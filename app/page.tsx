@@ -1,32 +1,63 @@
-import { demoPredictions } from "@/lib/demo-data";
+import { getActiveStocks, type StockRow } from "@/lib/stocks";
 
-function directionLabel(direction: string) {
-  if (direction === "UP") return "상승";
-  if (direction === "DOWN") return "하락";
-  return "중립";
-}
+export const dynamic = "force-dynamic";
 
-export default function Home() {
-  const upCount = demoPredictions.filter((item) => item.direction === "UP").length;
-  const avgConfidence = demoPredictions.reduce((sum, item) => sum + item.probability, 0) / demoPredictions.length;
+export default async function Home() {
+  let stocks: StockRow[] = [];
+  let errorMessage: string | null = null;
+
+  try {
+    stocks = await getActiveStocks();
+  } catch (error) {
+    errorMessage =
+      error instanceof Error
+        ? error.message
+        : "종목 데이터를 불러오지 못했습니다.";
+  }
+
+  const kospiCount = stocks.filter(
+    (stock) => stock.market.toUpperCase() === "KOSPI",
+  ).length;
+
+  const kosdaqCount = stocks.filter(
+    (stock) => stock.market.toUpperCase() === "KOSDAQ",
+  ).length;
+
+  const sectorCount = new Set(
+    stocks
+      .map((stock) => stock.sector)
+      .filter((sector): sector is string => Boolean(sector)),
+  ).size;
+
+  const today = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 
   return (
     <main className="shell">
       <aside className="sidebar">
         <div className="brand">
           <span className="brandMark">A</span>
+
           <div>
             <strong>AI Stock Lab</strong>
             <small>자기평가형 투자 연구</small>
           </div>
         </div>
+
         <nav>
-          <a className="active" href="#overview">대시보드</a>
+          <a className="active" href="#overview">
+            대시보드
+          </a>
+          <a href="#stocks">등록 종목</a>
           <a href="#predictions">오늘의 예측</a>
           <a href="#memory">경험 기억</a>
-          <a href="#postmortem">성공·실패 복기</a>
           <a href="#trading">모의·실거래</a>
         </nav>
+
         <div className="sidebarNote">
           <span>현재 모드</span>
           <strong>연구·가상투자</strong>
@@ -37,73 +68,198 @@ export default function Home() {
       <section className="content" id="overview">
         <header className="topbar">
           <div>
-            <p className="eyebrow">2026-07-22 시장 분석</p>
-            <h1>AI가 예측하고, 결과를 복기합니다.</h1>
-            <p className="subcopy">모든 판단을 결과가 나오기 전에 저장하고 시장·업종 대비 성과로 평가합니다.</p>
+            <p className="eyebrow">{today} 데이터베이스 현황</p>
+            <h1>Supabase 종목 데이터가 연결되었습니다.</h1>
+            <p className="subcopy">
+              등록된 종목을 기반으로 시세·공시·예측 데이터를 순차적으로
+              수집합니다.
+            </p>
           </div>
-          <button className="primaryButton">오늘 분석 실행</button>
+
+          <button className="primaryButton" type="button">
+            종목 데이터 동기화
+          </button>
         </header>
 
         <div className="metricGrid">
-          <article className="metricCard"><span>분석 종목</span><strong>2,487</strong><small>전체 국내 상장종목 목표</small></article>
-          <article className="metricCard"><span>상승 후보</span><strong>{upCount}</strong><small>현재 데모 데이터 기준</small></article>
-          <article className="metricCard"><span>평균 확신도</span><strong>{Math.round(avgConfidence * 100)}%</strong><small>확률 보정 전 데모</small></article>
-          <article className="metricCard"><span>누적 경험</span><strong>0</strong><small>DB 연결 후 자동 누적</small></article>
+          <article className="metricCard">
+            <span>등록 종목</span>
+            <strong>{stocks.length}</strong>
+            <small>Supabase stocks 테이블</small>
+          </article>
+
+          <article className="metricCard">
+            <span>KOSPI</span>
+            <strong>{kospiCount}</strong>
+            <small>등록된 코스피 종목</small>
+          </article>
+
+          <article className="metricCard">
+            <span>KOSDAQ</span>
+            <strong>{kosdaqCount}</strong>
+            <small>등록된 코스닥 종목</small>
+          </article>
+
+          <article className="metricCard">
+            <span>산업 분야</span>
+            <strong>{sectorCount}</strong>
+            <small>중복을 제외한 업종 수</small>
+          </article>
         </div>
 
-        <section className="panel" id="predictions">
+        <section className="panel" id="stocks">
           <div className="panelHeader">
-            <div><p className="eyebrow">PRE-MARKET PREDICTIONS</p><h2>오늘의 예측 후보</h2></div>
-            <span className="statusPill">Demo data</span>
+            <div>
+              <p className="eyebrow">STOCK UNIVERSE</p>
+              <h2>분석 대상 종목</h2>
+            </div>
+
+            <span className="statusPill">
+              {errorMessage ? "연결 오류" : "Supabase 연결"}
+            </span>
           </div>
-          <div className="tableWrap">
-            <table>
-              <thead><tr><th>종목</th><th>방향</th><th>확률</th><th>기간</th><th>예상 초과수익</th><th>시장 국면</th></tr></thead>
-              <tbody>
-                {demoPredictions.map((item) => (
-                  <tr key={item.stockCode}>
-                    <td><strong>{item.stockName}</strong><small>{item.stockCode}</small></td>
-                    <td><span className={`direction ${item.direction.toLowerCase()}`}>{directionLabel(item.direction)}</span></td>
-                    <td>{Math.round(item.probability * 100)}%</td>
-                    <td>{item.horizonDays}일</td>
-                    <td className={item.expectedExcessReturn >= 0 ? "positive" : "negative"}>{(item.expectedExcessReturn * 100).toFixed(1)}%</td>
-                    <td>{item.marketRegime}</td>
+
+          {errorMessage ? (
+            <div className="emptyState">
+              <h3>종목을 불러오지 못했습니다.</h3>
+              <p>{errorMessage}</p>
+            </div>
+          ) : stocks.length === 0 ? (
+            <div className="emptyState">
+              <h3>등록된 종목이 없습니다.</h3>
+              <p>Supabase의 stocks 테이블에 종목을 추가해 주세요.</p>
+            </div>
+          ) : (
+            <div className="tableWrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>종목명</th>
+                    <th>종목코드</th>
+                    <th>시장</th>
+                    <th>업종</th>
+                    <th>상태</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody>
+                  {stocks.map((stock) => (
+                    <tr key={stock.stock_code}>
+                      <td>
+                        <strong>{stock.stock_name}</strong>
+                      </td>
+                      <td>{stock.stock_code}</td>
+                      <td>{stock.market}</td>
+                      <td>{stock.sector ?? "미분류"}</td>
+                      <td>
+                        <span className="direction up">
+                          {stock.is_active ? "분석 중" : "비활성"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         <div className="twoColumn">
-          <section className="panel" id="memory">
-            <div className="panelHeader"><div><p className="eyebrow">MEMORY</p><h2>유사 경험 검색</h2></div></div>
+          <section className="panel" id="predictions">
+            <div className="panelHeader">
+              <div>
+                <p className="eyebrow">PREDICTIONS</p>
+                <h2>AI 예측</h2>
+              </div>
+            </div>
+
             <div className="emptyState">
               <div className="orb" />
-              <h3>과거 사례가 아직 없습니다.</h3>
-              <p>예측과 결과가 쌓이면 pgvector로 비슷한 성공·실패 사례를 검색합니다.</p>
+              <h3>예측 데이터가 아직 없습니다.</h3>
+              <p>
+                다음 단계에서 종목별 상승·하락 예측을 생성하고 저장합니다.
+              </p>
             </div>
           </section>
 
-          <section className="panel" id="postmortem">
-            <div className="panelHeader"><div><p className="eyebrow">POSTMORTEM</p><h2>복기 파이프라인</h2></div></div>
+          <section className="panel" id="memory">
+            <div className="panelHeader">
+              <div>
+                <p className="eyebrow">MEMORY</p>
+                <h2>투자 경험 기억</h2>
+              </div>
+            </div>
+
             <ol className="steps">
-              <li><span>1</span><div><strong>사전 가설 고정</strong><p>예상 방향·기간·근거·위험을 결과 전에 저장</p></div></li>
-              <li><span>2</span><div><strong>실제 결과 측정</strong><p>1·5·20·60일 수익과 시장 대비 성과 계산</p></div></li>
-              <li><span>3</span><div><strong>원인 가설 생성</strong><p>맞은 근거, 놓친 변수, 우연 가능성을 분리</p></div></li>
-              <li><span>4</span><div><strong>다음 판단에 반영</strong><p>반복 검증된 패턴만 모델과 전략에 적용</p></div></li>
+              <li>
+                <span>1</span>
+                <div>
+                  <strong>종목 데이터 수집</strong>
+                  <p>가격·거래량·공시·재무정보 저장</p>
+                </div>
+              </li>
+
+              <li>
+                <span>2</span>
+                <div>
+                  <strong>사전 예측 생성</strong>
+                  <p>예상 방향·확률·근거·위험요인 저장</p>
+                </div>
+              </li>
+
+              <li>
+                <span>3</span>
+                <div>
+                  <strong>결과 평가</strong>
+                  <p>실제 수익률과 시장 대비 성과 측정</p>
+                </div>
+              </li>
+
+              <li>
+                <span>4</span>
+                <div>
+                  <strong>성공·실패 복기</strong>
+                  <p>과거 경험을 다음 판단에 반영</p>
+                </div>
+              </li>
             </ol>
           </section>
         </div>
 
         <section className="panel architecture" id="trading">
-          <div className="panelHeader"><div><p className="eyebrow">ARCHITECTURE</p><h2>확장 가능한 시스템 구조</h2></div></div>
+          <div className="panelHeader">
+            <div>
+              <p className="eyebrow">CURRENT PIPELINE</p>
+              <h2>현재 개발 상태</h2>
+            </div>
+          </div>
+
           <div className="flow">
-            <div><strong>OpenDART·시세</strong><span>공시·재무·가격</span></div><i>→</i>
-            <div><strong>LLM 분석</strong><span>가설·근거·위험</span></div><i>→</i>
-            <div><strong>Supabase</strong><span>판단·결과·기억</span></div><i>→</i>
-            <div><strong>평가 모델</strong><span>초과수익·오류 분석</span></div><i>→</i>
-            <div><strong>KIS API</strong><span>모의 후 극소액 주문</span></div>
+            <div>
+              <strong>Supabase</strong>
+              <span>종목 기본정보</span>
+            </div>
+
+            <i>→</i>
+
+            <div>
+              <strong>시세 수집</strong>
+              <span>다음 개발 단계</span>
+            </div>
+
+            <i>→</i>
+
+            <div>
+              <strong>AI 예측</strong>
+              <span>방향·확률·근거</span>
+            </div>
+
+            <i>→</i>
+
+            <div>
+              <strong>성과 평가</strong>
+              <span>성공·실패 분석</span>
+            </div>
           </div>
         </section>
       </section>
