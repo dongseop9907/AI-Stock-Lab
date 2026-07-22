@@ -1,40 +1,82 @@
-import { getActiveStocks, type StockRow } from "@/lib/stocks";
+import MarketSyncButton from "@/app/components/MarketSyncButton";
+import {
+  getLatestStockMarketRows,
+  type StockMarketRow,
+} from "@/lib/market/latest-snapshots";
 
 export const dynamic = "force-dynamic";
 
+function formatPrice(value: number | null): string {
+  if (value === null) {
+    return "-";
+  }
+
+  return new Intl.NumberFormat("ko-KR").format(value);
+}
+
+function formatVolume(value: number | null): string {
+  if (value === null) {
+    return "-";
+  }
+
+  return new Intl.NumberFormat("ko-KR", {
+    notation: value >= 1_000_000 ? "compact" : "standard",
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
+function formatChangeRate(value: number | null): string {
+  if (value === null) {
+    return "-";
+  }
+
+  const sign = value > 0 ? "+" : "";
+
+  return `${sign}${value.toFixed(2)}%`;
+}
+
+function formatObservedAt(value: string | null): string {
+  if (!value) {
+    return "수집 전";
+  }
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
 export default async function Home() {
-  let stocks: StockRow[] = [];
+  let stocks: StockMarketRow[] = [];
   let errorMessage: string | null = null;
 
   try {
-    stocks = await getActiveStocks();
+    stocks = await getLatestStockMarketRows();
   } catch (error) {
     errorMessage =
       error instanceof Error
         ? error.message
-        : "종목 데이터를 불러오지 못했습니다.";
+        : "주식 데이터를 불러오지 못했습니다.";
   }
 
-  const kospiCount = stocks.filter(
-    (stock) => stock.market.toUpperCase() === "KOSPI",
+  const syncedCount = stocks.filter(
+    (stock) => stock.closePrice !== null,
   ).length;
 
-  const kosdaqCount = stocks.filter(
-    (stock) => stock.market.toUpperCase() === "KOSDAQ",
+  const risingCount = stocks.filter(
+    (stock) =>
+      stock.changeRate !== null &&
+      stock.changeRate > 0,
   ).length;
 
-  const sectorCount = new Set(
-    stocks
-      .map((stock) => stock.sector)
-      .filter((sector): sector is string => Boolean(sector)),
-  ).size;
-
-  const today = new Intl.DateTimeFormat("ko-KR", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
+  const fallingCount = stocks.filter(
+    (stock) =>
+      stock.changeRate !== null &&
+      stock.changeRate < 0,
+  ).length;
 
   return (
     <main className="shell">
@@ -52,112 +94,137 @@ export default async function Home() {
           <a className="active" href="#overview">
             대시보드
           </a>
-          <a href="#stocks">등록 종목</a>
-          <a href="#predictions">오늘의 예측</a>
+          <a href="#stocks">종목 시세</a>
+          <a href="#predictions">AI 예측</a>
           <a href="#memory">경험 기억</a>
-          <a href="#trading">모의·실거래</a>
         </nav>
 
         <div className="sidebarNote">
           <span>현재 모드</span>
-          <strong>연구·가상투자</strong>
-          <p>실계좌 주문은 비활성화되어 있습니다.</p>
+          <strong>시세 수집 단계</strong>
+          <p>실계좌 주문 기능은 아직 비활성화되어 있습니다.</p>
         </div>
       </aside>
 
       <section className="content" id="overview">
         <header className="topbar">
           <div>
-            <p className="eyebrow">{today} 데이터베이스 현황</p>
-            <h1>Supabase 종목 데이터가 연결되었습니다.</h1>
+            <p className="eyebrow">MARKET DATA</p>
+            <h1>한국투자증권 시세 연동</h1>
+
             <p className="subcopy">
-              등록된 종목을 기반으로 시세·공시·예측 데이터를 순차적으로
-              수집합니다.
+              한국투자증권 API에서 가져온 현재가를 Supabase에 저장하고
+              대시보드에 표시합니다.
             </p>
           </div>
 
-          <button className="primaryButton" type="button">
-            종목 데이터 동기화
-          </button>
+          <MarketSyncButton />
         </header>
 
         <div className="metricGrid">
           <article className="metricCard">
             <span>등록 종목</span>
             <strong>{stocks.length}</strong>
-            <small>Supabase stocks 테이블</small>
+            <small>현재 분석 대상</small>
           </article>
 
           <article className="metricCard">
-            <span>KOSPI</span>
-            <strong>{kospiCount}</strong>
-            <small>등록된 코스피 종목</small>
+            <span>시세 수집 완료</span>
+            <strong>{syncedCount}</strong>
+            <small>최신 가격 데이터 보유</small>
           </article>
 
           <article className="metricCard">
-            <span>KOSDAQ</span>
-            <strong>{kosdaqCount}</strong>
-            <small>등록된 코스닥 종목</small>
+            <span>상승 종목</span>
+            <strong>{risingCount}</strong>
+            <small>전일 대비 상승</small>
           </article>
 
           <article className="metricCard">
-            <span>산업 분야</span>
-            <strong>{sectorCount}</strong>
-            <small>중복을 제외한 업종 수</small>
+            <span>하락 종목</span>
+            <strong>{fallingCount}</strong>
+            <small>전일 대비 하락</small>
           </article>
         </div>
 
         <section className="panel" id="stocks">
           <div className="panelHeader">
             <div>
-              <p className="eyebrow">STOCK UNIVERSE</p>
-              <h2>분석 대상 종목</h2>
+              <p className="eyebrow">LATEST SNAPSHOTS</p>
+              <h2>최신 종목 시세</h2>
             </div>
 
             <span className="statusPill">
-              {errorMessage ? "연결 오류" : "Supabase 연결"}
+              {errorMessage ? "연결 오류" : "KIS API 연결"}
             </span>
           </div>
 
           {errorMessage ? (
             <div className="emptyState">
-              <h3>종목을 불러오지 못했습니다.</h3>
+              <h3>데이터를 불러오지 못했습니다.</h3>
               <p>{errorMessage}</p>
             </div>
           ) : stocks.length === 0 ? (
             <div className="emptyState">
               <h3>등록된 종목이 없습니다.</h3>
-              <p>Supabase의 stocks 테이블에 종목을 추가해 주세요.</p>
             </div>
           ) : (
             <div className="tableWrap">
               <table>
                 <thead>
                   <tr>
-                    <th>종목명</th>
-                    <th>종목코드</th>
-                    <th>시장</th>
-                    <th>업종</th>
-                    <th>상태</th>
+                    <th>종목</th>
+                    <th>현재가</th>
+                    <th>등락률</th>
+                    <th>시가</th>
+                    <th>고가</th>
+                    <th>저가</th>
+                    <th>거래량</th>
+                    <th>수집 시각</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {stocks.map((stock) => (
-                    <tr key={stock.stock_code}>
-                      <td>
-                        <strong>{stock.stock_name}</strong>
-                      </td>
-                      <td>{stock.stock_code}</td>
-                      <td>{stock.market}</td>
-                      <td>{stock.sector ?? "미분류"}</td>
-                      <td>
-                        <span className="direction up">
-                          {stock.is_active ? "분석 중" : "비활성"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {stocks.map((stock) => {
+                    const direction =
+                      stock.changeRate === null
+                        ? "flat"
+                        : stock.changeRate > 0
+                          ? "up"
+                          : stock.changeRate < 0
+                            ? "down"
+                            : "flat";
+
+                    return (
+                      <tr key={stock.stockCode}>
+                        <td>
+                          <strong>{stock.stockName}</strong>
+                          <br />
+                          <small>
+                            {stock.stockCode} · {stock.market}
+                          </small>
+                        </td>
+
+                        <td>
+                          <strong>
+                            {formatPrice(stock.closePrice)}원
+                          </strong>
+                        </td>
+
+                        <td>
+                          <span className={`direction ${direction}`}>
+                            {formatChangeRate(stock.changeRate)}
+                          </span>
+                        </td>
+
+                        <td>{formatPrice(stock.openPrice)}</td>
+                        <td>{formatPrice(stock.highPrice)}</td>
+                        <td>{formatPrice(stock.lowPrice)}</td>
+                        <td>{formatVolume(stock.volume)}</td>
+                        <td>{formatObservedAt(stock.observedAt)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -168,16 +235,16 @@ export default async function Home() {
           <section className="panel" id="predictions">
             <div className="panelHeader">
               <div>
-                <p className="eyebrow">PREDICTIONS</p>
-                <h2>AI 예측</h2>
+                <p className="eyebrow">NEXT STEP</p>
+                <h2>AI 상승·하락 예측</h2>
               </div>
             </div>
 
             <div className="emptyState">
-              <div className="orb" />
-              <h3>예측 데이터가 아직 없습니다.</h3>
+              <h3>예측 모델 준비 단계</h3>
               <p>
-                다음 단계에서 종목별 상승·하락 예측을 생성하고 저장합니다.
+                저장된 가격·공시·재무 데이터를 기반으로 다음 거래일의
+                방향을 예측하게 됩니다.
               </p>
             </div>
           </section>
@@ -185,8 +252,8 @@ export default async function Home() {
           <section className="panel" id="memory">
             <div className="panelHeader">
               <div>
-                <p className="eyebrow">MEMORY</p>
-                <h2>투자 경험 기억</h2>
+                <p className="eyebrow">PIPELINE</p>
+                <h2>현재 개발 흐름</h2>
               </div>
             </div>
 
@@ -194,74 +261,37 @@ export default async function Home() {
               <li>
                 <span>1</span>
                 <div>
-                  <strong>종목 데이터 수집</strong>
-                  <p>가격·거래량·공시·재무정보 저장</p>
+                  <strong>종목 등록</strong>
+                  <p>Supabase에 분석 종목 저장</p>
                 </div>
               </li>
 
               <li>
                 <span>2</span>
                 <div>
-                  <strong>사전 예측 생성</strong>
-                  <p>예상 방향·확률·근거·위험요인 저장</p>
+                  <strong>실제 시세 수집</strong>
+                  <p>한국투자증권 API 연동 완료</p>
                 </div>
               </li>
 
               <li>
                 <span>3</span>
                 <div>
-                  <strong>결과 평가</strong>
-                  <p>실제 수익률과 시장 대비 성과 측정</p>
+                  <strong>AI 예측 생성</strong>
+                  <p>다음 개발 단계</p>
                 </div>
               </li>
 
               <li>
                 <span>4</span>
                 <div>
-                  <strong>성공·실패 복기</strong>
-                  <p>과거 경험을 다음 판단에 반영</p>
+                  <strong>결과 평가와 복기</strong>
+                  <p>예측 성공·실패 원인 저장</p>
                 </div>
               </li>
             </ol>
           </section>
         </div>
-
-        <section className="panel architecture" id="trading">
-          <div className="panelHeader">
-            <div>
-              <p className="eyebrow">CURRENT PIPELINE</p>
-              <h2>현재 개발 상태</h2>
-            </div>
-          </div>
-
-          <div className="flow">
-            <div>
-              <strong>Supabase</strong>
-              <span>종목 기본정보</span>
-            </div>
-
-            <i>→</i>
-
-            <div>
-              <strong>시세 수집</strong>
-              <span>다음 개발 단계</span>
-            </div>
-
-            <i>→</i>
-
-            <div>
-              <strong>AI 예측</strong>
-              <span>방향·확률·근거</span>
-            </div>
-
-            <i>→</i>
-
-            <div>
-              <strong>성과 평가</strong>
-              <span>성공·실패 분석</span>
-            </div>
-          </div>
-        </section>
       </section>
     </main>
   );
