@@ -256,6 +256,21 @@ export async function evaluateCandidateModel(
 ) {
   const supabase = createSupabaseServerClient();
 
+  const {
+    error: metricsRefreshError,
+  } = await supabase.rpc(
+    "refresh_ai_model_metrics",
+    {
+      p_model_id: modelId,
+    },
+  );
+
+  if (metricsRefreshError) {
+    throw new Error(
+      `평가 전 모델 지표 갱신 실패: ${metricsRefreshError.message}`,
+    );
+  }
+
   const { data: candidateData, error: candidateError } =
     await supabase
       .from("ai_model_versions")
