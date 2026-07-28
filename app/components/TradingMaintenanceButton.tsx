@@ -15,6 +15,10 @@ interface CycleStepResult {
 }
 
 const CYCLE_STEPS: CycleStep[] = [
+   {
+    name: "승인 주문 체결",
+    url: "/api/orders/paper/execute-approved",
+  },
   {
     name: "트레일링 손절 갱신",
     url: "/api/trading/trailing-stop/update",
@@ -37,6 +41,22 @@ function getResultMessage(
   stepName: string,
   payload: Record<string, unknown>,
 ): string {
+  if (stepName === "승인 주문 체결") {
+    const checked = Number(
+      payload.checked ?? 0,
+    );
+
+    const executed = Number(
+      payload.executed ?? 0,
+    );
+
+    const failed = Number(
+      payload.failed ?? 0,
+    );
+
+    return `확인 ${checked}건 · 체결 ${executed}건 · 실패 ${failed}건`;
+  }
+
   if (stepName === "트레일링 손절 갱신") {
     const checked = Number(
       payload.checked ?? 0,
