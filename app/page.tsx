@@ -1,6 +1,25 @@
+import TradeHistoryPanel from "@/app/components/TradeHistoryPanel";
+import PaperPortfolioPanel from "@/app/components/PaperPortfolioPanel";
+import EntrySignalPanel from "@/app/components/EntrySignalPanel";
 import TradingMaintenanceButton from "@/app/components/TradingMaintenanceButton";
 import MarketSyncButton from "@/app/components/MarketSyncButton";
 import ModelPerformancePanel from "@/app/components/ModelPerformancePanel";
+
+import {
+  getTradeHistoryDashboard,
+  type TradeHistoryDashboard,
+} from "@/lib/trading/get-trade-history-dashboard";
+
+import {
+  getPaperAccountDashboard,
+  type PaperAccountDashboard,
+} from "@/lib/trading/get-paper-account-dashboard";
+
+import {
+  getEntrySignalDashboardData,
+  type EntryModelOption,
+  type EntrySignalDashboardRow,
+} from "@/lib/trading/get-entry-signal-dashboard";
 
 import {
   getLatestStockMarketRows,
@@ -68,17 +87,66 @@ function getDirectionClass(
 }
 
 export default async function Home() {
+
+  let tradeHistory: TradeHistoryDashboard | null = null;
+
+  let tradeHistoryErrorMessage: string | null = null;
+
+  let paperAccount:PaperAccountDashboard | null = null;
+  let paperAccountErrorMessage: string | null = null;
+
   let stocks: StockMarketRow[] = [];
   let models: ModelPerformance[] = [];
 
+  let entrySignals:
+  EntrySignalDashboardRow[] = [];
+
+  let entryModels:
+  EntryModelOption[] = [];
+
   let marketErrorMessage: string | null = null;
   let modelErrorMessage: string | null = null;
+  let signalErrorMessage: string | null = null;
 
-  const [marketResult, modelResult] =
-    await Promise.allSettled([
-      getLatestStockMarketRows(),
-      getModelPerformance(),
-    ]);
+  const [
+  marketResult,
+  modelResult,
+  signalResult,
+  paperAccountResult,
+  tradeHistoryResult,
+] = await Promise.allSettled([
+  getLatestStockMarketRows(),
+  getModelPerformance(),
+  getEntrySignalDashboardData(),
+  getPaperAccountDashboard(),
+  getTradeHistoryDashboard(),
+]);
+
+if (
+  tradeHistoryResult.status ===
+  "fulfilled"
+) {
+  tradeHistory =
+    tradeHistoryResult.value;
+} else {
+  tradeHistoryErrorMessage =
+    tradeHistoryResult.reason instanceof Error
+      ? tradeHistoryResult.reason.message
+      : "거래 이력을 불러오지 못했습니다.";
+}
+
+if (
+  paperAccountResult.status ===
+  "fulfilled"
+) {
+  paperAccount =
+    paperAccountResult.value;
+} else {
+  paperAccountErrorMessage =
+    paperAccountResult.reason instanceof Error
+      ? paperAccountResult.reason.message
+      : "모의계좌를 불러오지 못했습니다.";
+}
 
   if (marketResult.status === "fulfilled") {
     stocks = marketResult.value;
@@ -96,6 +164,21 @@ export default async function Home() {
       modelResult.reason instanceof Error
         ? modelResult.reason.message
         : "모델 성과를 불러오지 못했습니다.";
+  }
+
+  if (
+    signalResult.status === "fulfilled" 
+  ) {
+    entrySignals =
+      signalResult.value.signals;
+
+    entryModels =
+      signalResult.value.models;
+  } else {
+    signalErrorMessage =
+      signalResult.reason instanceof Error
+        ? signalResult.reason.message
+        : "진입 신호를 불러오지 못했습니다.";
   }
 
   const syncedCount = stocks.filter(
@@ -141,6 +224,18 @@ export default async function Home() {
 
           <a href="#stocks">
             종목 시세
+          </a>
+
+          <a href="#entry-signals">
+            진입 신호
+          </a>
+
+          <a href="#paper-portfolio">
+            모의계좌
+          </a>
+
+          <a href="#trade-history">
+            거래 이력
           </a>
 
           <a href="#model-performance">
@@ -401,6 +496,31 @@ export default async function Home() {
           )}
         </section>
 
+                      <EntrySignalPanel
+  signals={entrySignals}
+  models={entryModels}
+  errorMessage={signalErrorMessage}
+/>
+
+<PaperPortfolioPanel
+  data={paperAccount}
+  errorMessage={
+    paperAccountErrorMessage
+  }
+/>
+
+<TradeHistoryPanel
+  data={tradeHistory}
+  errorMessage={
+    tradeHistoryErrorMessage
+  }
+/>
+
+<ModelPerformancePanel
+  models={models}
+  errorMessage={modelErrorMessage}
+/>
+
         <div className="metricGrid">
           <article className="metricCard">
             <span>상승 종목</span>
@@ -455,11 +575,6 @@ export default async function Home() {
             </small>
           </article>
         </div>
-
-        <ModelPerformancePanel
-          models={models}
-          errorMessage={modelErrorMessage}
-        />
 
         <div className="twoColumn">
           <section
