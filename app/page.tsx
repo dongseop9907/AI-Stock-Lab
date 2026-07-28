@@ -4,6 +4,12 @@ import EntrySignalPanel from "@/app/components/EntrySignalPanel";
 import TradingMaintenanceButton from "@/app/components/TradingMaintenanceButton";
 import MarketSyncButton from "@/app/components/MarketSyncButton";
 import ModelPerformancePanel from "@/app/components/ModelPerformancePanel";
+import AutomationRunPanel from "@/app/components/AutomationRunPanel";
+
+import {
+  getAutomationRunDashboard,
+  type AutomationRunDashboardRow,
+} from "@/lib/trading/get-automation-run-dashboard";
 
 import {
   getTradeHistoryDashboard,
@@ -88,6 +94,10 @@ function getDirectionClass(
 
 export default async function Home() {
 
+  let automationRuns: AutomationRunDashboardRow[] = [];
+
+  let automationRunErrorMessage: string | null = null;
+
   let tradeHistory: TradeHistoryDashboard | null = null;
 
   let tradeHistoryErrorMessage: string | null = null;
@@ -114,13 +124,29 @@ export default async function Home() {
   signalResult,
   paperAccountResult,
   tradeHistoryResult,
+  automationRunResult,
 ] = await Promise.allSettled([
   getLatestStockMarketRows(),
   getModelPerformance(),
   getEntrySignalDashboardData(),
   getPaperAccountDashboard(),
   getTradeHistoryDashboard(),
+  getAutomationRunDashboard(),
 ]);
+
+if (
+  automationRunResult.status ===
+  "fulfilled"
+) {
+  automationRuns =
+    automationRunResult.value;
+} else {
+  automationRunErrorMessage =
+    automationRunResult.reason instanceof
+    Error
+      ? automationRunResult.reason.message
+      : "자동 운영 기록을 불러오지 못했습니다.";
+}
 
 if (
   tradeHistoryResult.status ===
@@ -495,6 +521,13 @@ if (
             </div>
           )}
         </section>
+
+<AutomationRunPanel
+  runs={automationRuns}
+  errorMessage={
+    automationRunErrorMessage
+  }
+/>
 
                       <EntrySignalPanel
   signals={entrySignals}

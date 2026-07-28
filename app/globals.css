@@ -185,3 +185,215 @@ td small { color: var(--muted); margin-top: 4px; }
     text-align: left;
   }
 }
+
+.signalControl {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid #c7d2fe;
+  border-radius: 14px;
+  background: #eef4ff;
+}
+
+.signalControl label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 170px;
+}
+
+.signalControl label > span {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.signalControl select {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #94a3b8;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+}
+
+.signalControl select:disabled {
+  opacity: 1;
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.signalCheckbox {
+  flex-direction: row !important;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.signalCheckbox input {
+  width: 17px;
+  height: 17px;
+}
+
+.signalCheckbox span {
+  color: #334155 !important;
+}
+
+.maintenanceButton {
+  min-height: 42px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 12px;
+  background: #2563eb;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease;
+}
+
+.maintenanceButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #1d4ed8;
+}
+
+.maintenanceButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.paperPortfolioActions {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.paperResetControl {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.paperResetButton {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid #fca5a5;
+  border-radius: 10px;
+  background: #fff1f2;
+  color: #be123c;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.paperResetButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #fb7185;
+  background: #ffe4e6;
+}
+
+.paperResetButton:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.paperResetMessage {
+  max-width: 420px;
+  margin: 0;
+  font-size: 12px;
+  text-align: right;
+}
+
+.paperResetMessage.success {
+  color: #15803d;
+}
+
+.paperResetMessage.failure {
+  color: #be123c;
+}
+
+@media (max-width: 760px) {
+  .paperPortfolioActions,
+  .paperResetControl {
+    align-items: flex-start;
+  }
+
+  .paperResetMessage {
+    text-align: left;
+  }
+}
+
+.automationControl {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid #c7d2fe;
+  border-radius: 14px;
+  background: #eef4ff;
+}
+
+.automationControl > label:not(
+    .signalCheckbox
+  ) {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 140px;
+}
+
+.automationControl
+  > label
+  > span {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.automationControl select {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #94a3b8;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+}
+
+.automationControl
+  select:disabled {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+@media (max-width: 760px) {
+  .automationControl {
+    align-items: stretch;
+  }
+
+  .automationControl > label {
+    width: 100%;
+  }
+
+  .automationControl button {
+    width: 100%;
+  }
+}
