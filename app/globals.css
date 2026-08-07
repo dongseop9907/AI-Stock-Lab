@@ -397,3 +397,514 @@ td small { color: var(--muted); margin-top: 4px; }
     width: 100%;
   }
 }
+
+.performanceChart {
+  margin: 20px 0;
+  padding: 18px;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.chartHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 14px;
+}
+
+.chartHeader div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.chartHeader strong {
+  color: #0f172a;
+}
+
+.chartHeader small,
+.chartHeader span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.performanceChart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 220px;
+  overflow: visible;
+}
+
+.chartAxis {
+  stroke: #cbd5e1;
+  stroke-width: 1;
+}
+
+.equityLine {
+  fill: none;
+  stroke: #2563eb;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chartRange {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .chartHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .performanceChart {
+    padding: 12px;
+  }
+}
+
+.safetyControlPanel {
+  border: 1px solid #bfdbfe;
+  background:
+    linear-gradient(
+      180deg,
+      #eff6ff 0%,
+      #ffffff 34%
+    );
+}
+
+.systemStatePill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88px;
+  padding: 8px 13px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.systemStatePill.normal {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.systemStatePill.paused {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.systemStatePill.critical {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.safetyStatusGrid {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0, 1fr)
+    );
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.safetyStatusCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #dbeafe;
+  border-radius: 13px;
+  background: #ffffff;
+}
+
+.safetyStatusCard span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.safetyStatusCard strong {
+  color: #0f172a;
+  font-size: 20px;
+}
+
+.stateEnabled {
+  color: #15803d !important;
+}
+
+.stateDisabled {
+  color: #b91c1c !important;
+}
+
+.emergencyBanner {
+  margin-top: 16px;
+  padding: 15px 17px;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: #fef2f2;
+}
+
+.emergencyBanner strong {
+  color: #991b1b;
+}
+
+.emergencyBanner p {
+  margin: 6px 0 0;
+  color: #7f1d1d;
+  font-size: 13px;
+}
+
+.controlButtonGrid {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.controlButton {
+  min-height: 43px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.controlButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.controlButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.controlButton.primary {
+  color: #ffffff;
+  background: #2563eb;
+}
+
+.controlButton.secondary {
+  color: #1e3a8a;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+}
+
+.controlButton.warning {
+  color: #78350f;
+  background: #fde68a;
+}
+
+.controlButton.danger {
+  color: #ffffff;
+  background: #dc2626;
+}
+
+.orderLimitControl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.orderLimitControl strong {
+  color: #0f172a;
+}
+
+.orderLimitControl p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.orderLimitActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.orderLimitActions select {
+  min-width: 88px;
+  min-height: 43px;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  color: #0f172a;
+  background: #ffffff;
+}
+
+.controlMessage {
+  margin-top: 15px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.controlMessage.success {
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+}
+
+.controlMessage.error {
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+}
+
+.controlFooter {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  margin-top: 18px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.realTradingWarning {
+  margin: 12px 0 0;
+  color: #475569;
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .safetyStatusGrid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+  }
+
+  .controlButtonGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .safetyStatusGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .orderLimitControl,
+  .controlFooter {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .orderLimitActions {
+    width: 100%;
+  }
+
+  .orderLimitActions select,
+  .orderLimitActions button {
+    flex: 1;
+  }
+}
+
+.shadowDecisionBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.shadowDecisionBadge.good {
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  background: #dcfce7;
+}
+
+.shadowDecisionBadge.bad {
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  background: #fee2e2;
+}
+
+.shadowDecisionBadge.pending {
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  background: #f1f5f9;
+}
+
+.thresholdRecommendationCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  background: #eff6ff;
+}
+
+.thresholdRecommendationCard h3 {
+  margin: 10px 0 6px;
+  color: #0f172a;
+}
+
+.thresholdRecommendationCard p {
+  margin: 0 0 6px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.thresholdRecommendationCard small {
+  color: #64748b;
+}
+
+.thresholdActionGroup {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.thresholdStatusBadge {
+  display: inline-flex;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.thresholdStatusBadge.good {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.thresholdStatusBadge.warning {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.thresholdStatusBadge.bad {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.thresholdStatusBadge.neutral {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+@media (max-width: 760px) {
+  .thresholdRecommendationCard {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .thresholdActionGroup {
+    width: 100%;
+  }
+
+  .thresholdActionGroup button {
+    flex: 1;
+  }
+}
+.predictionSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.predictionSummary span {
+  padding: 7px 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 999px;
+  color: #475569;
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.predictionDirectionBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.predictionDirectionBadge.up {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.predictionDirectionBadge.down {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.predictionDirectionBadge.neutral {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+.predictionCandidateBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.predictionCandidateBadge.active {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.predictionCandidateBadge.inactive {
+  color: #64748b;
+  background: #f1f5f9;
+}
+
+.predictionReasons {
+  display: flex;
+  min-width: 220px;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.predictionReasons span {
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.predictionReasons span::before {
+  content: "· ";
+}

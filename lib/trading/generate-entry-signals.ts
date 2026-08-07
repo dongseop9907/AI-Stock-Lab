@@ -1,3 +1,12 @@
+import { getActiveEntryThreshold } from "@/lib/trading/get-active-entry-threshold";
+import {
+  getLatestPredictionCandidates,
+  type PredictionCandidate,
+} from "@/lib/trading/get-latest-prediction-candidates";
+import {
+  getCurrentMarketRegimeShadowSafe,
+  type MarketRegimeShadow,
+} from "@/lib/trading/market-regime-shadow";
 import { createSupabaseServerClient } from "@/lib/supabase";
 import { createPaperBuyOrder } from "@/lib/trading/paper-order-service";
 
@@ -6,6 +15,7 @@ interface GenerateEntrySignalsInput {
   autoOrder?: boolean;
   maxOrders?: number;
   stockCodes?: string[];
+  maximumPredictionAgeMinutes?: number;
 }
 
 interface SnapshotRecord {
@@ -50,14 +60,33 @@ interface SignalCandidate {
     intradayRate: number;
     volumeRatio: number;
     rangePosition: number;
+
+    prediction: {
+      predictionId: string;
+      score: number;
+      confidence: number;
+      disclosureScore: number | null;
+      priceMomentum: number | null;
+      intradayReturn: number | null;
+      volumeRatio: number | null;
+      generatedAt: string;
+      modelName: string;
+      modelVersion: string;
+    };
+
+    /*
+     * Regime Shadow는 관찰용 메타데이터다.
+     * 실제 진입 여부(qualifies)에는 사용하지 않는다.
+     */
+    marketRegimeShadow?: MarketRegimeShadow;
   };
 
   reasons: string[];
 }
 
-const ENTRY_SCORE_THRESHOLD = 0.62;
 const DEFAULT_MAX_ORDERS = 3;
 const DEFAULT_STOP_DISTANCE_RATE = 0.025;
+const DEFAULT_MAX_PREDICTION_AGE_MINUTES = 180;
 
 function clamp(
   value: number,
@@ -231,6 +260,8 @@ async function resolveEntryModel(
 
 function calculateEntrySignal(
   snapshots: SnapshotRecord[],
+  prediction: PredictionCandidate,
+  entryScoreThreshold: number,
 ): SignalCandidate | null {
   const sorted = [...snapshots].sort(
     (left, right) =>
@@ -370,7 +401,7 @@ function calculateEntrySignal(
     volumeScore * 0.15;
 
   const qualifies =
-    score >= ENTRY_SCORE_THRESHOLD &&
+    score >= entryScoreThreshold &&
     momentumRate > 0 &&
     intradayRate > -0.005;
 
@@ -382,7 +413,12 @@ function calculateEntrySignal(
       ),
   );
 
-  const reasons: string[] = [];
+  const reasons: string[] = [
+    `AI 종목 예측에서 상승 후보로 선정됐습니다. 예측점수 ${prediction.score.toFixed(4)}, 신뢰도 ${prediction.confidence.toFixed(4)}입니다.`,
+    ...prediction.reasons.map(
+      (reason) => `예측 근거: ${reason}`,
+    ),
+  ];
 
   if (momentumRate > 0) {
     reasons.push(
@@ -414,7 +450,7 @@ function calculateEntrySignal(
 
   if (!qualifies) {
     reasons.push(
-      `진입 기준 점수 ${ENTRY_SCORE_THRESHOLD}에 미달했거나 상승 조건을 충족하지 못했습니다.`,
+      `진입 기준 점수 ${entryScoreThreshold}에 미달했거나 상승 조건을 충족하지 못했습니다.`,
     );
   }
 
@@ -454,6 +490,38 @@ function calculateEntrySignal(
         Math.round(
           rangePosition * 1_000_000,
         ) / 1_000_000,
+
+      prediction: {
+        predictionId:
+          prediction.predictionId,
+
+        score:
+          prediction.score,
+
+        confidence:
+          prediction.confidence,
+
+        disclosureScore:
+          prediction.disclosureScore,
+
+        priceMomentum:
+          prediction.priceMomentum,
+
+        intradayReturn:
+          prediction.intradayReturn,
+
+        volumeRatio:
+          prediction.volumeRatio,
+
+        generatedAt:
+          prediction.generatedAt,
+
+        modelName:
+          prediction.modelName,
+
+        modelVersion:
+          prediction.modelVersion,
+      },
     },
 
     reasons,
@@ -485,39 +553,158 @@ export async function generateEntrySignals(
     ),
   );
 
+  const entryScoreThreshold =
+    await getActiveEntryThreshold();
+
+  /*
+   * Regime Shadow v6
+   *
+   * 현재 시장 상태를 관찰하고 저장하지만,
+   * 실제 주문 조건에는 사용하지 않는다.
+   */
+  const marketRegimeShadow =
+    await getCurrentMarketRegimeShadowSafe();
+
+  const maximumPredictionAgeMinutes =
+    Math.min(
+      24 * 60,
+      Math.max(
+        10,
+        Math.floor(
+          input.maximumPredictionAgeMinutes ??
+            DEFAULT_MAX_PREDICTION_AGE_MINUTES,
+        ),
+      ),
+    );
+
+  const predictionGate =
+    await getLatestPredictionCandidates({
+      maximumAgeMinutes:
+        maximumPredictionAgeMinutes,
+      limit: 100,
+    });
+
   const requestedStockCodes =
     normalizeStockCodes(
       input.stockCodes,
     );
 
-  let snapshotResult;
+  if (
+    !predictionGate.available ||
+    !predictionGate.fresh ||
+    predictionGate.candidateCount === 0
+  ) {
+    const message =
+      predictionGate.reason ===
+      "NO_PREDICTION"
+        ? "AI 종목 예측이 없어 진입 분석을 중단했습니다."
+        : predictionGate.reason ===
+          "STALE_PREDICTION"
+        ? `AI 종목 예측이 ${predictionGate.maximumAgeMinutes}분보다 오래돼 진입 분석을 중단했습니다.`
+        : "AI 상승 후보가 없어 진입 신호와 주문을 생성하지 않았습니다.";
 
-  const baseSnapshotQuery = supabase
-    .from("market_snapshots")
-    .select(`
-      stock_code,
-      observed_at,
-      close_price,
-      open_price,
-      high_price,
-      low_price,
-      volume
-    `)
-    .order("observed_at", {
-      ascending: false,
-    })
-    .limit(1000);
+    return {
+      model: {
+        id: model.id,
+        name: model.model_name,
+        version: model.model_version,
+        purpose: model.purpose,
+        status: model.status,
+      },
 
-  if (requestedStockCodes.length > 0) {
-    snapshotResult =
-      await baseSnapshotQuery.in(
-        "stock_code",
-        requestedStockCodes,
-      );
-  } else {
-    snapshotResult =
-      await baseSnapshotQuery;
+      autoOrder,
+      threshold:
+        entryScoreThreshold,
+      maxOrders,
+
+      predictionGate,
+      marketRegimeShadow,
+
+      analyzed: 0,
+      qualified: 0,
+      eligible: 0,
+      ordersCreated: 0,
+      message,
+      signals: [],
+    };
   }
+
+  const predictionMap =
+    new Map(
+      predictionGate.candidates.map(
+        (prediction) => [
+          prediction.stockCode,
+          prediction,
+        ],
+      ),
+    );
+
+  const targetStockCodes =
+    requestedStockCodes.length > 0
+      ? requestedStockCodes.filter(
+          (stockCode) =>
+            predictionMap.has(
+              stockCode,
+            ),
+        )
+      : predictionGate.stockCodes;
+
+  if (targetStockCodes.length === 0) {
+    return {
+      model: {
+        id: model.id,
+        name: model.model_name,
+        version: model.model_version,
+        purpose: model.purpose,
+        status: model.status,
+      },
+
+      autoOrder,
+      threshold:
+        entryScoreThreshold,
+      maxOrders,
+
+      predictionGate,
+      requestedStockCodes,
+      targetStockCodes,
+      marketRegimeShadow,
+
+      analyzed: 0,
+      qualified: 0,
+      eligible: 0,
+      ordersCreated: 0,
+
+      message:
+        "요청한 종목 중 최신 AI 상승 후보에 포함된 종목이 없습니다.",
+
+      signals: [],
+    };
+  }
+
+  const snapshotResult =
+    await supabase
+      .from("market_snapshots")
+      .select(`
+        stock_code,
+        observed_at,
+        close_price,
+        open_price,
+        high_price,
+        low_price,
+        volume
+      `)
+      .in(
+        "stock_code",
+        targetStockCodes,
+      )
+      .lte(
+        "observed_at",
+        new Date().toISOString(),
+      )
+      .order("observed_at", {
+        ascending: false,
+      })
+      .limit(1000);
 
   const {
     data: snapshotData,
@@ -538,6 +725,11 @@ export async function generateEntrySignals(
     return {
       model,
       autoOrder,
+      threshold:
+        entryScoreThreshold,
+      predictionGate,
+      targetStockCodes,
+      marketRegimeShadow,
       analyzed: 0,
       qualified: 0,
       ordersCreated: 0,
@@ -574,12 +766,43 @@ export async function generateEntrySignals(
     const stockSnapshots
     of groupedSnapshots.values()
   ) {
+    const prediction =
+      predictionMap.get(
+        stockSnapshots[0]
+          ?.stock_code ??
+          "",
+      );
+
+    if (!prediction) {
+      continue;
+    }
+
     const candidate =
       calculateEntrySignal(
         stockSnapshots,
+        prediction,
+        entryScoreThreshold,
       );
 
     if (candidate) {
+      /*
+       * SHADOW 관찰 정보만 추가한다.
+       * candidate.qualifies 값은 변경하지 않는다.
+       */
+      candidate.features
+        .marketRegimeShadow =
+          marketRegimeShadow;
+
+      candidate.reasons.push(
+        `시장 Regime SHADOW: ${marketRegimeShadow.regime}, breadth20=${
+          marketRegimeShadow.breadth20 ?? "N/A"
+        }, avgReturn20=${
+          marketRegimeShadow.avgReturn20 ?? "N/A"
+        }, wouldBlock=${
+          marketRegimeShadow.wouldBlockByRegime
+        }. 실제 주문 판단에는 반영하지 않습니다.`,
+      );
+
       candidates.push(candidate);
     }
   }
@@ -657,6 +880,11 @@ export async function generateEntrySignals(
     }
   }
 
+  /*
+   * 중요:
+   * Regime Shadow는 아래 후보 선정 로직에 사용하지 않는다.
+   * 기존 전략과 동일하게 qualifies/보유/대기주문만 사용한다.
+   */
   const eligibleCandidates =
     candidates.filter(
       (candidate) =>
@@ -698,6 +926,22 @@ export async function generateEntrySignals(
     const reasons = [
       ...candidate.reasons,
     ];
+
+    const shadowFeatures = {
+      ...candidate.features,
+
+      marketRegimeShadow,
+    };
+
+    reasons.push(
+      `Market Regime SHADOW: ${marketRegimeShadow.regime} / breadth20=${
+        marketRegimeShadow.breadth20 ?? "N/A"
+      } / avgReturn20=${
+        marketRegimeShadow.avgReturn20 ?? "N/A"
+      } / wouldBlock=${
+        marketRegimeShadow.wouldBlockByRegime
+      }. SHADOW only; orders are unaffected.`,
+    );
 
     if (
       activePositionCodes.has(
@@ -778,8 +1022,7 @@ export async function generateEntrySignals(
           recommended_quantity:
             candidate.quantity,
 
-          features:
-            candidate.features,
+          features: shadowFeatures,
 
           reasons,
         })
@@ -823,8 +1066,7 @@ export async function generateEntrySignals(
           recommended_quantity:
             candidate.quantity,
 
-          features:
-            candidate.features,
+          features: shadowFeatures,
           reasons,
           error_message: null,
           updated_at:
@@ -872,8 +1114,7 @@ export async function generateEntrySignals(
         status: signal.status,
         orderId: signal.order_id,
         reasons,
-        features:
-          candidate.features,
+        features: shadowFeatures,
       });
 
       continue;
@@ -931,8 +1172,7 @@ export async function generateEntrySignals(
         orderStatus:
           orderResult.order.status,
         reasons,
-        features:
-          candidate.features,
+        features: shadowFeatures,
       });
     } catch (error) {
       const message =
@@ -959,8 +1199,7 @@ export async function generateEntrySignals(
         status: "FAILED",
         error: message,
         reasons,
-        features:
-          candidate.features,
+        features: shadowFeatures,
       });
     }
   }
@@ -976,8 +1215,13 @@ export async function generateEntrySignals(
 
     autoOrder,
     threshold:
-      ENTRY_SCORE_THRESHOLD,
+      entryScoreThreshold,
     maxOrders,
+
+    predictionGate,
+    requestedStockCodes,
+    targetStockCodes,
+    marketRegimeShadow,
 
     analyzed: candidates.length,
 

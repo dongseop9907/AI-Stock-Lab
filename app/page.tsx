@@ -1,3 +1,4 @@
+import TradingSystemControlPanel from "@/app/components/TradingSystemControlPanel";
 import TradeHistoryPanel from "@/app/components/TradeHistoryPanel";
 import PaperPortfolioPanel from "@/app/components/PaperPortfolioPanel";
 import EntrySignalPanel from "@/app/components/EntrySignalPanel";
@@ -5,6 +6,30 @@ import TradingMaintenanceButton from "@/app/components/TradingMaintenanceButton"
 import MarketSyncButton from "@/app/components/MarketSyncButton";
 import ModelPerformancePanel from "@/app/components/ModelPerformancePanel";
 import AutomationRunPanel from "@/app/components/AutomationRunPanel";
+import DailyPerformancePanel from "@/app/components/DailyPerformancePanel";
+import ShadowSignalPanel from "@/app/components/ShadowSignalPanel";
+import EntryThresholdGovernancePanel from "@/app/components/EntryThresholdGovernancePanel";
+import StockPredictionPanel from "@/app/components/StockPredictionPanel";
+
+import {
+  getStockPredictionDashboard,
+  type StockPredictionDashboard,
+} from "@/lib/trading/get-stock-prediction-dashboard";
+
+import {
+  getEntryThresholdGovernance,
+  type EntryThresholdGovernance,
+} from "@/lib/trading/get-entry-threshold-governance";
+
+import {
+  getShadowSignalDashboard,
+  type ShadowSignalDashboard,
+} from "@/lib/trading/get-shadow-signal-dashboard";
+
+import {
+  getDailyPerformanceDashboard,
+  type DailyPerformanceDashboard,
+} from "@/lib/trading/get-daily-performance-dashboard";
 
 import {
   getAutomationRunDashboard,
@@ -94,6 +119,22 @@ function getDirectionClass(
 
 export default async function Home() {
 
+  let stockPredictionDashboard: StockPredictionDashboard | null = null;
+
+  let stockPredictionErrorMessage: string | null = null;
+
+  let entryThresholdGovernance: EntryThresholdGovernance | null = null;
+
+  let entryThresholdErrorMessage: string | null = null;
+
+  let shadowSignalDashboard: ShadowSignalDashboard | null = null;
+  
+  let shadowSignalErrorMessage: string | null = null;
+
+  let dailyPerformance: DailyPerformanceDashboard | null = null;
+
+  let dailyPerformanceErrorMessage: string | null = null;
+
   let automationRuns: AutomationRunDashboardRow[] = [];
 
   let automationRunErrorMessage: string | null = null;
@@ -125,6 +166,7 @@ export default async function Home() {
   paperAccountResult,
   tradeHistoryResult,
   automationRunResult,
+  dailyPerformanceResult,
 ] = await Promise.allSettled([
   getLatestStockMarketRows(),
   getModelPerformance(),
@@ -132,7 +174,22 @@ export default async function Home() {
   getPaperAccountDashboard(),
   getTradeHistoryDashboard(),
   getAutomationRunDashboard(),
+  getDailyPerformanceDashboard(),
 ]);
+
+if (
+  dailyPerformanceResult.status ===
+  "fulfilled"
+) {
+  dailyPerformance =
+    dailyPerformanceResult.value;
+} else {
+  dailyPerformanceErrorMessage =
+    dailyPerformanceResult.reason instanceof
+    Error
+      ? dailyPerformanceResult.reason.message
+      : "일일 성과를 불러오지 못했습니다.";
+}
 
 if (
   automationRunResult.status ===
@@ -231,6 +288,36 @@ if (
     (model) => model.status === "CANDIDATE",
   ).length;
 
+    try {
+        stockPredictionDashboard =
+          await getStockPredictionDashboard();
+      } catch (error) {
+        stockPredictionErrorMessage =
+          error instanceof Error
+            ? error.message
+            : "AI 예측 결과를 불러오지 못했습니다.";
+      }
+
+    try {
+        shadowSignalDashboard =
+          await getShadowSignalDashboard();
+      } catch (error) {
+        shadowSignalErrorMessage =
+          error instanceof Error
+            ? error.message
+            : "그림자 추적 결과를 불러오지 못했습니다.";
+      }
+    try {
+        entryThresholdGovernance =
+          await getEntryThresholdGovernance();
+      } catch (error) {
+        entryThresholdErrorMessage =
+          error instanceof Error
+            ? error.message
+            : "진입 기준점수 정보를 불러오지 못했습니다.";
+      }
+
+
   return (
     <main className="shell">
       <aside className="sidebar">
@@ -246,6 +333,22 @@ if (
         <nav>
           <a className="active" href="#overview">
             대시보드
+          </a>
+
+          <a href="#entry-threshold">
+            진입 기준 관리
+          </a>
+
+          <a href="#shadow-signals">
+            미매수 신호 평가
+          </a>
+
+          <a href="#daily-performance">
+            일일 성과
+          </a>
+
+          <a href="#system-control">
+            안전제어
           </a>
 
           <a href="#stocks">
@@ -529,16 +632,47 @@ if (
   }
 />
 
-                      <EntrySignalPanel
-  signals={entrySignals}
-  models={entryModels}
-  errorMessage={signalErrorMessage}
+<TradingSystemControlPanel />
+
+<StockPredictionPanel
+  data={
+    stockPredictionDashboard
+  }
+  errorMessage={
+    stockPredictionErrorMessage
+  }
 />
+
+<ShadowSignalPanel
+  data={
+    shadowSignalDashboard
+  }
+  errorMessage={
+    shadowSignalErrorMessage
+  }
+/>
+
+<EntryThresholdGovernancePanel
+  data={
+    entryThresholdGovernance
+  }
+  errorMessage={
+    entryThresholdErrorMessage
+  }
+/>
+
 
 <PaperPortfolioPanel
   data={paperAccount}
   errorMessage={
     paperAccountErrorMessage
+  }
+/>
+
+<DailyPerformancePanel
+  data={dailyPerformance}
+  errorMessage={
+    dailyPerformanceErrorMessage
   }
 />
 

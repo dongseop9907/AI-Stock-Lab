@@ -1,107 +1,157 @@
-param(
-  [string]$BaseUrl =
-    "http://localhost:3000",
-
-  [switch]$AutoOrder,
-
-  [ValidateRange(1, 5)]
-  [int]$MaxOrders = 1,
-
-  [string]$StartTime =
-    "09:05",
-
-  [string]$EndTime =
-    "15:15",
-
-  [string]$Secret = ""
+﻿param(
+  [string]$BaseUrl = "http://localhost:3000"
 )
 
 $ErrorActionPreference = "Stop"
 
+$projectPath = (
+  Resolve-Path (
+    Join-Path $PSScriptRoot ".."
+  )
+).Path
+
+$logDirectory =
+  Join-Path $projectPath "logs"
+
+if (-not (Test-Path $logDirectory)) {
+  New-Item `
+    -ItemType Directory `
+    -Force `
+    -Path $logDirectory |
+    Out-Null
+}
+
+$logPath =
+  Join-Path `
+    $logDirectory `
+    (
+      "trading-automation-" +
+      (Get-Date -Format "yyyy-MM-dd") +
+      ".log"
+    )
+
+function Write-AutomationLog {
+  param(
+    [string]$Message
+  )
+
+  $line =
+    "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $Message"
+
+  Write-Host $line
+
+  $line |
+    Out-File `
+      -FilePath $logPath `
+      -Append `
+      -Encoding utf8
+}
+
+function Get-EnvironmentValue {
+  param(
+    [string]$Name
+  )
+
+  $environmentPath =
+    Join-Path `
+      $projectPath `
+      ".env.local"
+
+  if (-not (Test-Path $environmentPath)) {
+    return ""
+  }
+
+  $matchingLine =
+    Get-Content $environmentPath |
+      Where-Object {
+        $_ -match "^\s*$Name\s*="
+      } |
+      Select-Object -Last 1
+
+  if (-not $matchingLine) {
+    return ""
+  }
+
+  $value =
+    $matchingLine `
+      -replace "^\s*$Name\s*=\s*", ""
+
+  return $value.Trim().Trim('"').Trim("'")
+}
+
 try {
-  $koreaTimeZone =
-    [System.TimeZoneInfo]::
-      FindSystemTimeZoneById(
-        "Korea Standard Time"
-      )
-
-  $now =
-    [System.TimeZoneInfo]::
-      ConvertTime(
-        [DateTimeOffset]::UtcNow,
-        $koreaTimeZone
-      )
+  $secret =
+    Get-EnvironmentValue `
+      "TRADING_AUTOMATION_SECRET"
 
   if (
-    $now.DayOfWeek -eq
-      [DayOfWeek]::Saturday -or
-    $now.DayOfWeek -eq
-      [DayOfWeek]::Sunday
-  ) {
-    Write-Host (
-      "주말이므로 실행하지 않습니다: " +
-      $now.ToString(
-        "yyyy-MM-dd HH:mm:ss"
-      )
+    [string]::IsNullOrWhiteSpace(
+      $secret
     )
-
-    exit 0
+  ) {
+    throw "TRADING_AUTOMATION_SECRET is not configured"
   }
 
-  $start =
-    [TimeSpan]::Parse(
-      $StartTime
-    )
+  $headers = @{
+    "x-automation-secret" =
+      $secret
+  }
 
-  $end =
-    [TimeSpan]::Parse(
-      $EndTime
-    )
+  Write-AutomationLog `
+    "Reading trading system control"
+
+  $controlResponse =
+    Invoke-RestMethod `
+      -Method Get `
+      -Uri (
+        "$BaseUrl/api/trading/system/control"
+      ) `
+      -TimeoutSec 30
 
   if (
-    $now.TimeOfDay -lt
-      $start -or
-    $now.TimeOfDay -gt
-      $end
+    $controlResponse.ok -ne
+    $true
   ) {
-    Write-Host (
-      "설정된 운영 시간이 아닙니다: " +
-      $now.ToString(
-        "yyyy-MM-dd HH:mm:ss"
-      )
-    )
-
-    exit 0
+    throw "Trading system control request failed"
   }
 
-  $body = @{
+  $control =
+    $controlResponse.control
+
+  Write-AutomationLog (
+    "Control state: " +
+    "automationEnabled=" +
+    $control.automationEnabled +
+    ", paperOrderEnabled=" +
+    $control.paperOrderEnabled +
+    ", emergencyStop=" +
+    $control.emergencyStop +
+    ", maxOrdersPerCycle=" +
+    $control.maxOrdersPerCycle
+  )
+
+  $requestBody = @{
     triggerType =
       "SCHEDULED"
 
     includeMarketSync =
       $true
 
+    # Request automatic paper orders.
+    # The database safety control makes the final decision.
     autoOrder =
-      [bool]$AutoOrder
+      $true
 
+    # The server applies the smaller value between
+    # this request and maxOrdersPerCycle.
     maxOrders =
-      $MaxOrders
+      5
   } |
     ConvertTo-Json `
       -Compress
 
-  $headers = @{}
-
-  if (
-    -not [string]::
-      IsNullOrWhiteSpace(
-        $Secret
-      )
-  ) {
-    $headers[
-      "x-automation-secret"
-    ] = $Secret
-  }
+  Write-AutomationLog `
+    "Starting scheduled trading automation"
 
   $response =
     Invoke-RestMethod `
@@ -114,26 +164,106 @@ try {
       ) `
       -Headers $headers `
       -Body (
-        [System.Text.Encoding]::
-          UTF8.GetBytes(
-            $body
-          )
-      )
+        [System.Text.Encoding]::UTF8.GetBytes(
+          $requestBody
+        )
+      ) `
+      -TimeoutSec 240
 
-  $response |
-    ConvertTo-Json `
-      -Depth 30
+  $safeReason = ""
+
+if ($response.skipped -eq $true) {
+  if (
+    $response.control.emergencyStop -eq
+    $true
+  ) {
+    $safeReason =
+      "Emergency stop is active"
+  }
+  elseif (
+    $response.control.automationEnabled -eq
+    $false
+  ) {
+    $safeReason =
+      "Automation is paused"
+  }
+  else {
+    $safeReason =
+      "Automation was skipped"
+  }
+}
+
+Write-AutomationLog (
+  "Automation result: " +
+  "ok=" +
+  $response.ok +
+  ", skipped=" +
+  $response.skipped +
+  ", status=" +
+  $response.status +
+  ", reason=" +
+  $safeReason
+)
 
   if (
-    $response.status -ne
-      "SUCCESS"
+    $response.skipped -eq
+    $true
   ) {
+    Write-AutomationLog (
+  "Automation skipped safely: " +
+  $safeReason
+)
+
+    exit 0
+  }
+
+  if (
+    $response.status -eq
+    "SUCCESS"
+  ) {
+    Write-AutomationLog `
+      "Automation completed successfully"
+
+    exit 0
+  }
+
+  if (
+    $response.status -eq
+      "PARTIAL_FAILURE"
+  ) {
+    Write-AutomationLog `
+      "Automation completed with partial failures"
+
+    exit 1
+  }
+
+  if (
+    $response.status -eq
+    "FAILED"
+  ) {
+    Write-AutomationLog `
+      "Automation failed"
+
+    exit 1
+  }
+
+  if (
+    $response.ok -ne
+    $true
+  ) {
+    Write-AutomationLog `
+      "Automation returned an unsuccessful result"
+
     exit 1
   }
 
   exit 0
 }
 catch {
-  Write-Error $_.Exception.Message
+  Write-AutomationLog (
+    "Automation script failed: " +
+    $_.Exception.Message
+  )
+
   exit 1
 }

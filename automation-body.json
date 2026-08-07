@@ -1,1 +1,1 @@
-{"triggerType":"MANUAL","autoOrder":true,"includeMarketSync":true,"maxOrders":1}
+{"triggerType":"MANUAL","autoOrder":false,"includeMarketSync":true,"maxOrders":1}

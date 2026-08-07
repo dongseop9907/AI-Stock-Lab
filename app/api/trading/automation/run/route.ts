@@ -1,9 +1,22 @@
 import { NextResponse } from "next/server";
-
+import { getActiveEntryThreshold } from "@/lib/trading/get-active-entry-threshold";
+import { getTradingSystemControl } from "@/lib/trading/get-trading-system-control";
+import { notifyAutomationRecovery } from "@/lib/notifications/notify-automation-recovery";
+import { notifyAutomationFailure } from "@/lib/notifications/notify-automation-failure";
 import { createSupabaseServerClient } from "@/lib/supabase";
+import { bindMarketRegimeCausalArtifactV711 } from "@/lib/market/bind-market-regime-causal-artifact-v7-11";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+type TriggerType =
+  | "MANUAL"
+  | "SCHEDULED";
+
+type AutomationRunStatus =
+  | "SUCCESS"
+  | "PARTIAL_FAILURE"
+  | "FAILED";
 
 interface AutomationRequest {
   triggerType?: unknown;
@@ -13,22 +26,32 @@ interface AutomationRequest {
   secret?: unknown;
 }
 
-interface AutomationStepResult {
-  name: string;
-  path: string;
-  ok: boolean;
-  statusCode: number;
-  startedAt: string;
-  finishedAt: string;
-  payload: unknown;
-  error: string | null;
-}
-
 interface StepDefinition {
   name: string;
   path: string;
   body: Record<string, unknown>;
   critical: boolean;
+}
+
+interface AutomationStepResult {
+  name: string;
+  path: string;
+
+  ok: boolean;
+  statusCode: number;
+
+  startedAt: string;
+  finishedAt: string;
+
+  payload: unknown;
+  error: string | null;
+}
+
+interface TelegramNotificationResult {
+  sent: boolean;
+  suppressed: boolean;
+  messageId: number | null;
+  reason: string | null;
 }
 
 function clampMaxOrders(
@@ -58,23 +81,101 @@ function parseBoolean(
     : fallback;
 }
 
+function isLocalRequest(
+  request: Request,
+): boolean {
+  try {
+    const hostname =
+      new URL(request.url)
+        .hostname
+        .toLowerCase();
+
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1"
+    );
+  } catch {
+    return false;
+  }
+}
+
+function normalizeInternalPath(
+  value: string,
+): string {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  /*
+   * 외부 URL이 들어가는 것을 막고
+   * 현재 Next.js 서버 내부 API만 호출한다.
+   */
+  if (
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://")
+  ) {
+    throw new Error(
+      "MARKET_SYNC_API_PATH는 /api/... 형태의 내부 경로여야 합니다.",
+    );
+  }
+
+  return trimmed.startsWith("/")
+    ? trimmed
+    : `/${trimmed}`;
+}
+
+async function readResponsePayload(
+  response: Response,
+): Promise<unknown> {
+  const responseText =
+    await response.text();
+
+  if (!responseText.trim()) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    return {
+      message: responseText,
+    };
+  }
+}
+
 async function executeStep(
   origin: string,
   definition: StepDefinition,
+  automationSecret: string | null,
 ): Promise<AutomationStepResult> {
   const startedAt =
     new Date().toISOString();
 
   try {
+    const headers:
+      Record<string, string> = {
+        "Content-Type":
+          "application/json; charset=utf-8",
+      };
+
+    /*
+     * 내부 단계 API도 비밀키를 요구할 수 있으므로
+     * 설정돼 있으면 함께 전달한다.
+     */
+    if (automationSecret) {
+      headers[
+        "x-automation-secret"
+      ] = automationSecret;
+    }
+
     const response = await fetch(
       `${origin}${definition.path}`,
       {
         method: "POST",
-
-        headers: {
-          "Content-Type":
-            "application/json; charset=utf-8",
-        },
+        headers,
 
         body: JSON.stringify(
           definition.body,
@@ -84,22 +185,21 @@ async function executeStep(
       },
     );
 
-    const payload = await response
-      .json()
-      .catch(async () => ({
-        message:
-          await response.text().catch(
-            () => "",
-          ),
-      }));
+    const payload =
+      await readResponsePayload(
+        response,
+      );
 
     const payloadRecord =
       payload &&
-      typeof payload === "object"
-        ? payload as Record<
-            string,
-            unknown
-          >
+      typeof payload === "object" &&
+      !Array.isArray(payload)
+        ? (
+            payload as Record<
+              string,
+              unknown
+            >
+          )
         : {};
 
     const ok =
@@ -109,6 +209,7 @@ async function executeStep(
     return {
       name: definition.name,
       path: definition.path,
+
       ok,
       statusCode:
         response.status,
@@ -130,6 +231,7 @@ async function executeStep(
     return {
       name: definition.name,
       path: definition.path,
+
       ok: false,
       statusCode: 0,
 
@@ -142,7 +244,7 @@ async function executeStep(
       error:
         error instanceof Error
           ? error.message
-          : "자동 운영 단계 실행 실패",
+          : "자동 운영 단계 실행 중 오류가 발생했습니다.",
     };
   }
 }
@@ -153,82 +255,182 @@ export async function POST(
   const supabase =
     createSupabaseServerClient();
 
-  let runId: string | null = null;
+  let runId: string | null =
+    null;
+
+  let runStartedAt =
+    new Date().toISOString();
+
+  let resolvedTriggerType:
+    TriggerType =
+    "MANUAL";
+
+    
 
   try {
     const body =
       (await request
         .json()
-        .catch(() => ({}))) as AutomationRequest;
+        .catch(
+          () => ({}),
+        )) as AutomationRequest;
 
-    const triggerType =
-      body.triggerType === "SCHEDULED"
+    const triggerType:
+      TriggerType =
+      body.triggerType ===
+      "SCHEDULED"
         ? "SCHEDULED"
         : "MANUAL";
 
-    /*
-     * 개발 환경에서는 대시보드 수동 실행을 허용하고,
-     * 배포 환경에서는 비밀키를 필수로 사용한다.
-     */
-    if (
-      process.env.NODE_ENV ===
-      "production"
-    ) {
-      const expectedSecret =
-        process.env
-          .TRADING_AUTOMATION_SECRET;
+    resolvedTriggerType =
+      triggerType;
 
-      const providedSecret =
-        request.headers.get(
+    const expectedSecret =
+      process.env
+        .TRADING_AUTOMATION_SECRET
+        ?.trim() || "";
+
+    const providedSecret =
+      request.headers
+        .get(
           "x-automation-secret",
-        ) ??
-        String(
-          body.secret ?? "",
-        );
+        )
+        ?.trim() ||
+      String(
+        body.secret ?? "",
+      ).trim();
 
-      if (
+    /*
+     * production 환경에서도 localhost의 수동 실행은 허용한다.
+     *
+     * 다음 경우에는 비밀키가 필수다.
+     * 1. 예약 실행
+     * 2. localhost가 아닌 외부 요청
+     */
+    const requiresAuthentication =
+      process.env.NODE_ENV ===
+        "production" &&
+      (
+        triggerType ===
+          "SCHEDULED" ||
+        !isLocalRequest(request)
+      );
+
+    if (
+      requiresAuthentication &&
+      (
         !expectedSecret ||
         providedSecret !==
           expectedSecret
-      ) {
-        return NextResponse.json(
-          {
-            ok: false,
-            message:
-              "자동 운영 실행 권한이 없습니다.",
-          },
-          {
-            status: 401,
-          },
-        );
-      }
+      )
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "자동 운영 실행 권한이 없습니다.",
+        },
+        {
+          status: 401,
+        },
+      );
     }
 
-    const includeMarketSync =
-      parseBoolean(
-        body.includeMarketSync,
-        true,
-      );
+    const control =
+  await getTradingSystemControl();
 
-    /*
-     * 처음에는 반드시 false로 실행한다.
-     * 신호가 정상인지 확인한 뒤 true로 바꾼다.
-     */
-    const autoOrder =
-      parseBoolean(
-        body.autoOrder,
+  let activeEntryThreshold =
+  0.62;
+
+try {
+  activeEntryThreshold =
+    await getActiveEntryThreshold();
+} catch (error) {
+  console.warn(
+    "활성 진입 기준점수 조회 실패, 기본값 0.62를 사용합니다.",
+    error,
+  );
+}
+
+if (
+  control.emergencyStop ||
+  !control.automationEnabled
+) {
+  return NextResponse.json({
+    ok: true,
+    skipped: true,
+    status: "PAUSED",
+
+    reason:
+      control.emergencyStop
+        ? (
+            control.emergencyReason ??
+            "비상정지 상태입니다."
+          )
+        : "자동 운영이 일시정지 상태입니다.",
+
+    control: {
+      automationEnabled:
+        control.automationEnabled,
+
+      paperOrderEnabled:
+        control.paperOrderEnabled,
+
+      realOrderEnabled:
         false,
-      );
 
-    const maxOrders =
-      clampMaxOrders(
-        body.maxOrders,
-      );
+      emergencyStop:
+        control.emergencyStop,
 
-    const marketSyncPath =
+      maxOrdersPerCycle:
+        control.maxOrdersPerCycle,
+    },
+  });
+}
+
+const includeMarketSync =
+  parseBoolean(
+    body.includeMarketSync,
+    true,
+  );
+
+const requestedAutoOrder =
+  parseBoolean(
+    body.autoOrder,
+    false,
+  );
+
+/*
+ * 요청에서 autoOrder=true를 보내더라도
+ * DB 안전설정이 허용해야 실제로 활성화된다.
+ */
+const autoOrder =
+  requestedAutoOrder &&
+  control.paperOrderEnabled;
+
+/*
+ * 요청값과 시스템 제한값 중
+ * 더 작은 값을 적용한다.
+ */
+const maxOrders =
+  Math.min(
+    clampMaxOrders(
+      body.maxOrders,
+    ),
+    control.maxOrdersPerCycle,
+  );
+
+    const rawMarketSyncPath =
       process.env
         .MARKET_SYNC_API_PATH
-        ?.trim();
+        ?.trim() || "";
+
+    const marketSyncPath =
+      rawMarketSyncPath
+        ? normalizeInternalPath(
+            rawMarketSyncPath,
+          )
+        : "";
 
     if (
       includeMarketSync &&
@@ -247,17 +449,19 @@ export async function POST(
     }
 
     /*
-     * 15분 이내 실행 중인 사이클이 있다면
-     * 중복 실행을 차단한다.
+     * 최근 15분 이내 RUNNING 상태가 있으면
+     * 자동 운영 중복 실행을 차단한다.
      */
     const runningCutoff =
       new Date(
         Date.now() -
-          15 * 60 * 1000,
+          15 *
+            60 *
+            1000,
       ).toISOString();
 
     const {
-      data: running,
+      data: runningRun,
       error: runningError,
     } = await supabase
       .from(
@@ -267,10 +471,19 @@ export async function POST(
         id,
         started_at
       `)
-      .eq("status", "RUNNING")
+      .eq(
+        "status",
+        "RUNNING",
+      )
       .gte(
         "started_at",
         runningCutoff,
+      )
+      .order(
+        "started_at",
+        {
+          ascending: false,
+        },
       )
       .limit(1)
       .maybeSingle();
@@ -281,13 +494,21 @@ export async function POST(
       );
     }
 
-    if (running) {
+    if (runningRun) {
       return NextResponse.json(
         {
           ok: false,
+
           message:
             "이미 자동 운영 사이클이 실행 중입니다.",
-          running,
+
+          running: {
+            id:
+              runningRun.id,
+
+            startedAt:
+              runningRun.started_at,
+          },
         },
         {
           status: 409,
@@ -295,6 +516,9 @@ export async function POST(
       );
     }
 
+    /*
+     * 자동 운영 시작 기록 생성
+     */
     const {
       data: createdRun,
       error: createError,
@@ -306,15 +530,27 @@ export async function POST(
         trigger_type:
           triggerType,
 
-        status: "RUNNING",
+        status:
+          "RUNNING",
+
+        steps: [],
 
         summary: {
           includeMarketSync,
           autoOrder,
           maxOrders,
+
+          requestedSteps: 0,
+          completedSteps: 0,
+          successCount: 0,
+          failureCount: 0,
+          stoppedEarly: false,
         },
       })
-      .select("id")
+      .select(`
+        id,
+        started_at
+      `)
       .single();
 
     if (createError) {
@@ -323,25 +559,171 @@ export async function POST(
       );
     }
 
-    runId = createdRun.id;
+    runId =
+      createdRun.id;
 
-    const steps: StepDefinition[] =
-      [];
+    runStartedAt =
+      createdRun.started_at;
 
+    const steps:
+      StepDefinition[] = [];
+
+    /*
+     * 1. 시세 동기화
+     */
     if (
       includeMarketSync &&
       marketSyncPath
     ) {
       steps.push({
-        name: "시세 동기화",
-        path: marketSyncPath,
+        name:
+          "시세 동기화",
+
+        path:
+          marketSyncPath,
+
         body: {},
+
         critical: true,
       });
     }
 
+    /*
+     * 2. DART 공시 수집
+     *
+     * 공시 API 장애가 손절·포지션 관리까지
+     * 중단시키지 않도록 비필수 단계로 둔다.
+     */
+    /*
+     * 2. Market Regime SHADOW capture
+     *
+     * ?쒖꽭 ?숆린??吏곹썑 ?쒖옣 ?곹깭瑜???ν븳??
+     * Forward 寃利??꾩슜?대ŉ ?ㅼ젣 二쇰Ц?먮뒗 諛섏쁺?섏? ?딅뒗??
+     * ?ㅽ뙣?대룄 ?먯젅/?ъ???愿由ш? 以묐떒?섏? ?딅룄濡?
+     * non-critical ?④퀎濡??붾떎.
+     */
     steps.push({
-      name: "진입 신호 생성",
+      name:
+        "Market Regime SHADOW Capture",
+
+      path:
+        "/api/market/regime/capture",
+
+      body: {},
+
+      critical: false,
+    });
+    /*
+     * Market Regime v7.7 Data Freshness Guard
+     *
+     * Captures KOSPI/KOSDAQ/active-stock daily-bar freshness
+     * immediately before the v7 shadow comparator runs.
+     *
+     * The comparator independently reads the same guard and can
+     * invalidate stale/misaligned SHADOW comparisons.
+     *
+     * Production orders are not changed.
+     */
+    steps.push({
+      name:
+        "Market Regime v7.7 Data Freshness Guard",
+
+      path:
+        "/api/market/regime/v7/freshness/capture",
+
+      body: {},
+
+      critical: false,
+    });
+    /*
+     * Market Regime v7.10 Data Quality Gate
+     *
+     * Requires both fresh market data and a current v7.9 integrity
+     * scan with zero effective errors before forward-shadow evidence
+     * can be accepted.
+     *
+     * Production orders are not changed.
+     */
+    steps.push({
+      name:
+        "Market Regime v7.10 Data Quality Gate",
+
+      path:
+        "/api/market/regime/v7/quality-gate/capture",
+
+      body: {},
+
+      critical: false,
+    });
+    /*
+     * Market Regime v7.3 Forward Shadow Comparator
+     *
+     * Compares the existing v6 BEAR decision with the
+     * v7 BLOCK_BREADTH_OR_HIGH_VOL candidate.
+     *
+     * Observation only:
+     * - no signal qualification changes
+     * - no order blocking
+     * - no production decision changes
+     */
+    steps.push({
+      name:
+        "Market Regime v7.3 Shadow Comparator",
+
+      path:
+        "/api/market/regime/v7/shadow/capture",
+
+      body: {},
+
+      critical: false,
+    });
+    steps.push({
+      name:
+        "DART 공시 수집",
+
+      path:
+        "/api/market/disclosures/sync",
+
+      body: {
+        lookbackDays: 3,
+        maxPages: 10,
+      },
+
+      critical: false,
+    });
+
+    /*
+     * 3. AI 종목 예측 생성
+     *
+     * 최신 시세와 최근 공시를 결합해
+     * 종목별 상승 후보점수를 갱신한다.
+     */
+    steps.push({
+      name:
+        "AI 종목 예측 생성",
+
+      path:
+        "/api/predictions/generate",
+
+      body: {
+        disclosureLookbackDays: 14,
+        candidateThreshold:
+          activeEntryThreshold,
+      },
+
+      critical: false,
+    });
+
+    /*
+     * 4. 진입 신호 생성
+     *
+     * autoOrder가 true면
+     * 위험관리 검증을 통과한 주문까지 생성한다.
+     */
+    steps.push({
+      name:
+        "진입 신호 생성",
+
       path:
         "/api/signals/entry/generate",
 
@@ -353,13 +735,94 @@ export async function POST(
       critical: true,
     });
 
+
+        /*
+      * 매수 여부와 상관없이 방금 생성된
+      * 진입 신호를 그림자 추적 대상으로 등록한다.
+      */
+    steps.push({
+      name:
+        "그림자 신호 등록",
+
+      path:
+        "/api/signals/shadow/capture",
+
+      body: {
+        lookbackHours: 72,
+        limit: 500,
+      },
+
+      critical: false,
+    });
     /*
-     * 모의주문 생성이 켜진 경우에만
-     * 승인 주문을 자동 체결한다.
+     * Market Regime v7.4 Forward Outcome Attribution
+     *
+     * Link only fresh GENERATED shadow signals that were created
+     * after the current/latest eligible v7.3 comparison.
+     *
+     * Then re-evaluate all pending/partial regime outcomes against
+     * whatever future daily bars are currently available.
+     *
+     * Observation only. No production order logic is changed.
+     */
+    steps.push({
+      name:
+        "Market Regime v7.4 Outcome Link",
+
+      path:
+        "/api/market/regime/v7/outcomes/link",
+
+      body: {
+        automationRunId:
+          runId,
+      },
+
+      critical: false,
+    });
+
+    steps.push({
+      name:
+        "Market Regime v7.4 Outcome Evaluate",
+
+      path:
+        "/api/market/regime/v7/outcomes/evaluate",
+
+      body: {
+        limit: 300,
+      },
+
+      critical: false,
+    });
+    /*
+     * Market Regime v7.6 Governance Review
+     *
+     * Captures a recommendation-only governance snapshot after
+     * forward outcomes have been evaluated.
+     *
+     * Duplicate evidence fingerprints are suppressed.
+     * No production promotion or order blocking is performed here.
+     */
+    steps.push({
+      name:
+        "Market Regime v7.6 Governance Review",
+
+      path:
+        "/api/market/regime/v7/governance/capture",
+
+      body: {},
+
+      critical: false,
+    });
+
+
+    /*
+     * 3. 승인 주문 체결
      */
     if (autoOrder) {
       steps.push({
-        name: "승인 주문 체결",
+        name:
+          "승인 주문 체결",
+
         path:
           "/api/orders/paper/execute-approved",
 
@@ -371,56 +834,210 @@ export async function POST(
       });
     }
 
+    /*
+     * 4. 보유 포지션 관리
+     * 5. 종료 거래 평가
+     * 6. 모델 지표 갱신
+     */
     steps.push(
       {
-        name: "트레일링 손절 갱신",
+        name:
+          "트레일링 손절 갱신",
+
         path:
           "/api/trading/trailing-stop/update",
 
         body: {},
+
         critical: false,
       },
       {
-        name: "손절 조건 검사",
+        name:
+          "손절 조건 검사",
+
         path:
           "/api/trading/stop-loss/check",
 
         body: {},
+
         critical: false,
       },
       {
-        name: "종료 거래 평가",
+        name:
+          "종료 거래 평가",
+
         path:
           "/api/trading/trades/evaluate",
 
         body: {},
+
         critical: false,
       },
       {
-        name: "모델 지표 갱신",
+        name:
+          "그림자 신호 평가",
+
+        path:
+          "/api/signals/shadow/evaluate",
+
+        body: {
+          limit: 300,
+        },
+
+        critical: false,
+      },
+      {
+        name:
+          "모델 지표 갱신",
+
         path:
           "/api/models/metrics/refresh",
 
         body: {},
+
         critical: false,
       },
     );
 
+    /*
+     * 최초 summary에 실제 요청 단계 수 반영
+     */
+    const {
+      error:
+        initialSummaryError,
+    } = await supabase
+      .from(
+        "trading_automation_runs",
+      )
+      .update({
+        summary: {
+          includeMarketSync,
+          autoOrder,
+          maxOrders,
+
+          requestedSteps:
+            steps.length,
+
+          completedSteps: 0,
+          successCount: 0,
+          failureCount: 0,
+          stoppedEarly: false,
+        },
+      })
+      .eq(
+        "id",
+        runId,
+      );
+
+    if (initialSummaryError) {
+      throw new Error(
+        `자동 운영 초기 상태 저장 실패: ${initialSummaryError.message}`,
+      );
+    }
+
     const origin =
-      new URL(request.url).origin;
+      new URL(
+        request.url,
+      ).origin;
+
+    const internalSecret =
+      expectedSecret || null;
 
     const results:
-      AutomationStepResult[] = [];
+      AutomationStepResult[] =
+      [];
 
+    /*
+     * 모든 단계를 순서대로 실행한다.
+     *
+     * critical 단계가 실패하면
+     * 뒤의 단계는 실행하지 않는다.
+     */
     for (const step of steps) {
       const result =
         await executeStep(
           origin,
           step,
+          internalSecret,
         );
 
-      results.push(result);
+      results.push(
+        result,
+      );
 
+      /*
+       * v7.11 causal cohort binding.
+       *
+       * Observation-only:
+       * binding errors never alter production order/risk behavior.
+       * The v7.11 outcome linker fails closed when no valid run-bound
+       * batch/event exists.
+       */
+      try {
+        const causalBindingResult =
+          await bindMarketRegimeCausalArtifactV711({
+            automationRunId:
+              runId!,
+
+            automationStartedAt:
+              runStartedAt,
+
+            stepPath:
+              result.path,
+
+            stepOk:
+              result.ok,
+
+            payload:
+              result.payload,
+          });
+
+        if (
+          causalBindingResult.relevant &&
+          result.payload &&
+          typeof result.payload === "object" &&
+          !Array.isArray(result.payload)
+        ) {
+          (
+            result.payload as Record<
+              string,
+              unknown
+            >
+          ).causalBinding =
+            causalBindingResult;
+        }
+      } catch (
+        causalBindingError
+      ) {
+        console.error(
+          "v7.11 causal binding failed:",
+          causalBindingError,
+        );
+
+        if (
+          result.payload &&
+          typeof result.payload === "object" &&
+          !Array.isArray(result.payload)
+        ) {
+          (
+            result.payload as Record<
+              string,
+              unknown
+            >
+          ).causalBinding = {
+            relevant:
+              true,
+
+            bound:
+              false,
+
+            error:
+              causalBindingError instanceof Error
+                ? causalBindingError.message
+                : "UNKNOWN_CAUSAL_BINDING_ERROR",
+          };
+        }
+      }
       if (
         !result.ok &&
         step.critical
@@ -431,21 +1048,38 @@ export async function POST(
 
     const successCount =
       results.filter(
-        (result) => result.ok,
+        (result) =>
+          result.ok,
       ).length;
 
     const failureCount =
-      results.length -
-      successCount;
+      results.filter(
+        (result) =>
+          !result.ok,
+      ).length;
 
-    const finalStatus =
+    const stoppedEarly =
+      results.length <
+      steps.length;
+
+    let finalStatus:
+      AutomationRunStatus;
+
+    if (
       failureCount === 0 &&
-      results.length ===
-        steps.length
-        ? "SUCCESS"
-        : successCount > 0
-          ? "PARTIAL_FAILURE"
-          : "FAILED";
+      !stoppedEarly
+    ) {
+      finalStatus =
+        "SUCCESS";
+    } else if (
+      successCount > 0
+    ) {
+      finalStatus =
+        "PARTIAL_FAILURE";
+    } else {
+      finalStatus =
+        "FAILED";
+    }
 
     const finishedAt =
       new Date().toISOString();
@@ -464,10 +1098,18 @@ export async function POST(
       successCount,
       failureCount,
 
-      stoppedEarly:
-        results.length <
-        steps.length,
+      stoppedEarly,
     };
+
+    const firstFailure =
+      results.find(
+        (result) =>
+          !result.ok,
+      );
+
+    const errorMessage =
+      firstFailure?.error ??
+      null;
 
     const {
       error: updateError,
@@ -476,13 +1118,24 @@ export async function POST(
         "trading_automation_runs",
       )
       .update({
-        status: finalStatus,
+        status:
+          finalStatus,
+
         finished_at:
           finishedAt,
-        steps: results,
+
+        steps:
+          results,
+
         summary,
+
+        error_message:
+          errorMessage,
       })
-      .eq("id", runId);
+      .eq(
+        "id",
+        runId,
+      );
 
     if (updateError) {
       throw new Error(
@@ -490,43 +1143,202 @@ export async function POST(
       );
     }
 
-    return NextResponse.json({
-      ok:
-        finalStatus ===
-        "SUCCESS",
+    /*
+     * 예약 실행이 실패했을 때
+     * 텔레그램 긴급 알림 전송
+     */
+    let telegramNotification:
+      TelegramNotificationResult |
+      null = null;
+      let recoveryNotification:
+  | Awaited<
+      ReturnType<
+        typeof notifyAutomationRecovery
+      >
+    >
+  | null = null;
 
-      runId,
-      status: finalStatus,
-      summary,
-      steps: results,
-    });
+    if (
+      finalStatus ===
+        "FAILED" ||
+      finalStatus ===
+        "PARTIAL_FAILURE"
+    ) {
+      try {
+        telegramNotification =
+          await notifyAutomationFailure({
+             runId: runId!,
+            triggerType,
+            status:
+              finalStatus,
+
+            startedAt:
+              runStartedAt,
+
+            successCount,
+            failureCount,
+
+            steps:
+              results.map(
+                (result) => ({
+                  name:
+                    result.name,
+
+                  ok:
+                    result.ok,
+
+                  statusCode:
+                    result.statusCode,
+
+                  error:
+                    result.error,
+                }),
+              ),
+
+            errorMessage,
+
+            cooldownMinutes: 30,
+          });
+      } catch (
+        notificationError
+      ) {
+        telegramNotification = {
+          sent: false,
+          suppressed: false,
+          messageId: null,
+
+          reason:
+            notificationError instanceof
+            Error
+              ? notificationError.message
+              : "TELEGRAM_NOTIFICATION_FAILED",
+        };
+      }
+    }
+
+    if (
+  finalStatus ===
+  "SUCCESS"
+) {
+  try {
+    recoveryNotification =
+      await notifyAutomationRecovery({
+        runId: runId!,
+
+        triggerType,
+
+        status:
+          "SUCCESS",
+
+        startedAt:
+          runStartedAt,
+
+        successCount,
+
+        steps:
+          results.map(
+            (result) => ({
+              name:
+                result.name,
+
+              ok:
+                result.ok,
+            }),
+          ),
+      });
+  } catch (
+    recoveryError
+  ) {
+    recoveryNotification = {
+      sent: false,
+      suppressed: false,
+
+      messageId: null,
+
+      recoveredFailureRunId:
+        null,
+
+      reason:
+        recoveryError instanceof
+        Error
+          ? recoveryError.message
+          : "TELEGRAM_RECOVERY_NOTIFICATION_FAILED",
+    };
+  }
+}
+
+    return NextResponse.json({
+  ok:
+    finalStatus ===
+    "SUCCESS",
+
+  runId,
+  status:
+    finalStatus,
+
+  summary,
+  steps:
+    results,
+
+  telegramNotification,
+  recoveryNotification,
+});
+
   } catch (error) {
     const message =
       error instanceof Error
         ? error.message
         : "자동 운영 사이클 실행 중 오류가 발생했습니다.";
 
-    if (runId) {
-      await supabase
-        .from(
-          "trading_automation_runs",
-        )
-        .update({
-          status: "FAILED",
+    /*
+     * 실행 기록이 생성된 이후 오류가 발생했다면
+     * FAILED 상태로 변경한다.
+     */
+    const failedRunId = runId;
 
-          finished_at:
-            new Date().toISOString(),
+if (failedRunId) {
+  await supabase
+    .from("trading_automation_runs")
+    .update({
+      status: "FAILED",
+      finished_at: new Date().toISOString(),
+      error_message: message,
+    })
+    .eq("id", failedRunId);
 
-          error_message:
-            message,
-        })
-        .eq("id", runId);
-    }
+  try {
+    await notifyAutomationFailure({
+      runId: failedRunId,
+      triggerType: resolvedTriggerType,
+      status: "FAILED",
+      startedAt: runStartedAt,
+      successCount: 0,
+      failureCount: 1,
+
+      steps: [
+        {
+          name: "자동 운영 API",
+          ok: false,
+          statusCode: 500,
+          error: message,
+        },
+      ],
+
+      errorMessage: message,
+      cooldownMinutes: 30,
+    });
+  } catch {
+    // 텔레그램 오류가 원래 오류를 덮지 않도록 무시
+  }
+}
 
     return NextResponse.json(
       {
         ok: false,
         runId,
+        status:
+          "FAILED",
+
         message,
       },
       {
