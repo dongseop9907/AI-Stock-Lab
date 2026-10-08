@@ -11,6 +11,10 @@ import { createSupabaseServerClient } from "@/lib/supabase";
 import { createPaperBuyOrder } from "@/lib/trading/paper-order-service";
 
 import { assertKillSwitchAllows } from "@/lib/trading/kill-switch-guard";
+import {
+  assertDataFreshnessAllows,
+  readCurrentDataFreshnessProductionDecision,
+} from "./data-freshness-production-guard";
 interface GenerateEntrySignalsInput {
   modelId?: string;
   autoOrder?: boolean;
@@ -539,6 +543,27 @@ export async function generateEntrySignals(
 
   const supabase =
     createSupabaseServerClient();
+
+  /* ALPHA_V3_DATA_FRESHNESS_ENTRY_GUARD_V2 */
+  if (
+    input.autoOrder ===
+    true
+  ) {
+    const dataFreshnessEntryDecision =
+      await readCurrentDataFreshnessProductionDecision(
+        supabase,
+        "PAPER_BUY_CREATE",
+      );
+
+    if (
+      !dataFreshnessEntryDecision.allowed
+    ) {
+      input = {
+        ...input,
+        autoOrder: false,
+      };
+    }
+  }
 
   const model =
     await resolveEntryModel(

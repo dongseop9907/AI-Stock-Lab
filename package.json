@@ -9,7 +9,21 @@
     "lint": "eslint .",
     "automation:scheduler": "tsx --env-file=.env.local scripts/alpha-v3-automation-cycle-scheduler.ts",
     "automation:scheduler:once": "tsx --env-file=.env.local scripts/alpha-v3-automation-cycle-scheduler.ts --once",
-    "automation:scheduler:test": "tsx scripts/alpha-v3-automation-cycle-scheduler-contract-test.ts"
+    "automation:scheduler:test": "tsx scripts/alpha-v3-automation-cycle-scheduler-contract-test.ts",
+    "market-data:maintenance:scheduler": "tsx --env-file=.env.local scripts/alpha-v3-market-data-maintenance-supervisor-v4.ts",
+    "market-data:maintenance:once": "tsx --env-file=.env.local scripts/alpha-v3-market-data-maintenance-scheduler.ts --once",
+    "market-data:maintenance:test": "tsx scripts/alpha-v3-market-data-maintenance-scheduler-contract-test.ts",
+    "market-data:maintenance:supervisor:once": "tsx --env-file=.env.local scripts/alpha-v3-market-data-maintenance-supervisor-v4.ts --once-supervisor",
+    "market-data:maintenance:supervisor:test": "tsx scripts/alpha-v3-market-data-maintenance-supervisor-v4-contract-test.ts",
+    "forward-oos:produce": "tsx --env-file=.env.local scripts/alpha-v3-true-forward-top1-producer-v1.ts",
+    "forward-oos:collect": "tsx --env-file=.env.local scripts/alpha-v3-true-entry-forward-oos-collector-v1.ts",
+    "forward-oos:evaluate": "tsx scripts/alpha-v3-true-forward-oos-evaluator-v1.ts",
+    "forward-oos:test": "tsx scripts/alpha-v3-true-forward-oos-pipeline-v1-contract-test.ts",
+    "risk:gap-slippage:test": "tsx scripts/alpha-v3-gap-slippage-risk-v1-contract-test.ts",
+    "risk:gap-slippage:probe": "node scripts/alpha-v3-gap-slippage-risk-v1-execution-surface-probe.cjs",
+    "risk:gap-slippage:binding-probe": "node scripts/alpha-v3-gap-slippage-risk-v1-binding-facts-probe.cjs",
+    "paper-execution-price:test": "tsx scripts/alpha-v3-paper-execution-price-model-v1-contract-test.ts",
+    "risk:gap-slippage:binding:test": "tsx scripts/alpha-v3-gap-slippage-execution-binding-v1-contract-test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "latest",

@@ -4,6 +4,10 @@ import { createPaperBuyOrderWithCommittedRisk } from "@/lib/trading/committed-ri
 import { validateBuyRisk } from "@/lib/trading/risk-manager";
 
 import { assertKillSwitchAllows } from "@/lib/trading/kill-switch-guard";
+import {
+  assertDataFreshnessAllows,
+  readCurrentDataFreshnessProductionDecision,
+} from "./data-freshness-production-guard";
 interface CreatePaperBuyOrderInput {
   stockCode: string;
   proposedStopPrice: number;
@@ -95,6 +99,12 @@ export async function createPaperBuyOrder(
 
   const supabase =
     createSupabaseServerClient();
+
+  /* ALPHA_V3_DATA_FRESHNESS_CREATE_GUARD_V2 */
+  await assertDataFreshnessAllows(
+    supabase,
+    "PAPER_BUY_CREATE",
+  );
 
   /*
    * 계좌/잔액은 클라이언트 입력을 신뢰하지 않고

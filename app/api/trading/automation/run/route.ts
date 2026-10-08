@@ -5,6 +5,9 @@ import { notifyAutomationRecovery } from "@/lib/notifications/notify-automation-
 import { notifyAutomationFailure } from "@/lib/notifications/notify-automation-failure";
 import { createSupabaseServerClient } from "@/lib/supabase";
 import { bindMarketRegimeCausalArtifactV711 } from "@/lib/market/bind-market-regime-causal-artifact-v7-11";
+import {
+  readCurrentDataFreshnessProductionDecision,
+} from "@/lib/trading/data-freshness-production-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -404,11 +407,27 @@ const requestedAutoOrder =
  * 요청에서 autoOrder=true를 보내더라도
  * DB 안전설정이 허용해야 실제로 활성화된다.
  */
-const autoOrder =
-  requestedAutoOrder &&
+/* ALPHA_V3_DATA_FRESHNESS_AUTOMATION_BOUNDARY_V2 */
+  const controlEligibleAutoOrder =
+    requestedAutoOrder &&
   control.automationEnabled &&
   control.paperOrderEnabled &&
   !control.emergencyStop;
+
+  const dataFreshnessAutomationDecision =
+    controlEligibleAutoOrder
+      ? await readCurrentDataFreshnessProductionDecision(
+          supabase,
+          "PAPER_BUY_CREATE",
+        )
+      : null;
+
+  const autoOrder =
+    controlEligibleAutoOrder &&
+    (
+      dataFreshnessAutomationDecision?.allowed ??
+      true
+    );
 
 /*
  * 요청값과 시스템 제한값 중

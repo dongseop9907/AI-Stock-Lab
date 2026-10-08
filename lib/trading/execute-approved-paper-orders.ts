@@ -2,6 +2,10 @@ import { createSupabaseServerClient } from "@/lib/supabase";
 import { executePaperOrder } from "@/lib/trading/execute-paper-order";
 
 import { assertKillSwitchAllows } from "@/lib/trading/kill-switch-guard";
+import {
+  assertDataFreshnessAllows,
+  readCurrentDataFreshnessProductionDecision,
+} from "./data-freshness-production-guard";
 interface ApprovedOrderRecord {
   id: string;
   stock_code: string;
@@ -63,7 +67,12 @@ export async function executeApprovedPaperOrders(
 
   for (const order of orders) {
     try {
-      const execution =
+            /* ALPHA_V3_DATA_FRESHNESS_APPROVED_EXECUTE_GUARD_V2 */
+      await assertDataFreshnessAllows(
+        supabase,
+        "PAPER_BUY_EXECUTE",
+      );
+const execution =
         await executePaperOrder(order.id);
 
       executed += 1;

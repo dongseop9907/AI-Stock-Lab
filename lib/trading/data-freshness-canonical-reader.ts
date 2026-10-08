@@ -139,39 +139,11 @@ type SupabaseResult<T> = {
     } | null;
 };
 
-type QueryChain<T> = {
-  select(
-    columns:
-      string,
-  ): QueryChain<T>;
-
-  order(
-    column:
-      string,
-    options:
-      {
-        ascending:
-          boolean;
-      },
-  ): QueryChain<T>;
-
-  limit(
-    count:
-      number,
-  ): QueryChain<T>;
-
-  maybeSingle():
-    Promise<
-      SupabaseResult<T>
-    >;
-};
-
 export interface DataFreshnessSupabaseLike {
-  from<T = unknown>(
+  from(
     table:
       string,
-  ):
-    QueryChain<T>;
+  ): any;
 }
 
 const FRESHNESS_SELECT = [
@@ -397,7 +369,7 @@ async function readLatestFreshness(
     error,
   } =
     await supabase
-      .from<FreshnessObservationRow>(
+      .from(
         "market_data_freshness_observations",
       )
       .select(
@@ -443,7 +415,7 @@ async function readLatestQualityGate(
     error,
   } =
     await supabase
-      .from<QualityGateObservationRow>(
+      .from(
         "market_data_quality_gate_observations",
       )
       .select(

@@ -53,201 +53,232 @@ const supabase =
     },
   );
 
-const state =
-  await readCanonicalDataFreshnessState(
-    supabase as never,
-  );
-
-const createDecision =
-  evaluateDataFreshnessProductionAction(
-    state,
-    "PAPER_BUY_CREATE",
-  );
-
-const executeDecision =
-  evaluateDataFreshnessProductionAction(
-    state,
-    "PAPER_BUY_EXECUTE",
-  );
-
-const checks = {
-  canonicalVersion:
-    state.version ===
-      "ALPHA_V3_DATA_FRESHNESS_CANONICAL_READER_V1",
-
-  freshnessObserved:
-    Boolean(
-      state.freshnessObservedAt,
-    ),
-
-  qualityObserved:
-    Boolean(
-      state.qualityObservedAt,
-    ),
-
-  expectedMarketDatePresent:
-    Boolean(
-      state.expectedMarketDate,
-    ),
-
-  decisionConsistent:
-    createDecision.allowed ===
-      executeDecision.allowed,
-
-  failClosedIfNotUsable:
-    state.usableForProduction ===
-      true ||
-    (
-      createDecision.allowed ===
-        false &&
-      executeDecision.allowed ===
-        false
-    ),
-};
-
-const failed =
-  Object.entries(checks)
-    .filter(
-      ([, value]) => !value,
-    )
-    .map(
-      ([key]) => key,
+async function main() {
+  const state =
+    await readCanonicalDataFreshnessState(
+      supabase as never,
     );
 
-const report = {
-  status:
-    failed.length === 0
-      ? "ALPHA_V3_DATA_FRESHNESS_CANONICAL_READER_V1_LIVE_VERIFIED"
-      : "ALPHA_V3_DATA_FRESHNESS_CANONICAL_READER_V1_LIVE_REVIEW",
+  const createDecision =
+    evaluateDataFreshnessProductionAction(
+      state,
+      "PAPER_BUY_CREATE",
+    );
 
-  checks,
-  failed,
+  const executeDecision =
+    evaluateDataFreshnessProductionAction(
+      state,
+      "PAPER_BUY_EXECUTE",
+    );
 
-  state,
+  const checks = {
+    canonicalVersion:
+      state.version ===
+        "ALPHA_V3_DATA_FRESHNESS_CANONICAL_READER_V1",
 
-  decisions: {
-    paperBuyCreate: {
-      allowed:
-        createDecision.allowed,
+    freshnessObserved:
+      Boolean(
+        state.freshnessObservedAt,
+      ),
 
-      reason:
-        createDecision.reason,
-    },
+    qualityObserved:
+      Boolean(
+        state.qualityObservedAt,
+      ),
 
-    paperBuyExecute: {
-      allowed:
+    expectedMarketDatePresent:
+      Boolean(
+        state.expectedMarketDate,
+      ),
+
+    decisionConsistent:
+      createDecision.allowed ===
         executeDecision.allowed,
 
-      reason:
-        executeDecision.reason,
-    },
-  },
+    failClosedIfNotUsable:
+      state.usableForProduction ===
+        true ||
+      (
+        createDecision.allowed ===
+          false &&
+        executeDecision.allowed ===
+          false
+      ),
+  };
 
-  safety: {
-    databaseReads:
-      2,
+  const failed =
+    Object.entries(checks)
+      .filter(
+        ([, value]) => !value,
+      )
+      .map(
+        ([key]) => key,
+      );
 
-    databaseWrites:
-      0,
+  const report = {
+    status:
+      failed.length === 0
+        ? "ALPHA_V3_DATA_FRESHNESS_CANONICAL_READER_V1_LIVE_VERIFIED"
+        : "ALPHA_V3_DATA_FRESHNESS_CANONICAL_READER_V1_LIVE_REVIEW",
 
-    ordersCreated:
-      0,
+    checks,
+    failed,
 
-    positionsChanged:
-      0,
-  },
+    state,
 
-  nextGate:
-    failed.length === 0
-      ? "BIND_CANONICAL_FRESHNESS_GUARD_TO_ENTRY_CREATE_AND_FILL_V1"
-      : "REVIEW_CANONICAL_FRESHNESS_LIVE_STATE",
-};
+    decisions: {
+      paperBuyCreate: {
+        allowed:
+          createDecision.allowed,
 
-const logFile =
-  path.resolve(
-    root,
-    "logs/alpha-v3-data-freshness-canonical-reader-v1-live.json",
-  );
-
-fs.mkdirSync(
-  path.dirname(
-    logFile,
-  ),
-  {
-    recursive: true,
-  },
-);
-
-fs.writeFileSync(
-  logFile,
-  JSON.stringify(
-    report,
-    null,
-    2,
-  ) + "\n",
-  "utf8",
-);
-
-console.log(
-  JSON.stringify(
-    {
-      status:
-        report.status,
-
-      checks:
-        report.checks,
-
-      failed:
-        report.failed,
-
-      state: {
-        freshnessStatus:
-          state.freshnessStatus,
-
-        qualityStatus:
-          state.qualityStatus,
-
-        usableForProduction:
-          state.usableForProduction,
-
-        expectedMarketDate:
-          state.expectedMarketDate,
-
-        latestCommonDate:
-          state.latestCommonDate,
-
-        businessWeekdayLag:
-          state.businessWeekdayLag,
-
-        allSourceDatesAligned:
-          state.allSourceDatesAligned,
-
-        freshnessObservedAt:
-          state.freshnessObservedAt,
-
-        qualityObservedAt:
-          state.qualityObservedAt,
+        reason:
+          createDecision.reason,
       },
 
-      decisions:
-        report.decisions,
+      paperBuyExecute: {
+        allowed:
+          executeDecision.allowed,
 
-      safety:
-        report.safety,
-
-      logFile:
-        "logs/alpha-v3-data-freshness-canonical-reader-v1-live.json",
-
-      nextGate:
-        report.nextGate,
+        reason:
+          executeDecision.reason,
+      },
     },
-    null,
-    2,
-  ),
-);
 
-if (
-  failed.length > 0
-) {
-  process.exitCode = 2;
+    safety: {
+      databaseReads:
+        2,
+
+      databaseWrites:
+        0,
+
+      ordersCreated:
+        0,
+
+      positionsChanged:
+        0,
+    },
+
+    nextGate:
+      failed.length === 0
+        ? "BIND_CANONICAL_FRESHNESS_GUARD_TO_ENTRY_CREATE_AND_FILL_V1"
+        : "REVIEW_CANONICAL_FRESHNESS_LIVE_STATE",
+  };
+
+  const logFile =
+    path.resolve(
+      root,
+      "logs/alpha-v3-data-freshness-canonical-reader-v1-live.json",
+    );
+
+  fs.mkdirSync(
+    path.dirname(
+      logFile,
+    ),
+    {
+      recursive: true,
+    },
+  );
+
+  fs.writeFileSync(
+    logFile,
+    JSON.stringify(
+      report,
+      null,
+      2,
+    ) + "\n",
+    "utf8",
+  );
+
+  console.log(
+    JSON.stringify(
+      {
+        status:
+          report.status,
+
+        checks:
+          report.checks,
+
+        failed:
+          report.failed,
+
+        state: {
+          freshnessStatus:
+            state.freshnessStatus,
+
+          qualityStatus:
+            state.qualityStatus,
+
+          usableForProduction:
+            state.usableForProduction,
+
+          expectedMarketDate:
+            state.expectedMarketDate,
+
+          latestCommonDate:
+            state.latestCommonDate,
+
+          businessWeekdayLag:
+            state.businessWeekdayLag,
+
+          allSourceDatesAligned:
+            state.allSourceDatesAligned,
+
+          freshnessObservedAt:
+            state.freshnessObservedAt,
+
+          qualityObservedAt:
+            state.qualityObservedAt,
+        },
+
+        decisions:
+          report.decisions,
+
+        safety:
+          report.safety,
+
+        logFile:
+          "logs/alpha-v3-data-freshness-canonical-reader-v1-live.json",
+
+        nextGate:
+          report.nextGate,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    failed.length > 0
+  ) {
+    process.exitCode = 2;
+  }
+
 }
+
+main().catch(
+  (error) => {
+    console.error(
+      JSON.stringify(
+        {
+          status:
+            "ALPHA_V3_DATA_FRESHNESS_CANONICAL_READER_V1_LIVE_FATAL",
+
+          error:
+            error instanceof Error
+              ? error.message
+              : String(error),
+
+          safety: {
+            databaseWrites: 0,
+            ordersCreated: 0,
+            positionsChanged: 0,
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    process.exitCode = 2;
+  },
+);
