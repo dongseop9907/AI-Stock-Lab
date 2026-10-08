@@ -1,0 +1,490 @@
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  AUTOMATION_CYCLE_CONTRACT,
+  AUTOMATION_CYCLE_MAX_APPROVED_ORDERS,
+} from "@/lib/trading/automation-cycle-contract";
+
+import {
+  executeApprovedPaperOrders,
+} from "@/lib/trading/execute-approved-paper-orders";
+
+import {
+  runCommittedRiskMaintenance,
+} from "@/lib/trading/run-committed-risk-maintenance";
+
+export const runtime =
+  "nodejs";
+
+export const dynamic =
+  "force-dynamic";
+
+function authorizeAutomationRequest(
+  request: NextRequest,
+) {
+  const expectedSecret =
+    process.env
+      .TRADING_AUTOMATION_SECRET
+      ?.trim();
+
+  if (!expectedSecret) {
+    return {
+      ok: true as const,
+      secret: null,
+    };
+  }
+
+  const providedSecret =
+    request.headers
+      .get(
+        "x-automation-secret",
+      )
+      ?.trim();
+
+  if (
+    !providedSecret ||
+    providedSecret !==
+      expectedSecret
+  ) {
+    return {
+      ok: false as const,
+      response:
+        NextResponse.json(
+          {
+            ok: false,
+            error:
+              "UNAUTHORIZED_AUTOMATION_CYCLE",
+          },
+          {
+            status: 401,
+          },
+        ),
+    };
+  }
+
+  return {
+    ok: true as const,
+    secret:
+      providedSecret,
+  };
+}
+
+async function parseResponsePayload(
+  response: Response,
+) {
+  const text =
+    await response.text();
+
+  if (!text.trim()) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {
+      raw:
+        text,
+    };
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+) {
+
+  /*
+   * ALPHA_V3_PROBE_ONLY_V1
+   *
+   * Authenticated live-route smoke mode.
+   * This branch intentionally returns before:
+   * - committed-risk maintenance
+   * - automation/run
+   * - approved-order execution
+   * - any DB read/write owned by this route
+   *
+   * request.clone() preserves the original body for the normal cycle path.
+   */
+  const __alphaV3ProbeBody =
+    await request
+      .clone()
+      .json()
+      .catch(
+        () => ({}),
+      ) as {
+        probeOnly?: unknown;
+      };
+
+  if (
+    __alphaV3ProbeBody
+      .probeOnly === true
+  ) {
+    const expectedSecret =
+      process.env
+        .TRADING_AUTOMATION_SECRET
+        ?.trim() ??
+      "";
+
+    const providedSecret =
+      request.headers
+        .get(
+          "x-automation-secret",
+        )
+        ?.trim() ??
+      "";
+
+    if (
+      !expectedSecret ||
+      providedSecret !==
+        expectedSecret
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          probeOnly: true,
+          error:
+            "UNAUTHORIZED_AUTOMATION_CYCLE_PROBE",
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        ok: true,
+        probeOnly: true,
+        status:
+          "AUTOMATION_CYCLE_ROUTE_REACHABLE",
+        sideEffects: {
+          committedRiskMaintenance:
+            false,
+          automationRun:
+            false,
+          approvedOrderExecution:
+            false,
+          databaseReads:
+            0,
+          databaseWrites:
+            0,
+          ordersCreated:
+            0,
+          ordersChanged:
+            0,
+          positionsChanged:
+            0,
+        },
+      },
+      {
+        status: 200,
+      },
+    );
+  }
+
+
+  const authorization =
+    authorizeAutomationRequest(
+      request,
+    );
+
+  if (!authorization.ok) {
+    return authorization.response;
+  }
+
+  const startedAt =
+    new Date().toISOString();
+
+  const rawBody =
+    await request.text();
+
+  let preMaintenance:
+    Awaited<
+      ReturnType<
+        typeof runCommittedRiskMaintenance
+      >
+    > | null = null;
+
+  let automationRun:
+    {
+      ok: boolean;
+      status: number;
+      payload: unknown;
+    } | null = null;
+
+  let approvedExecution:
+    Awaited<
+      ReturnType<
+        typeof executeApprovedPaperOrders
+      >
+    > | null = null;
+
+  let postMaintenance:
+    Awaited<
+      ReturnType<
+        typeof runCommittedRiskMaintenance
+      >
+    > | null = null;
+
+  try {
+    /*
+     * Fail closed before generating new work:
+     * committed-risk state must be internally consistent first.
+     */
+    preMaintenance =
+      await runCommittedRiskMaintenance(
+        {
+          phase:
+            "PRE_CYCLE",
+
+          runExpiry:
+            true,
+        },
+      );
+
+    const origin =
+      new URL(
+        request.url,
+      ).origin;
+
+    const headers:
+      Record<string, string> =
+      {
+        "Content-Type":
+          request.headers.get(
+            "content-type",
+          ) ??
+          "application/json",
+      };
+
+    if (
+      authorization.secret
+    ) {
+      headers[
+        "x-automation-secret"
+      ] =
+        authorization.secret;
+    }
+
+    const automationResponse =
+      await fetch(
+        `${origin}/api/trading/automation/run`,
+        {
+          method:
+            "POST",
+
+          headers,
+
+          body:
+            rawBody.trim()
+              ? rawBody
+              : "{}",
+
+          cache:
+            "no-store",
+        },
+      );
+
+    const automationPayload =
+      await parseResponsePayload(
+        automationResponse,
+      );
+
+    automationRun = {
+      ok:
+        automationResponse.ok,
+
+      status:
+        automationResponse.status,
+
+      payload:
+        automationPayload,
+    };
+
+    /*
+     * Existing automation pipeline is authoritative.
+     * Never execute approved orders when that pipeline failed.
+     */
+    const automationPayloadRecord =
+      automationPayload &&
+      typeof automationPayload ===
+        "object" &&
+      !Array.isArray(
+        automationPayload,
+      )
+        ? (automationPayload as
+            Record<string, unknown>)
+        : null;
+
+    const automationSemanticFailure =
+      automationPayloadRecord?.ok ===
+        false ||
+      automationPayloadRecord?.status ===
+        "FAILED" ||
+      automationPayloadRecord?.status ===
+        "PARTIAL_FAILURE";
+
+    if (
+      !automationResponse.ok ||
+      automationSemanticFailure
+    ) {
+      postMaintenance =
+        await runCommittedRiskMaintenance(
+          {
+            phase:
+              "POST_EXECUTION",
+
+            runExpiry:
+              false,
+          },
+        );
+
+      return NextResponse.json(
+        {
+          ok: false,
+
+          error:
+            "AUTOMATION_PIPELINE_FAILED",
+
+          contract:
+            AUTOMATION_CYCLE_CONTRACT,
+
+          startedAt,
+
+          finishedAt:
+            new Date()
+              .toISOString(),
+
+          preMaintenance,
+
+          automationRun,
+
+          approvedExecution:
+            null,
+
+          postMaintenance,
+        },
+        {
+          status:
+            automationResponse.status >= 400
+              ? automationResponse.status
+              : 500,
+        },
+      );
+    }
+
+    approvedExecution =
+      null;
+
+    /*
+     * Approved-order execution is owned by automation/run.
+     * Do not execute it a second time in the cycle wrapper.
+     */
+
+    postMaintenance =
+      await runCommittedRiskMaintenance(
+        {
+          phase:
+            "POST_EXECUTION",
+
+          runExpiry:
+            false,
+        },
+      );
+
+    return NextResponse.json(
+      {
+        ok: true,
+
+        contract:
+          AUTOMATION_CYCLE_CONTRACT,
+
+        startedAt,
+
+        finishedAt:
+          new Date()
+            .toISOString(),
+
+        preMaintenance,
+
+        automationRun,
+
+        approvedExecution,
+
+        postMaintenance,
+      },
+    );
+  } catch (error) {
+    /*
+     * Best-effort decrease-only cleanup after a cycle failure.
+     * Never mask the original error if cleanup also fails.
+     */
+    let failureCleanup:
+      unknown =
+      null;
+
+    try {
+      failureCleanup =
+        await runCommittedRiskMaintenance(
+          {
+            phase:
+              "POST_EXECUTION",
+
+            runExpiry:
+              false,
+          },
+        );
+    } catch (
+      cleanupError
+    ) {
+      failureCleanup = {
+        ok: false,
+
+        error:
+          cleanupError instanceof Error
+            ? cleanupError.message
+            : String(
+                cleanupError,
+              ),
+      };
+    }
+
+    return NextResponse.json(
+      {
+        ok: false,
+
+        error:
+          error instanceof Error
+            ? error.message
+            : String(
+                error,
+              ),
+
+        contract:
+          AUTOMATION_CYCLE_CONTRACT,
+
+        startedAt,
+
+        finishedAt:
+          new Date()
+            .toISOString(),
+
+        preMaintenance,
+
+        automationRun,
+
+        approvedExecution,
+
+        postMaintenance,
+
+        failureCleanup,
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}

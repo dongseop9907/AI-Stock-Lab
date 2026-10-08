@@ -256,11 +256,7 @@ export async function POST(
       case "RESUME_AUTOMATION": {
         updates.automation_enabled =
           true;
-
-        updates.emergency_stop =
-          false;
-
-        updates.emergency_reason =
+updates.emergency_reason =
           null;
 
         /*
@@ -360,6 +356,77 @@ export async function POST(
 
     const supabase =
       createSupabaseServerClient();
+
+    /*
+     * ALPHA_V3_KILL_SWITCH_RESET_RPC_BINDING_V1
+     *
+     * emergency_stop=true -> false is never written directly.
+     * An explicit manual reason is required and the audited DB RPC
+     * is the only authorized reset path.
+     */
+    if (
+      action ===
+      "RESUME_AUTOMATION"
+    ) {
+      const resetReason =
+        String(
+          reason ?? ""
+        ).trim();
+
+      if (!resetReason) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "KILL_SWITCH_RESET_REASON_REQUIRED",
+            message:
+              "비상정지 해제 사유가 필요합니다.",
+          },
+          {
+            status: 400,
+          },
+        );
+      }
+
+      const {
+        error: resetError,
+      } = await supabase.rpc(
+        "reset_trading_kill_switch_v1",
+        {
+          p_reason:
+            resetReason,
+
+          p_actor:
+            "LOCAL_CONTROL_API",
+
+          p_metadata: {
+            action:
+              "RESUME_AUTOMATION",
+
+            route:
+              "/api/trading/system/control",
+
+            requestedAt:
+              now,
+          },
+        },
+      );
+
+      if (resetError) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              "KILL_SWITCH_RESET_RPC_FAILED",
+            message:
+              resetError.message,
+          },
+          {
+            status: 409,
+          },
+        );
+      }
+    }
 
     const {
       data,

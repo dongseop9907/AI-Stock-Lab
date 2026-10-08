@@ -1,0 +1,207 @@
+const fs = require("fs");
+const path = require("path");
+
+const root = process.cwd();
+
+const routeFile = path.resolve(
+  root,
+  "app/api/trading/automation/cycle/route.ts"
+);
+
+if (!fs.existsSync(routeFile)) {
+  throw new Error(
+    "AUTOMATION_CYCLE_ROUTE_NOT_FOUND"
+  );
+}
+
+const text =
+  fs.readFileSync(
+    routeFile,
+    "utf8"
+  );
+
+const probeMarkerIndex =
+  text.indexOf(
+    "ALPHA_V3_PROBE_ONLY_V1"
+  );
+
+const postFunctionIndex =
+  text.search(
+    /export\\s+async\\s+function\\s+POST\\s*\\(/m
+  );
+
+function firstCallIndexAfterPost(
+  functionName
+) {
+  if (postFunctionIndex < 0) {
+    return -1;
+  }
+
+  const body =
+    text.slice(
+      postFunctionIndex
+    );
+
+  const regex =
+    new RegExp(
+      "\\b" +
+      functionName +
+      "\\s*\\(",
+      "m"
+    );
+
+  const relative =
+    body.search(
+      regex
+    );
+
+  return relative < 0
+    ? -1
+    : postFunctionIndex +
+      relative;
+}
+
+const maintenanceCallIndex =
+  firstCallIndexAfterPost(
+    "runCommittedRiskMaintenance"
+  );
+
+const executorCallIndex =
+  firstCallIndexAfterPost(
+    "executeApprovedPaperOrders"
+  );
+
+const automationRunIndex =
+  text.indexOf(
+    "/api/trading/automation/run",
+    Math.max(
+      0,
+      postFunctionIndex
+    )
+  );
+
+const checks = {
+  postFunctionFound:
+    postFunctionIndex >= 0,
+
+  probeMarkerPresent:
+    probeMarkerIndex >= 0,
+
+  usesRequestClone:
+    /request\\s*\\.\\s*clone\\s*\\(\\s*\\)/m.test(
+      text
+    ),
+
+  probeOnlyStrictTrue:
+    /probeOnly\\s*===\\s*true/m.test(
+      text
+    ),
+
+  requiresTradingAutomationSecret:
+    /ALPHA_V3_PROBE_ONLY_V1[\\s\\S]{0,2200}?TRADING_AUTOMATION_SECRET/m.test(
+      text
+    ),
+
+  requiresSecretHeader:
+    /ALPHA_V3_PROBE_ONLY_V1[\\s\\S]{0,2200}?x-automation-secret/m.test(
+      text
+    ),
+
+  unauthorizedProbeReturns401:
+    /UNAUTHORIZED_AUTOMATION_CYCLE_PROBE[\\s\\S]{0,250}?status:\\s*401/m.test(
+      text
+    ),
+
+  probeSuccessReturns200:
+    /AUTOMATION_CYCLE_ROUTE_REACHABLE[\\s\\S]{0,700}?status:\\s*200/m.test(
+      text
+    ),
+
+  probeDeclaresZeroOrderSideEffects:
+    /ordersCreated:\\s*0[\\s\\S]{0,200}?ordersChanged:\\s*0[\\s\\S]{0,200}?positionsChanged:\\s*0/m.test(
+      text
+    ),
+
+  maintenanceCallFound:
+    maintenanceCallIndex >= 0,
+
+  approvedExecutorCallFound:
+    executorCallIndex >= 0,
+
+  automationRunPathFound:
+    automationRunIndex >= 0,
+
+  probeBranchBeforeMaintenanceCall:
+    probeMarkerIndex >= 0 &&
+    maintenanceCallIndex >= 0 &&
+    probeMarkerIndex <
+      maintenanceCallIndex,
+
+  probeBranchBeforeAutomationRun:
+    probeMarkerIndex >= 0 &&
+    automationRunIndex >= 0 &&
+    probeMarkerIndex <
+      automationRunIndex,
+
+  probeBranchBeforeApprovedExecutorCall:
+    probeMarkerIndex >= 0 &&
+    executorCallIndex >= 0 &&
+    probeMarkerIndex <
+      executorCallIndex,
+};
+
+const failed =
+  Object.entries(checks)
+    .filter(
+      ([, value]) =>
+        !value
+    )
+    .map(
+      ([key]) =>
+        key
+    );
+
+console.log(
+  JSON.stringify(
+    {
+      status:
+        failed.length === 0
+          ? "ALPHA_V3_CYCLE_PROBE_ONLY_STATIC_VERIFIED"
+          : "ALPHA_V3_CYCLE_PROBE_ONLY_STATIC_REVIEW",
+
+      checks,
+      failed,
+
+      indexes: {
+        postFunctionIndex,
+        probeMarkerIndex,
+        maintenanceCallIndex,
+        automationRunIndex,
+        executorCallIndex,
+      },
+
+      verifierFix:
+        "COMPARE_PROBE_BRANCH_AGAINST_ACTUAL_POST_BODY_CALLS_NOT_IMPORTS",
+
+      safety: {
+        databaseReads: 0,
+        databaseWrites: 0,
+        networkCalls: 0,
+        cyclePostRequests: 0,
+        ordersCreated: 0,
+        positionsChanged: 0,
+      },
+
+      nextGate:
+        failed.length === 0
+          ? "RUN_PROBE_ONLY_LIVE_SMOKE"
+          : "REVIEW_PROBE_ONLY_ROUTE_STRUCTURE",
+    },
+    null,
+    2
+  )
+);
+
+if (failed.length > 0) {
+  process.exitCode = 2;
+}

@@ -413,7 +413,7 @@ export async function getDomesticDailyStockPrices(
    * 잘못된 종목코드 방지
    */
   if (
-    !/^\d{6}$/.test(
+    !/^[0-9A-Z]{6}$/.test(
       stockCode,
     )
   ) {
@@ -700,3 +700,308 @@ export async function getDomesticDailyIndexPrices(
 
   return body;
 }
+
+/* ALPHA_V1_KIS_INVESTOR_FLOW_BEGIN */
+
+export interface KisDomesticInvestorTrendOutput {
+  stck_bsop_date?: string | null;
+  stck_clpr?: string | number | null;
+  prdy_vrss?: string | number | null;
+  prdy_ctrt?: string | number | null;
+  acml_vol?: string | number | null;
+  acml_tr_pbmn?: string | number | null;
+
+  prsn_ntby_qty?: string | number | null;
+  frgn_ntby_qty?: string | number | null;
+  orgn_ntby_qty?: string | number | null;
+
+  frgn_reg_ntby_qty?: string | number | null;
+  frgn_nreg_ntby_qty?: string | number | null;
+  scrt_ntby_qty?: string | number | null;
+  ivtr_ntby_qty?: string | number | null;
+  pe_fund_ntby_vol?: string | number | null;
+  bank_ntby_qty?: string | number | null;
+  insu_ntby_qty?: string | number | null;
+  mrbn_ntby_qty?: string | number | null;
+
+  [key: string]: unknown;
+}
+
+export interface KisDomesticInvestorTrendResponse {
+  rt_cd?: string;
+  msg_cd?: string;
+  msg1?: string;
+  output?: KisDomesticInvestorTrendOutput[];
+  [key: string]: unknown;
+}
+
+/**
+ * 국내주식 종목별 투자자 매매동향
+ *
+ * Official KIS endpoint:
+ *   /uapi/domestic-stock/v1/quotations/inquire-investor
+ *
+ * TR:
+ *   FHKST01010900
+ *
+ * READ ONLY.
+ */
+export async function getDomesticInvestorTrend(
+  stockCode: string,
+  accessToken: string,
+): Promise<KisDomesticInvestorTrendResponse> {
+  const normalized =
+    stockCode.trim();
+
+  if (!/^\d{6}$/.test(normalized)) {
+    throw new Error(
+      `INVALID_KIS_STOCK_CODE:${stockCode}`,
+    );
+  }
+
+  const {
+    appKey,
+    appSecret,
+    baseUrl,
+  } =
+    getKisConfig();
+
+  const params =
+    new URLSearchParams({
+      FID_COND_MRKT_DIV_CODE:
+        "J",
+
+      FID_INPUT_ISCD:
+        normalized,
+    });
+
+  const response =
+    await fetch(
+      `${baseUrl}/uapi/domestic-stock/v1/quotations/inquire-investor?${params}`,
+      {
+        method:
+          "GET",
+
+        headers: {
+          "Content-Type":
+            "application/json; charset=utf-8",
+
+          authorization:
+            `Bearer ${accessToken}`,
+
+          appkey:
+            appKey,
+
+          appsecret:
+            appSecret,
+
+          tr_id:
+            "FHKST01010900",
+
+          custtype:
+            "P",
+        },
+      },
+    );
+
+  const body =
+    await response.json() as
+      KisDomesticInvestorTrendResponse;
+
+  if (!response.ok) {
+    throw new Error(
+      `KIS_INVESTOR_HTTP_${response.status}:${body.msg_cd ?? "UNKNOWN"}:${body.msg1 ?? "UNKNOWN"}`,
+    );
+  }
+
+  if (
+    body.rt_cd !== undefined &&
+    body.rt_cd !== "0"
+  ) {
+    throw new Error(
+      `KIS_INVESTOR_API_ERROR:${body.rt_cd}:${body.msg_cd ?? "UNKNOWN"}:${body.msg1 ?? "UNKNOWN"}`,
+    );
+  }
+
+  return body;
+}
+
+
+export interface KisDomesticInvestorTradeDailyResponse {
+  rt_cd?: string;
+  msg_cd?: string;
+  msg1?: string;
+
+  output1?:
+    | Record<string, unknown>
+    | Record<string, unknown>[];
+
+  output2?:
+    | Record<string, unknown>
+    | Record<string, unknown>[];
+
+  [key: string]: unknown;
+}
+
+export interface KisDomesticInvestorTradeDailyResult {
+  body:
+    KisDomesticInvestorTradeDailyResponse;
+
+  trCont:
+    string;
+}
+
+/**
+ * 국내주식 종목별 투자자매매동향(일별)
+ *
+ * Official KIS endpoint:
+ *   /uapi/domestic-stock/v1/quotations/investor-trade-by-stock-daily
+ *
+ * TR:
+ *   FHPTJ04160001
+ *
+ * READ ONLY.
+ */
+export async function getDomesticInvestorTradeDaily(
+  stockCode: string,
+  inputDate: string,
+  accessToken: string,
+  trCont = "",
+): Promise<KisDomesticInvestorTradeDailyResult> {
+  const normalized =
+    stockCode.trim();
+
+  if (
+    !/^\d{6}$/.test(
+      normalized,
+    )
+  ) {
+    throw new Error(
+      `INVALID_KIS_STOCK_CODE:${stockCode}`,
+    );
+  }
+
+  const normalizedDate =
+    inputDate
+      .replace(
+        /-/g,
+        "",
+      )
+      .trim();
+
+  if (
+    !/^\d{8}$/.test(
+      normalizedDate,
+    )
+  ) {
+    throw new Error(
+      `INVALID_KIS_INPUT_DATE:${inputDate}`,
+    );
+  }
+
+  const {
+    appKey,
+    appSecret,
+    baseUrl,
+  } =
+    getKisConfig();
+
+  const params =
+    new URLSearchParams({
+      FID_COND_MRKT_DIV_CODE:
+        "J",
+
+      FID_INPUT_ISCD:
+        normalized,
+
+      FID_INPUT_DATE_1:
+        normalizedDate,
+
+      FID_ORG_ADJ_PRC:
+        "",
+
+      FID_ETC_CLS_CODE:
+        "",
+    });
+
+  const headers:
+    Record<
+      string,
+      string
+    > = {
+      "Content-Type":
+        "application/json; charset=utf-8",
+
+      authorization:
+        `Bearer ${accessToken}`,
+
+      appkey:
+        appKey,
+
+      appsecret:
+        appSecret,
+
+      tr_id:
+        "FHPTJ04160001",
+
+      custtype:
+        "P",
+    };
+
+  if (
+    trCont
+      .trim()
+      .length >
+      0
+  ) {
+    headers.tr_cont =
+      trCont.trim();
+  }
+
+  const response =
+    await fetch(
+      `${baseUrl}/uapi/domestic-stock/v1/quotations/investor-trade-by-stock-daily?${params}`,
+      {
+        method:
+          "GET",
+
+        headers,
+      },
+    );
+
+  const body =
+    await response.json() as
+      KisDomesticInvestorTradeDailyResponse;
+
+  if (
+    !response.ok
+  ) {
+    throw new Error(
+      `KIS_INVESTOR_DAILY_HTTP_${response.status}:${body.msg_cd ?? "UNKNOWN"}:${body.msg1 ?? "UNKNOWN"}`,
+    );
+  }
+
+  if (
+    body.rt_cd !==
+      undefined &&
+    body.rt_cd !==
+      "0"
+  ) {
+    throw new Error(
+      `KIS_INVESTOR_DAILY_API_ERROR:${body.rt_cd}:${body.msg_cd ?? "UNKNOWN"}:${body.msg1 ?? "UNKNOWN"}`,
+    );
+  }
+
+  return {
+    body,
+
+    trCont:
+      response.headers
+        .get(
+          "tr_cont",
+        ) ??
+      "",
+  };
+}
+
+/* ALPHA_V1_KIS_INVESTOR_FLOW_END */

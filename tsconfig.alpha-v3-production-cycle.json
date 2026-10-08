@@ -1,0 +1,32 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": [
+      "node"
+    ],
+    "skipLibCheck": true
+  },
+  "include": [
+    "lib/trading/paper-order-service.ts",
+    "lib/trading/committed-risk-reservation.ts",
+    "lib/trading/risk-manager.ts",
+    "lib/trading/types.ts",
+    "lib/trading/policy.ts",
+    "lib/models/resolve-order-model.ts",
+    "lib/supabase.ts",
+    "lib/trading/automation-cycle-contract.ts",
+    "lib/trading/run-committed-risk-maintenance.ts",
+    "lib/trading/execute-approved-paper-orders.ts",
+    "lib/trading/execute-paper-order.ts",
+    "app/api/trading/automation/cycle/route.ts",
+    "app/api/trading/automation/manual/route.ts",
+    "lib/trading/order-state-machine.ts",
+    "lib/trading/kill-switch-contract.ts",
+    "lib/trading/kill-switch-guard.ts"
+  ],
+  "exclude": [
+    "scripts",
+    "node_modules"
+  ]
+}

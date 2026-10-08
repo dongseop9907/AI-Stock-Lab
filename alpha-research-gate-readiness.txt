@@ -1,0 +1,4027 @@
+
+============================================================
+V9.5 RESEARCH GATE
+FILE: .\lib\research\evaluate-alpha-backtest-research-gate-v9-5.ts
+============================================================
+
+--- MATCH @ 5 ---
+import {
+  createSupabaseServerClient,
+} from "@/lib/supabase";
+
+type GateInput = {
+  universeCode?:
+    string;
+
+  startDate?:
+    string;
+
+  endDate?:
+    string;
+};
+
+
+--- MATCH @ 35 ---
+
+  return value;
+}
+
+export async function evaluateAlphaBacktestResearchGateV95(
+  input:
+    GateInput = {},
+) {
+  const supabase =
+    createSupabaseServerClient();
+
+  const universeCode =
+    input
+      .universeCode
+      ?.trim() ||
+
+--- MATCH @ 37 ---
+}
+
+export async function evaluateAlphaBacktestResearchGateV95(
+  input:
+    GateInput = {},
+) {
+  const supabase =
+    createSupabaseServerClient();
+
+  const universeCode =
+    input
+      .universeCode
+      ?.trim() ||
+    "KRX_ALL_LISTED";
+
+
+--- MATCH @ 72 ---
+    );
+  }
+
+  const [
+    validationPlanResult,
+    pitCompilationResult,
+    marketCoverageResult,
+    corporateCoverageResult,
+    corporateValidationResult,
+  ] =
+    await Promise.all([
+      supabase
+        .from(
+          "alpha_validation_plans",
+        )
+
+--- MATCH @ 73 ---
+  }
+
+  const [
+    validationPlanResult,
+    pitCompilationResult,
+    marketCoverageResult,
+    corporateCoverageResult,
+    corporateValidationResult,
+  ] =
+    await Promise.all([
+      supabase
+        .from(
+          "alpha_validation_plans",
+        )
+        .select(`
+
+--- MATCH @ 74 ---
+
+  const [
+    validationPlanResult,
+    pitCompilationResult,
+    marketCoverageResult,
+    corporateCoverageResult,
+    corporateValidationResult,
+  ] =
+    await Promise.all([
+      supabase
+        .from(
+          "alpha_validation_plans",
+        )
+        .select(`
+          id,
+
+--- MATCH @ 75 ---
+  const [
+    validationPlanResult,
+    pitCompilationResult,
+    marketCoverageResult,
+    corporateCoverageResult,
+    corporateValidationResult,
+  ] =
+    await Promise.all([
+      supabase
+        .from(
+          "alpha_validation_plans",
+        )
+        .select(`
+          id,
+          status,
+
+--- MATCH @ 76 ---
+    validationPlanResult,
+    pitCompilationResult,
+    marketCoverageResult,
+    corporateCoverageResult,
+    corporateValidationResult,
+  ] =
+    await Promise.all([
+      supabase
+        .from(
+          "alpha_validation_plans",
+        )
+        .select(`
+          id,
+          status,
+          requested_start_date,
+
+--- MATCH @ 81 ---
+  ] =
+    await Promise.all([
+      supabase
+        .from(
+          "alpha_validation_plans",
+        )
+        .select(`
+          id,
+          status,
+          requested_start_date,
+          requested_end_date,
+          fold_count,
+          pit_ready_fold_count,
+          pit_blocked_fold_count,
+          created_at
+
+--- MATCH @ 89 ---
+          status,
+          requested_start_date,
+          requested_end_date,
+          fold_count,
+          pit_ready_fold_count,
+          pit_blocked_fold_count,
+          created_at
+        `)
+        .eq(
+          "universe_code",
+          universeCode,
+        )
+        .lte(
+          "requested_start_date",
+          startDate,
+
+--- MATCH @ 90 ---
+          requested_start_date,
+          requested_end_date,
+          fold_count,
+          pit_ready_fold_count,
+          pit_blocked_fold_count,
+          created_at
+        `)
+        .eq(
+          "universe_code",
+          universeCode,
+        )
+        .lte(
+          "requested_start_date",
+          startDate,
+        )
+
+--- MATCH @ 117 ---
+        .maybeSingle(),
+
+      supabase
+        .from(
+          "historical_universe_compilation_runs",
+        )
+        .select(`
+          id,
+          provider,
+          status,
+          start_date,
+          end_date,
+          expected_trading_dates,
+          imported_complete_dates,
+          missing_trading_dates,
+
+--- MATCH @ 137 ---
+          "universe_code",
+          universeCode,
+        )
+        .eq(
+          "is_validation",
+          false,
+        )
+        .lte(
+          "start_date",
+          startDate,
+        )
+        .gte(
+          "end_date",
+          endDate,
+        )
+
+--- MATCH @ 160 ---
+        .maybeSingle(),
+
+      supabase
+        .from(
+          "historical_market_data_coverage_assertions",
+        )
+        .select(`
+          id,
+          provider,
+          coverage_status,
+          start_date,
+          end_date,
+          observed_member_count,
+          data_ready_member_count,
+          observed_coverage_rate,
+
+--- MATCH @ 165 ---
+        )
+        .select(`
+          id,
+          provider,
+          coverage_status,
+          start_date,
+          end_date,
+          observed_member_count,
+          data_ready_member_count,
+          observed_coverage_rate,
+          minimum_required_rate,
+          created_at
+        `)
+        .eq(
+          "universe_code",
+
+--- MATCH @ 169 ---
+          coverage_status,
+          start_date,
+          end_date,
+          observed_member_count,
+          data_ready_member_count,
+          observed_coverage_rate,
+          minimum_required_rate,
+          created_at
+        `)
+        .eq(
+          "universe_code",
+          universeCode,
+        )
+        .eq(
+          "is_validation",
+
+--- MATCH @ 170 ---
+          start_date,
+          end_date,
+          observed_member_count,
+          data_ready_member_count,
+          observed_coverage_rate,
+          minimum_required_rate,
+          created_at
+        `)
+        .eq(
+          "universe_code",
+          universeCode,
+        )
+        .eq(
+          "is_validation",
+          false,
+
+--- MATCH @ 179 ---
+          "universe_code",
+          universeCode,
+        )
+        .eq(
+          "is_validation",
+          false,
+        )
+        .lte(
+          "start_date",
+          startDate,
+        )
+        .gte(
+          "end_date",
+          endDate,
+        )
+
+--- MATCH @ 202 ---
+        .maybeSingle(),
+
+      supabase
+        .from(
+          "corporate_action_coverage_assertions",
+        )
+        .select(`
+          id,
+          provider,
+          coverage_status,
+          start_date,
+          end_date,
+          supported_action_types,
+          unsupported_action_types,
+          created_at
+
+--- MATCH @ 207 ---
+        )
+        .select(`
+          id,
+          provider,
+          coverage_status,
+          start_date,
+          end_date,
+          supported_action_types,
+          unsupported_action_types,
+          created_at
+        `)
+        .eq(
+          "universe_code",
+          universeCode,
+        )
+
+--- MATCH @ 219 ---
+          "universe_code",
+          universeCode,
+        )
+        .eq(
+          "is_validation",
+          false,
+        )
+        .lte(
+          "start_date",
+          startDate,
+        )
+        .gte(
+          "end_date",
+          endDate,
+        )
+
+--- MATCH @ 242 ---
+        .maybeSingle(),
+
+      supabase
+        .from(
+          "corporate_action_validation_runs",
+        )
+        .select(`
+          id,
+          status,
+          cleanup_succeeded,
+          created_at
+        `)
+        .order(
+          "created_at",
+          {
+
+--- MATCH @ 262 ---
+        .maybeSingle(),
+    ]);
+
+  const queryErrors = [
+    validationPlanResult.error,
+    pitCompilationResult.error,
+    marketCoverageResult.error,
+    corporateCoverageResult.error,
+    corporateValidationResult.error,
+  ].filter(
+    Boolean,
+  );
+
+  if (
+    queryErrors.length >
+
+--- MATCH @ 263 ---
+    ]);
+
+  const queryErrors = [
+    validationPlanResult.error,
+    pitCompilationResult.error,
+    marketCoverageResult.error,
+    corporateCoverageResult.error,
+    corporateValidationResult.error,
+  ].filter(
+    Boolean,
+  );
+
+  if (
+    queryErrors.length >
+    0
+
+--- MATCH @ 264 ---
+
+  const queryErrors = [
+    validationPlanResult.error,
+    pitCompilationResult.error,
+    marketCoverageResult.error,
+    corporateCoverageResult.error,
+    corporateValidationResult.error,
+  ].filter(
+    Boolean,
+  );
+
+  if (
+    queryErrors.length >
+    0
+  ) {
+
+--- MATCH @ 265 ---
+  const queryErrors = [
+    validationPlanResult.error,
+    pitCompilationResult.error,
+    marketCoverageResult.error,
+    corporateCoverageResult.error,
+    corporateValidationResult.error,
+  ].filter(
+    Boolean,
+  );
+
+  if (
+    queryErrors.length >
+    0
+  ) {
+    throw new Error(
+
+--- MATCH @ 266 ---
+    validationPlanResult.error,
+    pitCompilationResult.error,
+    marketCoverageResult.error,
+    corporateCoverageResult.error,
+    corporateValidationResult.error,
+  ].filter(
+    Boolean,
+  );
+
+  if (
+    queryErrors.length >
+    0
+  ) {
+    throw new Error(
+      `v9.5 readiness query failed: ${
+
+--- MATCH @ 291 ---
+      }`,
+    );
+  }
+
+  const validationPlan =
+    validationPlanResult.data;
+
+  const pitCompilation =
+    pitCompilationResult.data;
+
+  const marketCoverage =
+    marketCoverageResult.data;
+
+  const corporateCoverage =
+    corporateCoverageResult.data;
+
+--- MATCH @ 292 ---
+    );
+  }
+
+  const validationPlan =
+    validationPlanResult.data;
+
+  const pitCompilation =
+    pitCompilationResult.data;
+
+  const marketCoverage =
+    marketCoverageResult.data;
+
+  const corporateCoverage =
+    corporateCoverageResult.data;
+
+
+--- MATCH @ 294 ---
+
+  const validationPlan =
+    validationPlanResult.data;
+
+  const pitCompilation =
+    pitCompilationResult.data;
+
+  const marketCoverage =
+    marketCoverageResult.data;
+
+  const corporateCoverage =
+    corporateCoverageResult.data;
+
+  const corporateValidation =
+    corporateValidationResult.data;
+
+--- MATCH @ 295 ---
+  const validationPlan =
+    validationPlanResult.data;
+
+  const pitCompilation =
+    pitCompilationResult.data;
+
+  const marketCoverage =
+    marketCoverageResult.data;
+
+  const corporateCoverage =
+    corporateCoverageResult.data;
+
+  const corporateValidation =
+    corporateValidationResult.data;
+
+
+--- MATCH @ 297 ---
+
+  const pitCompilation =
+    pitCompilationResult.data;
+
+  const marketCoverage =
+    marketCoverageResult.data;
+
+  const corporateCoverage =
+    corporateCoverageResult.data;
+
+  const corporateValidation =
+    corporateValidationResult.data;
+
+  const checks = {
+    purgedValidationPlanReady: {
+
+--- MATCH @ 298 ---
+  const pitCompilation =
+    pitCompilationResult.data;
+
+  const marketCoverage =
+    marketCoverageResult.data;
+
+  const corporateCoverage =
+    corporateCoverageResult.data;
+
+  const corporateValidation =
+    corporateValidationResult.data;
+
+  const checks = {
+    purgedValidationPlanReady: {
+      passed:
+
+--- MATCH @ 300 ---
+
+  const marketCoverage =
+    marketCoverageResult.data;
+
+  const corporateCoverage =
+    corporateCoverageResult.data;
+
+  const corporateValidation =
+    corporateValidationResult.data;
+
+  const checks = {
+    purgedValidationPlanReady: {
+      passed:
+        validationPlan
+          ?.status ===
+
+--- MATCH @ 301 ---
+  const marketCoverage =
+    marketCoverageResult.data;
+
+  const corporateCoverage =
+    corporateCoverageResult.data;
+
+  const corporateValidation =
+    corporateValidationResult.data;
+
+  const checks = {
+    purgedValidationPlanReady: {
+      passed:
+        validationPlan
+          ?.status ===
+        "READY",
+
+--- MATCH @ 303 ---
+
+  const corporateCoverage =
+    corporateCoverageResult.data;
+
+  const corporateValidation =
+    corporateValidationResult.data;
+
+  const checks = {
+    purgedValidationPlanReady: {
+      passed:
+        validationPlan
+          ?.status ===
+        "READY",
+
+      evidence:
+
+--- MATCH @ 304 ---
+  const corporateCoverage =
+    corporateCoverageResult.data;
+
+  const corporateValidation =
+    corporateValidationResult.data;
+
+  const checks = {
+    purgedValidationPlanReady: {
+      passed:
+        validationPlan
+          ?.status ===
+        "READY",
+
+      evidence:
+        validationPlan ??
+
+--- MATCH @ 306 ---
+
+  const corporateValidation =
+    corporateValidationResult.data;
+
+  const checks = {
+    purgedValidationPlanReady: {
+      passed:
+        validationPlan
+          ?.status ===
+        "READY",
+
+      evidence:
+        validationPlan ??
+        null,
+    },
+
+--- MATCH @ 307 ---
+  const corporateValidation =
+    corporateValidationResult.data;
+
+  const checks = {
+    purgedValidationPlanReady: {
+      passed:
+        validationPlan
+          ?.status ===
+        "READY",
+
+      evidence:
+        validationPlan ??
+        null,
+    },
+
+
+--- MATCH @ 309 ---
+
+  const checks = {
+    purgedValidationPlanReady: {
+      passed:
+        validationPlan
+          ?.status ===
+        "READY",
+
+      evidence:
+        validationPlan ??
+        null,
+    },
+
+    historicalPitCompilationReady: {
+      passed:
+
+--- MATCH @ 311 ---
+    purgedValidationPlanReady: {
+      passed:
+        validationPlan
+          ?.status ===
+        "READY",
+
+      evidence:
+        validationPlan ??
+        null,
+    },
+
+    historicalPitCompilationReady: {
+      passed:
+        pitCompilation
+          ?.status ===
+
+--- MATCH @ 314 ---
+          ?.status ===
+        "READY",
+
+      evidence:
+        validationPlan ??
+        null,
+    },
+
+    historicalPitCompilationReady: {
+      passed:
+        pitCompilation
+          ?.status ===
+          "READY" &&
+        Number(
+          pitCompilation
+
+--- MATCH @ 318 ---
+        validationPlan ??
+        null,
+    },
+
+    historicalPitCompilationReady: {
+      passed:
+        pitCompilation
+          ?.status ===
+          "READY" &&
+        Number(
+          pitCompilation
+            ?.missing_trading_dates ??
+          1,
+        ) ===
+          0 &&
+
+--- MATCH @ 320 ---
+    },
+
+    historicalPitCompilationReady: {
+      passed:
+        pitCompilation
+          ?.status ===
+          "READY" &&
+        Number(
+          pitCompilation
+            ?.missing_trading_dates ??
+          1,
+        ) ===
+          0 &&
+        Number(
+          pitCompilation
+
+--- MATCH @ 322 ---
+    historicalPitCompilationReady: {
+      passed:
+        pitCompilation
+          ?.status ===
+          "READY" &&
+        Number(
+          pitCompilation
+            ?.missing_trading_dates ??
+          1,
+        ) ===
+          0 &&
+        Number(
+          pitCompilation
+            ?.duplicate_complete_dates ??
+          1,
+
+--- MATCH @ 324 ---
+        pitCompilation
+          ?.status ===
+          "READY" &&
+        Number(
+          pitCompilation
+            ?.missing_trading_dates ??
+          1,
+        ) ===
+          0 &&
+        Number(
+          pitCompilation
+            ?.duplicate_complete_dates ??
+          1,
+        ) ===
+          0,
+
+--- MATCH @ 330 ---
+          1,
+        ) ===
+          0 &&
+        Number(
+          pitCompilation
+            ?.duplicate_complete_dates ??
+          1,
+        ) ===
+          0,
+
+      evidence:
+        pitCompilation ??
+        null,
+    },
+
+
+--- MATCH @ 337 ---
+        ) ===
+          0,
+
+      evidence:
+        pitCompilation ??
+        null,
+    },
+
+    historicalMarketDataCoverageReady: {
+      passed:
+        marketCoverage
+          ?.coverage_status ===
+          "COMPLETE" &&
+        Number(
+          marketCoverage
+
+--- MATCH @ 341 ---
+        pitCompilation ??
+        null,
+    },
+
+    historicalMarketDataCoverageReady: {
+      passed:
+        marketCoverage
+          ?.coverage_status ===
+          "COMPLETE" &&
+        Number(
+          marketCoverage
+            ?.observed_coverage_rate ??
+          0,
+        ) >=
+          Number(
+
+--- MATCH @ 343 ---
+    },
+
+    historicalMarketDataCoverageReady: {
+      passed:
+        marketCoverage
+          ?.coverage_status ===
+          "COMPLETE" &&
+        Number(
+          marketCoverage
+            ?.observed_coverage_rate ??
+          0,
+        ) >=
+          Number(
+            marketCoverage
+              ?.minimum_required_rate ??
+
+--- MATCH @ 344 ---
+
+    historicalMarketDataCoverageReady: {
+      passed:
+        marketCoverage
+          ?.coverage_status ===
+          "COMPLETE" &&
+        Number(
+          marketCoverage
+            ?.observed_coverage_rate ??
+          0,
+        ) >=
+          Number(
+            marketCoverage
+              ?.minimum_required_rate ??
+            1,
+
+--- MATCH @ 347 ---
+        marketCoverage
+          ?.coverage_status ===
+          "COMPLETE" &&
+        Number(
+          marketCoverage
+            ?.observed_coverage_rate ??
+          0,
+        ) >=
+          Number(
+            marketCoverage
+              ?.minimum_required_rate ??
+            1,
+          ),
+
+      evidence:
+
+--- MATCH @ 348 ---
+          ?.coverage_status ===
+          "COMPLETE" &&
+        Number(
+          marketCoverage
+            ?.observed_coverage_rate ??
+          0,
+        ) >=
+          Number(
+            marketCoverage
+              ?.minimum_required_rate ??
+            1,
+          ),
+
+      evidence:
+        marketCoverage ??
+
+--- MATCH @ 352 ---
+            ?.observed_coverage_rate ??
+          0,
+        ) >=
+          Number(
+            marketCoverage
+              ?.minimum_required_rate ??
+            1,
+          ),
+
+      evidence:
+        marketCoverage ??
+        null,
+    },
+
+    corporateActionDatasetCoverageReady: {
+
+--- MATCH @ 358 ---
+            1,
+          ),
+
+      evidence:
+        marketCoverage ??
+        null,
+    },
+
+    corporateActionDatasetCoverageReady: {
+      passed:
+        corporateCoverage
+          ?.coverage_status ===
+        "COMPLETE",
+
+      evidence:
+
+--- MATCH @ 362 ---
+        marketCoverage ??
+        null,
+    },
+
+    corporateActionDatasetCoverageReady: {
+      passed:
+        corporateCoverage
+          ?.coverage_status ===
+        "COMPLETE",
+
+      evidence:
+        corporateCoverage ??
+        null,
+    },
+
+
+--- MATCH @ 364 ---
+    },
+
+    corporateActionDatasetCoverageReady: {
+      passed:
+        corporateCoverage
+          ?.coverage_status ===
+        "COMPLETE",
+
+      evidence:
+        corporateCoverage ??
+        null,
+    },
+
+    corporateActionEngineValidated: {
+      passed:
+
+--- MATCH @ 365 ---
+
+    corporateActionDatasetCoverageReady: {
+      passed:
+        corporateCoverage
+          ?.coverage_status ===
+        "COMPLETE",
+
+      evidence:
+        corporateCoverage ??
+        null,
+    },
+
+    corporateActionEngineValidated: {
+      passed:
+        corporateValidation
+
+--- MATCH @ 369 ---
+          ?.coverage_status ===
+        "COMPLETE",
+
+      evidence:
+        corporateCoverage ??
+        null,
+    },
+
+    corporateActionEngineValidated: {
+      passed:
+        corporateValidation
+          ?.status ===
+          "PASS" &&
+        corporateValidation
+          ?.cleanup_succeeded ===
+
+--- MATCH @ 373 ---
+        corporateCoverage ??
+        null,
+    },
+
+    corporateActionEngineValidated: {
+      passed:
+        corporateValidation
+          ?.status ===
+          "PASS" &&
+        corporateValidation
+          ?.cleanup_succeeded ===
+          true,
+
+      evidence:
+        corporateValidation ??
+
+--- MATCH @ 375 ---
+    },
+
+    corporateActionEngineValidated: {
+      passed:
+        corporateValidation
+          ?.status ===
+          "PASS" &&
+        corporateValidation
+          ?.cleanup_succeeded ===
+          true,
+
+      evidence:
+        corporateValidation ??
+        null,
+    },
+
+--- MATCH @ 378 ---
+      passed:
+        corporateValidation
+          ?.status ===
+          "PASS" &&
+        corporateValidation
+          ?.cleanup_succeeded ===
+          true,
+
+      evidence:
+        corporateValidation ??
+        null,
+    },
+
+    automaticBacktestDisabled: {
+      passed:
+
+--- MATCH @ 383 ---
+          ?.cleanup_succeeded ===
+          true,
+
+      evidence:
+        corporateValidation ??
+        null,
+    },
+
+    automaticBacktestDisabled: {
+      passed:
+        true,
+    },
+
+    productionNotApplied: {
+      passed:
+
+--- MATCH @ 387 ---
+        corporateValidation ??
+        null,
+    },
+
+    automaticBacktestDisabled: {
+      passed:
+        true,
+    },
+
+    productionNotApplied: {
+      passed:
+        true,
+    },
+  };
+
+
+--- MATCH @ 392 ---
+      passed:
+        true,
+    },
+
+    productionNotApplied: {
+      passed:
+        true,
+    },
+  };
+
+  const blockers:
+    string[] = [];
+
+  if (
+    !checks
+
+--- MATCH @ 402 ---
+  const blockers:
+    string[] = [];
+
+  if (
+    !checks
+      .purgedValidationPlanReady
+      .passed
+  ) {
+    blockers.push(
+      "PURGED_VALIDATION_PLAN_NOT_READY",
+    );
+  }
+
+  if (
+    !checks
+
+--- MATCH @ 403 ---
+    string[] = [];
+
+  if (
+    !checks
+      .purgedValidationPlanReady
+      .passed
+  ) {
+    blockers.push(
+      "PURGED_VALIDATION_PLAN_NOT_READY",
+    );
+  }
+
+  if (
+    !checks
+      .historicalPitCompilationReady
+
+--- MATCH @ 407 ---
+      .purgedValidationPlanReady
+      .passed
+  ) {
+    blockers.push(
+      "PURGED_VALIDATION_PLAN_NOT_READY",
+    );
+  }
+
+  if (
+    !checks
+      .historicalPitCompilationReady
+      .passed
+  ) {
+    blockers.push(
+      "HISTORICAL_PIT_NOT_READY",
+
+--- MATCH @ 412 ---
+    );
+  }
+
+  if (
+    !checks
+      .historicalPitCompilationReady
+      .passed
+  ) {
+    blockers.push(
+      "HISTORICAL_PIT_NOT_READY",
+    );
+  }
+
+  if (
+    !checks
+
+--- MATCH @ 413 ---
+  }
+
+  if (
+    !checks
+      .historicalPitCompilationReady
+      .passed
+  ) {
+    blockers.push(
+      "HISTORICAL_PIT_NOT_READY",
+    );
+  }
+
+  if (
+    !checks
+      .historicalMarketDataCoverageReady
+
+--- MATCH @ 417 ---
+      .historicalPitCompilationReady
+      .passed
+  ) {
+    blockers.push(
+      "HISTORICAL_PIT_NOT_READY",
+    );
+  }
+
+  if (
+    !checks
+      .historicalMarketDataCoverageReady
+      .passed
+  ) {
+    blockers.push(
+      "HISTORICAL_MARKET_DATA_COVERAGE_NOT_READY",
+
+--- MATCH @ 422 ---
+    );
+  }
+
+  if (
+    !checks
+      .historicalMarketDataCoverageReady
+      .passed
+  ) {
+    blockers.push(
+      "HISTORICAL_MARKET_DATA_COVERAGE_NOT_READY",
+    );
+  }
+
+  if (
+    !checks
+
+--- MATCH @ 423 ---
+  }
+
+  if (
+    !checks
+      .historicalMarketDataCoverageReady
+      .passed
+  ) {
+    blockers.push(
+      "HISTORICAL_MARKET_DATA_COVERAGE_NOT_READY",
+    );
+  }
+
+  if (
+    !checks
+      .corporateActionDatasetCoverageReady
+
+--- MATCH @ 427 ---
+      .historicalMarketDataCoverageReady
+      .passed
+  ) {
+    blockers.push(
+      "HISTORICAL_MARKET_DATA_COVERAGE_NOT_READY",
+    );
+  }
+
+  if (
+    !checks
+      .corporateActionDatasetCoverageReady
+      .passed
+  ) {
+    blockers.push(
+      "CORPORATE_ACTION_DATASET_COVERAGE_NOT_READY",
+
+--- MATCH @ 432 ---
+    );
+  }
+
+  if (
+    !checks
+      .corporateActionDatasetCoverageReady
+      .passed
+  ) {
+    blockers.push(
+      "CORPORATE_ACTION_DATASET_COVERAGE_NOT_READY",
+    );
+  }
+
+  if (
+    !checks
+
+--- MATCH @ 433 ---
+  }
+
+  if (
+    !checks
+      .corporateActionDatasetCoverageReady
+      .passed
+  ) {
+    blockers.push(
+      "CORPORATE_ACTION_DATASET_COVERAGE_NOT_READY",
+    );
+  }
+
+  if (
+    !checks
+      .corporateActionEngineValidated
+
+--- MATCH @ 437 ---
+      .corporateActionDatasetCoverageReady
+      .passed
+  ) {
+    blockers.push(
+      "CORPORATE_ACTION_DATASET_COVERAGE_NOT_READY",
+    );
+  }
+
+  if (
+    !checks
+      .corporateActionEngineValidated
+      .passed
+  ) {
+    blockers.push(
+      "CORPORATE_ACTION_ENGINE_NOT_VALIDATED",
+
+--- MATCH @ 442 ---
+    );
+  }
+
+  if (
+    !checks
+      .corporateActionEngineValidated
+      .passed
+  ) {
+    blockers.push(
+      "CORPORATE_ACTION_ENGINE_NOT_VALIDATED",
+    );
+  }
+
+  const status =
+    blockers.length ===
+
+--- MATCH @ 443 ---
+  }
+
+  if (
+    !checks
+      .corporateActionEngineValidated
+      .passed
+  ) {
+    blockers.push(
+      "CORPORATE_ACTION_ENGINE_NOT_VALIDATED",
+    );
+  }
+
+  const status =
+    blockers.length ===
+      0
+
+--- MATCH @ 447 ---
+      .corporateActionEngineValidated
+      .passed
+  ) {
+    blockers.push(
+      "CORPORATE_ACTION_ENGINE_NOT_VALIDATED",
+    );
+  }
+
+  const status =
+    blockers.length ===
+      0
+      ? "READY"
+      : "BLOCKED";
+
+  const {
+
+--- MATCH @ 454 ---
+
+  const status =
+    blockers.length ===
+      0
+      ? "READY"
+      : "BLOCKED";
+
+  const {
+    data: gateRun,
+    error: gateRunError,
+  } =
+    await supabase
+      .from(
+        "alpha_backtest_research_gate_runs",
+      )
+
+--- MATCH @ 455 ---
+  const status =
+    blockers.length ===
+      0
+      ? "READY"
+      : "BLOCKED";
+
+  const {
+    data: gateRun,
+    error: gateRunError,
+  } =
+    await supabase
+      .from(
+        "alpha_backtest_research_gate_runs",
+      )
+      .insert({
+
+--- MATCH @ 458 ---
+      ? "READY"
+      : "BLOCKED";
+
+  const {
+    data: gateRun,
+    error: gateRunError,
+  } =
+    await supabase
+      .from(
+        "alpha_backtest_research_gate_runs",
+      )
+      .insert({
+        gate_version:
+          "ALPHA_BACKTEST_RESEARCH_GATE_V9_5",
+
+
+--- MATCH @ 459 ---
+      : "BLOCKED";
+
+  const {
+    data: gateRun,
+    error: gateRunError,
+  } =
+    await supabase
+      .from(
+        "alpha_backtest_research_gate_runs",
+      )
+      .insert({
+        gate_version:
+          "ALPHA_BACKTEST_RESEARCH_GATE_V9_5",
+
+        universe_code:
+
+--- MATCH @ 463 ---
+    error: gateRunError,
+  } =
+    await supabase
+      .from(
+        "alpha_backtest_research_gate_runs",
+      )
+      .insert({
+        gate_version:
+          "ALPHA_BACKTEST_RESEARCH_GATE_V9_5",
+
+        universe_code:
+          universeCode,
+
+        requested_start_date:
+          startDate,
+
+--- MATCH @ 466 ---
+      .from(
+        "alpha_backtest_research_gate_runs",
+      )
+      .insert({
+        gate_version:
+          "ALPHA_BACKTEST_RESEARCH_GATE_V9_5",
+
+        universe_code:
+          universeCode,
+
+        requested_start_date:
+          startDate,
+
+        requested_end_date:
+          endDate,
+
+--- MATCH @ 467 ---
+        "alpha_backtest_research_gate_runs",
+      )
+      .insert({
+        gate_version:
+          "ALPHA_BACKTEST_RESEARCH_GATE_V9_5",
+
+        universe_code:
+          universeCode,
+
+        requested_start_date:
+          startDate,
+
+        requested_end_date:
+          endDate,
+
+
+--- MATCH @ 480 ---
+          endDate,
+
+        status,
+
+        checks,
+
+        blockers,
+
+        automatic_backtest_started:
+          false,
+
+        production_applied:
+          false,
+      })
+      .select(
+
+--- MATCH @ 484 ---
+        checks,
+
+        blockers,
+
+        automatic_backtest_started:
+          false,
+
+        production_applied:
+          false,
+      })
+      .select(
+        "id,created_at",
+      )
+      .single();
+
+
+--- MATCH @ 487 ---
+
+        automatic_backtest_started:
+          false,
+
+        production_applied:
+          false,
+      })
+      .select(
+        "id,created_at",
+      )
+      .single();
+
+  if (
+    gateRunError ||
+    !gateRun
+
+--- MATCH @ 496 ---
+      )
+      .single();
+
+  if (
+    gateRunError ||
+    !gateRun
+  ) {
+    throw new Error(
+      `v9.5 gate audit insert failed: ${
+        gateRunError?.message ??
+        "NO_GATE_RUN"
+      }`,
+    );
+  }
+
+
+--- MATCH @ 497 ---
+      .single();
+
+  if (
+    gateRunError ||
+    !gateRun
+  ) {
+    throw new Error(
+      `v9.5 gate audit insert failed: ${
+        gateRunError?.message ??
+        "NO_GATE_RUN"
+      }`,
+    );
+  }
+
+  return {
+
+--- MATCH @ 500 ---
+    gateRunError ||
+    !gateRun
+  ) {
+    throw new Error(
+      `v9.5 gate audit insert failed: ${
+        gateRunError?.message ??
+        "NO_GATE_RUN"
+      }`,
+    );
+  }
+
+  return {
+    version:
+      "ALPHA_BACKTEST_RESEARCH_GATE_V9_5",
+
+
+--- MATCH @ 501 ---
+    !gateRun
+  ) {
+    throw new Error(
+      `v9.5 gate audit insert failed: ${
+        gateRunError?.message ??
+        "NO_GATE_RUN"
+      }`,
+    );
+  }
+
+  return {
+    version:
+      "ALPHA_BACKTEST_RESEARCH_GATE_V9_5",
+
+    gateRunId:
+
+--- MATCH @ 502 ---
+  ) {
+    throw new Error(
+      `v9.5 gate audit insert failed: ${
+        gateRunError?.message ??
+        "NO_GATE_RUN"
+      }`,
+    );
+  }
+
+  return {
+    version:
+      "ALPHA_BACKTEST_RESEARCH_GATE_V9_5",
+
+    gateRunId:
+      gateRun.id,
+
+--- MATCH @ 509 ---
+  }
+
+  return {
+    version:
+      "ALPHA_BACKTEST_RESEARCH_GATE_V9_5",
+
+    gateRunId:
+      gateRun.id,
+
+    status,
+
+    universeCode,
+
+    requestedRange: {
+      startDate,
+
+--- MATCH @ 511 ---
+  return {
+    version:
+      "ALPHA_BACKTEST_RESEARCH_GATE_V9_5",
+
+    gateRunId:
+      gateRun.id,
+
+    status,
+
+    universeCode,
+
+    requestedRange: {
+      startDate,
+      endDate,
+    },
+
+--- MATCH @ 512 ---
+    version:
+      "ALPHA_BACKTEST_RESEARCH_GATE_V9_5",
+
+    gateRunId:
+      gateRun.id,
+
+    status,
+
+    universeCode,
+
+    requestedRange: {
+      startDate,
+      endDate,
+    },
+
+
+--- MATCH @ 523 ---
+      startDate,
+      endDate,
+    },
+
+    checks,
+
+    blockers,
+
+    interpretation:
+      status ===
+        "READY"
+        ? "All required historical-research evidence is present. A later research backtest may be started explicitly."
+        : "Historical Alpha backtesting remains blocked. Missing evidence must be resolved instead of bypassing the gate.",
+
+    safety: {
+
+--- MATCH @ 529 ---
+    blockers,
+
+    interpretation:
+      status ===
+        "READY"
+        ? "All required historical-research evidence is present. A later research backtest may be started explicitly."
+        : "Historical Alpha backtesting remains blocked. Missing evidence must be resolved instead of bypassing the gate.",
+
+    safety: {
+      automaticBacktestStarted:
+        false,
+
+      gateBypassImplemented:
+        false,
+
+
+--- MATCH @ 530 ---
+
+    interpretation:
+      status ===
+        "READY"
+        ? "All required historical-research evidence is present. A later research backtest may be started explicitly."
+        : "Historical Alpha backtesting remains blocked. Missing evidence must be resolved instead of bypassing the gate.",
+
+    safety: {
+      automaticBacktestStarted:
+        false,
+
+      gateBypassImplemented:
+        false,
+
+      productionApplied:
+
+--- MATCH @ 531 ---
+    interpretation:
+      status ===
+        "READY"
+        ? "All required historical-research evidence is present. A later research backtest may be started explicitly."
+        : "Historical Alpha backtesting remains blocked. Missing evidence must be resolved instead of bypassing the gate.",
+
+    safety: {
+      automaticBacktestStarted:
+        false,
+
+      gateBypassImplemented:
+        false,
+
+      productionApplied:
+        false,
+
+--- MATCH @ 534 ---
+        ? "All required historical-research evidence is present. A later research backtest may be started explicitly."
+        : "Historical Alpha backtesting remains blocked. Missing evidence must be resolved instead of bypassing the gate.",
+
+    safety: {
+      automaticBacktestStarted:
+        false,
+
+      gateBypassImplemented:
+        false,
+
+      productionApplied:
+        false,
+    },
+  };
+}
+
+--- MATCH @ 537 ---
+    safety: {
+      automaticBacktestStarted:
+        false,
+
+      gateBypassImplemented:
+        false,
+
+      productionApplied:
+        false,
+    },
+  };
+}
+
+--- MATCH @ 540 ---
+
+      gateBypassImplemented:
+        false,
+
+      productionApplied:
+        false,
+    },
+  };
+}
+
+============================================================
+V9.2 PURGED WALK FORWARD
+FILE: .\lib\research\build-purged-walk-forward-plan-v9-2.ts
+============================================================
+
+--- MATCH @ 10 ---
+  trading_date:
+    string;
+};
+
+type PitCheckRow = {
+  member_count:
+    number | string;
+
+  complete_member_count:
+    number | string;
+
+  incomplete_member_count:
+    number | string;
+
+  coverage_ready:
+
+--- MATCH @ 20 ---
+
+  incomplete_member_count:
+    number | string;
+
+  coverage_ready:
+    boolean;
+
+  coverage_status:
+    "READY" |
+    "NO_MEMBERS" |
+    "TOO_FEW_MEMBERS" |
+    "INCOMPLETE_COVERAGE";
+};
+
+type BuildInput = {
+
+--- MATCH @ 23 ---
+
+  coverage_ready:
+    boolean;
+
+  coverage_status:
+    "READY" |
+    "NO_MEMBERS" |
+    "TOO_FEW_MEMBERS" |
+    "INCOMPLETE_COVERAGE";
+};
+
+type BuildInput = {
+  universeCode?:
+    string;
+
+
+--- MATCH @ 24 ---
+  coverage_ready:
+    boolean;
+
+  coverage_status:
+    "READY" |
+    "NO_MEMBERS" |
+    "TOO_FEW_MEMBERS" |
+    "INCOMPLETE_COVERAGE";
+};
+
+type BuildInput = {
+  universeCode?:
+    string;
+
+  startDate?:
+
+--- MATCH @ 27 ---
+  coverage_status:
+    "READY" |
+    "NO_MEMBERS" |
+    "TOO_FEW_MEMBERS" |
+    "INCOMPLETE_COVERAGE";
+};
+
+type BuildInput = {
+  universeCode?:
+    string;
+
+  startDate?:
+    string;
+
+  endDate?:
+
+--- MATCH @ 58 ---
+
+  labelHorizonDays?:
+    number;
+
+  minimumPitMembers?:
+    number;
+};
+
+function requireSqlDate(
+  value:
+    string,
+
+  name:
+    string,
+) {
+
+--- MATCH @ 238 ---
+    ),
+  ];
+}
+
+async function checkPitCoverage(
+  universeCode:
+    string,
+
+  asOfDate:
+    string,
+
+  minimumMembers:
+    number,
+) {
+  const supabase =
+
+--- MATCH @ 257 ---
+    error,
+  } =
+    await supabase
+      .rpc(
+        "check_pit_universe_coverage_v9_2",
+        {
+          p_universe_code:
+            universeCode,
+
+          p_as_of_date:
+            asOfDate,
+
+          p_minimum_members:
+            minimumMembers,
+        },
+
+--- MATCH @ 274 ---
+  if (
+    error
+  ) {
+    throw new Error(
+      `v9.2 PIT coverage check failed for ${asOfDate}: ${error.message}`,
+    );
+  }
+
+  const row =
+    (
+      data?.[0] ??
+      null
+    ) as PitCheckRow | null;
+
+  if (
+
+--- MATCH @ 282 ---
+  const row =
+    (
+      data?.[0] ??
+      null
+    ) as PitCheckRow | null;
+
+  if (
+    !row
+  ) {
+    throw new Error(
+      `V9_2_EMPTY_PIT_COVERAGE_RESULT_${asOfDate}`,
+    );
+  }
+
+  return {
+
+--- MATCH @ 288 ---
+  if (
+    !row
+  ) {
+    throw new Error(
+      `V9_2_EMPTY_PIT_COVERAGE_RESULT_${asOfDate}`,
+    );
+  }
+
+  return {
+    memberCount:
+      Number(
+        row.member_count,
+      ),
+
+    completeMemberCount:
+
+--- MATCH @ 310 ---
+        row
+          .incomplete_member_count,
+      ),
+
+    ready:
+      row.coverage_ready,
+
+    status:
+      row.coverage_status,
+  };
+}
+
+export async function buildPurgedWalkForwardPlanV92(
+  input:
+    BuildInput = {},
+
+--- MATCH @ 311 ---
+          .incomplete_member_count,
+      ),
+
+    ready:
+      row.coverage_ready,
+
+    status:
+      row.coverage_status,
+  };
+}
+
+export async function buildPurgedWalkForwardPlanV92(
+  input:
+    BuildInput = {},
+) {
+
+--- MATCH @ 313 ---
+
+    ready:
+      row.coverage_ready,
+
+    status:
+      row.coverage_status,
+  };
+}
+
+export async function buildPurgedWalkForwardPlanV92(
+  input:
+    BuildInput = {},
+) {
+  const supabase =
+    createSupabaseServerClient();
+
+--- MATCH @ 314 ---
+    ready:
+      row.coverage_ready,
+
+    status:
+      row.coverage_status,
+  };
+}
+
+export async function buildPurgedWalkForwardPlanV92(
+  input:
+    BuildInput = {},
+) {
+  const supabase =
+    createSupabaseServerClient();
+
+
+--- MATCH @ 424 ---
+        5,
+      ),
+    );
+
+  const minimumPitMembers =
+    Math.max(
+      1,
+      Math.floor(
+        input
+          .minimumPitMembers ??
+        500,
+      ),
+    );
+
+  const calendar =
+
+--- MATCH @ 429 ---
+    Math.max(
+      1,
+      Math.floor(
+        input
+          .minimumPitMembers ??
+        500,
+      ),
+    );
+
+  const calendar =
+    await loadTradingCalendar(
+      calendarIndexCode,
+      startDate,
+      endDate,
+    );
+
+--- MATCH @ 488 ---
+
+        label_horizon_days:
+          labelHorizonDays,
+
+        minimum_pit_members:
+          minimumPitMembers,
+
+        status:
+          "BUILDING",
+
+        config: {
+          calendarTradingDays:
+            calendar.length,
+
+          minimumRequiredDays,
+
+--- MATCH @ 489 ---
+        label_horizon_days:
+          labelHorizonDays,
+
+        minimum_pit_members:
+          minimumPitMembers,
+
+        status:
+          "BUILDING",
+
+        config: {
+          calendarTradingDays:
+            calendar.length,
+
+          minimumRequiredDays,
+
+
+--- MATCH @ 491 ---
+
+        minimum_pit_members:
+          minimumPitMembers,
+
+        status:
+          "BUILDING",
+
+        config: {
+          calendarTradingDays:
+            calendar.length,
+
+          minimumRequiredDays,
+
+          foldStepDays:
+            testWindowDays +
+
+--- MATCH @ 510 ---
+
+          expandingWindow:
+            false,
+
+          futureTestDataUsedInTraining:
+            false,
+        },
+
+        safety: {
+          purgeAtLeastLabelHorizon:
+            purgeDays >=
+            labelHorizonDays,
+
+          currentUniverseBackfilledIntoPast:
+            false,
+
+--- MATCH @ 515 ---
+            false,
+        },
+
+        safety: {
+          purgeAtLeastLabelHorizon:
+            purgeDays >=
+            labelHorizonDays,
+
+          currentUniverseBackfilledIntoPast:
+            false,
+
+          missingPitCoverageFailsClosed:
+            true,
+
+          productionApplied:
+
+--- MATCH @ 522 ---
+
+          currentUniverseBackfilledIntoPast:
+            false,
+
+          missingPitCoverageFailsClosed:
+            true,
+
+          productionApplied:
+            false,
+        },
+
+        production_applied:
+          false,
+      })
+      .select(
+
+--- MATCH @ 564 ---
+        .from(
+          "alpha_validation_plans",
+        )
+        .update({
+          status:
+            "INSUFFICIENT_CALENDAR_HISTORY",
+
+          finished_at:
+            new Date()
+              .toISOString(),
+        })
+        .eq(
+          "id",
+          planId,
+        );
+
+--- MATCH @ 582 ---
+          "PURGED_EMBARGO_VALIDATION_FOUNDATION_V9_2",
+
+        planId,
+
+        status:
+          "INSUFFICIENT_CALENDAR_HISTORY",
+
+        calendarTradingDays:
+          calendar.length,
+
+        minimumRequiredDays,
+
+        productionApplied:
+          false,
+      };
+
+--- MATCH @ 624 ---
+
+        embargoEndDate:
+          string | null;
+
+        pit:
+          Awaited<
+            ReturnType<
+              typeof checkPitCoverage
+            >
+          >;
+      }> = [];
+
+    let testStartIndex =
+      trainingWindowDays +
+      purgeDays;
+
+--- MATCH @ 627 ---
+
+        pit:
+          Awaited<
+            ReturnType<
+              typeof checkPitCoverage
+            >
+          >;
+      }> = [];
+
+    let testStartIndex =
+      trainingWindowDays +
+      purgeDays;
+
+    let foldIndex =
+      1;
+
+--- MATCH @ 687 ---
+          testEndIndex +
+            embargoDays,
+        );
+
+      const pit =
+        await checkPitCoverage(
+          universeCode,
+          calendar[
+            testStartIndex
+          ],
+          minimumPitMembers,
+        );
+
+      folds.push({
+        foldIndex,
+
+--- MATCH @ 688 ---
+            embargoDays,
+        );
+
+      const pit =
+        await checkPitCoverage(
+          universeCode,
+          calendar[
+            testStartIndex
+          ],
+          minimumPitMembers,
+        );
+
+      folds.push({
+        foldIndex,
+
+
+--- MATCH @ 693 ---
+          universeCode,
+          calendar[
+            testStartIndex
+          ],
+          minimumPitMembers,
+        );
+
+      folds.push({
+        foldIndex,
+
+        trainStartDate:
+          calendar[
+            trainStartIndex
+          ],
+
+
+--- MATCH @ 755 ---
+                embargoEndIndex
+              ]
+            : null,
+
+        pit,
+      });
+
+      foldIndex +=
+        1;
+
+      testStartIndex +=
+        testWindowDays +
+        embargoDays;
+    }
+
+
+--- MATCH @ 813 ---
+
+          embargo_trading_days:
+            embargoDays,
+
+          pit_member_count:
+            fold.pit
+              .memberCount,
+
+          pit_complete_member_count:
+            fold.pit
+              .completeMemberCount,
+
+          pit_coverage_ready:
+            fold.pit.ready,
+
+
+--- MATCH @ 814 ---
+          embargo_trading_days:
+            embargoDays,
+
+          pit_member_count:
+            fold.pit
+              .memberCount,
+
+          pit_complete_member_count:
+            fold.pit
+              .completeMemberCount,
+
+          pit_coverage_ready:
+            fold.pit.ready,
+
+          pit_coverage_status:
+
+--- MATCH @ 817 ---
+          pit_member_count:
+            fold.pit
+              .memberCount,
+
+          pit_complete_member_count:
+            fold.pit
+              .completeMemberCount,
+
+          pit_coverage_ready:
+            fold.pit.ready,
+
+          pit_coverage_status:
+            fold.pit.status,
+
+          metadata: {
+
+--- MATCH @ 818 ---
+            fold.pit
+              .memberCount,
+
+          pit_complete_member_count:
+            fold.pit
+              .completeMemberCount,
+
+          pit_coverage_ready:
+            fold.pit.ready,
+
+          pit_coverage_status:
+            fold.pit.status,
+
+          metadata: {
+            labelHorizonDays,
+
+--- MATCH @ 821 ---
+          pit_complete_member_count:
+            fold.pit
+              .completeMemberCount,
+
+          pit_coverage_ready:
+            fold.pit.ready,
+
+          pit_coverage_status:
+            fold.pit.status,
+
+          metadata: {
+            labelHorizonDays,
+
+            purgeAtLeastLabelHorizon:
+              purgeDays >=
+
+--- MATCH @ 822 ---
+            fold.pit
+              .completeMemberCount,
+
+          pit_coverage_ready:
+            fold.pit.ready,
+
+          pit_coverage_status:
+            fold.pit.status,
+
+          metadata: {
+            labelHorizonDays,
+
+            purgeAtLeastLabelHorizon:
+              purgeDays >=
+              labelHorizonDays,
+
+--- MATCH @ 824 ---
+
+          pit_coverage_ready:
+            fold.pit.ready,
+
+          pit_coverage_status:
+            fold.pit.status,
+
+          metadata: {
+            labelHorizonDays,
+
+            purgeAtLeastLabelHorizon:
+              purgeDays >=
+              labelHorizonDays,
+          },
+
+
+--- MATCH @ 825 ---
+          pit_coverage_ready:
+            fold.pit.ready,
+
+          pit_coverage_status:
+            fold.pit.status,
+
+          metadata: {
+            labelHorizonDays,
+
+            purgeAtLeastLabelHorizon:
+              purgeDays >=
+              labelHorizonDays,
+          },
+
+          production_applied:
+
+--- MATCH @ 830 ---
+
+          metadata: {
+            labelHorizonDays,
+
+            purgeAtLeastLabelHorizon:
+              purgeDays >=
+              labelHorizonDays,
+          },
+
+          production_applied:
+            false,
+        }),
+      );
+
+    const chunkSize =
+
+--- MATCH @ 875 ---
+        );
+      }
+    }
+
+    const pitReadyFoldCount =
+      folds.filter(
+        (
+          fold,
+        ) =>
+          fold.pit.ready,
+      ).length;
+
+    const pitBlockedFoldCount =
+      folds.length -
+      pitReadyFoldCount;
+
+--- MATCH @ 880 ---
+      folds.filter(
+        (
+          fold,
+        ) =>
+          fold.pit.ready,
+      ).length;
+
+    const pitBlockedFoldCount =
+      folds.length -
+      pitReadyFoldCount;
+
+    const status =
+      folds.length >
+        0 &&
+      pitBlockedFoldCount ===
+
+--- MATCH @ 883 ---
+        ) =>
+          fold.pit.ready,
+      ).length;
+
+    const pitBlockedFoldCount =
+      folds.length -
+      pitReadyFoldCount;
+
+    const status =
+      folds.length >
+        0 &&
+      pitBlockedFoldCount ===
+        0
+        ? "READY"
+        : "BLOCKED_PIT_COVERAGE";
+
+--- MATCH @ 885 ---
+      ).length;
+
+    const pitBlockedFoldCount =
+      folds.length -
+      pitReadyFoldCount;
+
+    const status =
+      folds.length >
+        0 &&
+      pitBlockedFoldCount ===
+        0
+        ? "READY"
+        : "BLOCKED_PIT_COVERAGE";
+
+    const {
+
+--- MATCH @ 887 ---
+    const pitBlockedFoldCount =
+      folds.length -
+      pitReadyFoldCount;
+
+    const status =
+      folds.length >
+        0 &&
+      pitBlockedFoldCount ===
+        0
+        ? "READY"
+        : "BLOCKED_PIT_COVERAGE";
+
+    const {
+      error: finishError,
+    } =
+
+--- MATCH @ 890 ---
+
+    const status =
+      folds.length >
+        0 &&
+      pitBlockedFoldCount ===
+        0
+        ? "READY"
+        : "BLOCKED_PIT_COVERAGE";
+
+    const {
+      error: finishError,
+    } =
+      await supabase
+        .from(
+          "alpha_validation_plans",
+
+--- MATCH @ 892 ---
+      folds.length >
+        0 &&
+      pitBlockedFoldCount ===
+        0
+        ? "READY"
+        : "BLOCKED_PIT_COVERAGE";
+
+    const {
+      error: finishError,
+    } =
+      await supabase
+        .from(
+          "alpha_validation_plans",
+        )
+        .update({
+
+--- MATCH @ 893 ---
+        0 &&
+      pitBlockedFoldCount ===
+        0
+        ? "READY"
+        : "BLOCKED_PIT_COVERAGE";
+
+    const {
+      error: finishError,
+    } =
+      await supabase
+        .from(
+          "alpha_validation_plans",
+        )
+        .update({
+          status,
+
+--- MATCH @ 903 ---
+        .from(
+          "alpha_validation_plans",
+        )
+        .update({
+          status,
+
+          fold_count:
+            folds.length,
+
+          pit_ready_fold_count:
+            pitReadyFoldCount,
+
+          pit_blocked_fold_count:
+            pitBlockedFoldCount,
+
+
+--- MATCH @ 908 ---
+
+          fold_count:
+            folds.length,
+
+          pit_ready_fold_count:
+            pitReadyFoldCount,
+
+          pit_blocked_fold_count:
+            pitBlockedFoldCount,
+
+          finished_at:
+            new Date()
+              .toISOString(),
+        })
+        .eq(
+
+--- MATCH @ 909 ---
+          fold_count:
+            folds.length,
+
+          pit_ready_fold_count:
+            pitReadyFoldCount,
+
+          pit_blocked_fold_count:
+            pitBlockedFoldCount,
+
+          finished_at:
+            new Date()
+              .toISOString(),
+        })
+        .eq(
+          "id",
+
+--- MATCH @ 911 ---
+
+          pit_ready_fold_count:
+            pitReadyFoldCount,
+
+          pit_blocked_fold_count:
+            pitBlockedFoldCount,
+
+          finished_at:
+            new Date()
+              .toISOString(),
+        })
+        .eq(
+          "id",
+          planId,
+        );
+
+--- MATCH @ 912 ---
+          pit_ready_fold_count:
+            pitReadyFoldCount,
+
+          pit_blocked_fold_count:
+            pitBlockedFoldCount,
+
+          finished_at:
+            new Date()
+              .toISOString(),
+        })
+        .eq(
+          "id",
+          planId,
+        );
+
+
+--- MATCH @ 937 ---
+        "PURGED_EMBARGO_VALIDATION_FOUNDATION_V9_2",
+
+      planId,
+
+      status,
+
+      universeCode,
+
+      calendar: {
+        indexCode:
+          calendarIndexCode,
+
+        startDate,
+        endDate,
+
+
+--- MATCH @ 968 ---
+      counts: {
+        folds:
+          folds.length,
+
+        pitReady:
+          pitReadyFoldCount,
+
+        pitBlocked:
+          pitBlockedFoldCount,
+      },
+
+      folds:
+        folds.map(
+          (
+            fold,
+
+--- MATCH @ 969 ---
+        folds:
+          folds.length,
+
+        pitReady:
+          pitReadyFoldCount,
+
+        pitBlocked:
+          pitBlockedFoldCount,
+      },
+
+      folds:
+        folds.map(
+          (
+            fold,
+          ) => ({
+
+--- MATCH @ 971 ---
+
+        pitReady:
+          pitReadyFoldCount,
+
+        pitBlocked:
+          pitBlockedFoldCount,
+      },
+
+      folds:
+        folds.map(
+          (
+            fold,
+          ) => ({
+            foldIndex:
+              fold.foldIndex,
+
+--- MATCH @ 972 ---
+        pitReady:
+          pitReadyFoldCount,
+
+        pitBlocked:
+          pitBlockedFoldCount,
+      },
+
+      folds:
+        folds.map(
+          (
+            fold,
+          ) => ({
+            foldIndex:
+              fold.foldIndex,
+
+
+--- MATCH @ 1003 ---
+              fold.embargoStartDate,
+              fold.embargoEndDate,
+            ],
+
+            pitCoverage:
+              fold.pit,
+          }),
+        ),
+
+      interpretation:
+        status ===
+          "READY"
+          ? "The time-series validation protocol and historical point-in-time universe coverage are both ready for research execution."
+          : "The validation folds are defined, but historical point-in-time universe coverage is not sufficient. Do not execute historical Alpha validation yet.",
+
+
+--- MATCH @ 1004 ---
+              fold.embargoEndDate,
+            ],
+
+            pitCoverage:
+              fold.pit,
+          }),
+        ),
+
+      interpretation:
+        status ===
+          "READY"
+          ? "The time-series validation protocol and historical point-in-time universe coverage are both ready for research execution."
+          : "The validation folds are defined, but historical point-in-time universe coverage is not sufficient. Do not execute historical Alpha validation yet.",
+
+      safety: {
+
+--- MATCH @ 1009 ---
+          }),
+        ),
+
+      interpretation:
+        status ===
+          "READY"
+          ? "The time-series validation protocol and historical point-in-time universe coverage are both ready for research execution."
+          : "The validation folds are defined, but historical point-in-time universe coverage is not sufficient. Do not execute historical Alpha validation yet.",
+
+      safety: {
+        purgeAtLeastLabelHorizon:
+          purgeDays >=
+          labelHorizonDays,
+
+        currentUniverseBackfilledIntoPast:
+
+--- MATCH @ 1010 ---
+        ),
+
+      interpretation:
+        status ===
+          "READY"
+          ? "The time-series validation protocol and historical point-in-time universe coverage are both ready for research execution."
+          : "The validation folds are defined, but historical point-in-time universe coverage is not sufficient. Do not execute historical Alpha validation yet.",
+
+      safety: {
+        purgeAtLeastLabelHorizon:
+          purgeDays >=
+          labelHorizonDays,
+
+        currentUniverseBackfilledIntoPast:
+          false,
+
+--- MATCH @ 1011 ---
+
+      interpretation:
+        status ===
+          "READY"
+          ? "The time-series validation protocol and historical point-in-time universe coverage are both ready for research execution."
+          : "The validation folds are defined, but historical point-in-time universe coverage is not sufficient. Do not execute historical Alpha validation yet.",
+
+      safety: {
+        purgeAtLeastLabelHorizon:
+          purgeDays >=
+          labelHorizonDays,
+
+        currentUniverseBackfilledIntoPast:
+          false,
+
+
+--- MATCH @ 1012 ---
+      interpretation:
+        status ===
+          "READY"
+          ? "The time-series validation protocol and historical point-in-time universe coverage are both ready for research execution."
+          : "The validation folds are defined, but historical point-in-time universe coverage is not sufficient. Do not execute historical Alpha validation yet.",
+
+      safety: {
+        purgeAtLeastLabelHorizon:
+          purgeDays >=
+          labelHorizonDays,
+
+        currentUniverseBackfilledIntoPast:
+          false,
+
+        missingPitCoverageFailsClosed:
+
+--- MATCH @ 1015 ---
+          ? "The time-series validation protocol and historical point-in-time universe coverage are both ready for research execution."
+          : "The validation folds are defined, but historical point-in-time universe coverage is not sufficient. Do not execute historical Alpha validation yet.",
+
+      safety: {
+        purgeAtLeastLabelHorizon:
+          purgeDays >=
+          labelHorizonDays,
+
+        currentUniverseBackfilledIntoPast:
+          false,
+
+        missingPitCoverageFailsClosed:
+          true,
+
+        validationExecuted:
+
+--- MATCH @ 1022 ---
+
+        currentUniverseBackfilledIntoPast:
+          false,
+
+        missingPitCoverageFailsClosed:
+          true,
+
+        validationExecuted:
+          false,
+
+        productionApplied:
+          false,
+      },
+    };
+  } catch (
+
+--- MATCH @ 1025 ---
+
+        missingPitCoverageFailsClosed:
+          true,
+
+        validationExecuted:
+          false,
+
+        productionApplied:
+          false,
+      },
+    };
+  } catch (
+    error
+  ) {
+    const message =
+
+--- MATCH @ 1045 ---
+      .from(
+        "alpha_validation_plans",
+      )
+      .update({
+        status:
+          "FAILED",
+
+        error_message:
+          message,
+
+        finished_at:
+          new Date()
+            .toISOString(),
+      })
+      .eq(
+
+============================================================
+V9.0 BASELINE ALPHA
+FILE: .\lib\research\run-baseline-momentum-alpha-v9-0.ts
+============================================================
+
+--- MATCH @ 8 ---
+  id: string;
+  universe_code: string;
+  as_of_date: string;
+  market_date: string;
+  status: string;
+  total_members: number;
+  master_eligible_count: number;
+  data_ready_count: number;
+  final_eligible_count: number;
+  data_coverage_rate: number | string | null;
+};
+
+type FeatureRow = {
+  stock_code: string;
+  stock_name: string;
+
+--- MATCH @ 55 ---
+  const topN = Math.min(200, Math.max(1, Math.floor(input.topN ?? 50)));
+
+  const {data:screenData,error:screenError} = await supabase
+    .from("stock_universe_screening_runs")
+    .select("id,universe_code,as_of_date,market_date,status,total_members,master_eligible_count,data_ready_count,final_eligible_count,data_coverage_rate")
+    .eq("universe_code", universeCode)
+    .order("started_at",{ascending:false})
+    .limit(1)
+    .maybeSingle();
+
+  if (screenError) throw new Error(`v9.0 screening load failed: ${screenError.message}`);
+  const screen = (screenData ?? null) as ScreenRow | null;
+
+  const hypothesis =
+    "Within the point-in-time tradable/liquid universe, stronger recent cross-sectional momentum plus non-collapsing volume may have positive forward relative expectancy. This is a baseline hypothesis, not a production claim.";
+
+--- MATCH @ 65 ---
+  if (screenError) throw new Error(`v9.0 screening load failed: ${screenError.message}`);
+  const screen = (screenData ?? null) as ScreenRow | null;
+
+  const hypothesis =
+    "Within the point-in-time tradable/liquid universe, stronger recent cross-sectional momentum plus non-collapsing volume may have positive forward relative expectancy. This is a baseline hypothesis, not a production claim.";
+
+  const validationPlan = {
+    historicalBacktestAllowedNow: false,
+    reason: "Historical point-in-time KRX membership including delisted securities is not yet complete.",
+    requiredBeforeClaim: [
+      "historical PIT universe",
+      "corporate-action normalization",
+      "purged/embargoed validation",
+      "walk-forward OOS",
+      "fees/slippage",
+
+--- MATCH @ 67 ---
+
+  const hypothesis =
+    "Within the point-in-time tradable/liquid universe, stronger recent cross-sectional momentum plus non-collapsing volume may have positive forward relative expectancy. This is a baseline hypothesis, not a production claim.";
+
+  const validationPlan = {
+    historicalBacktestAllowedNow: false,
+    reason: "Historical point-in-time KRX membership including delisted securities is not yet complete.",
+    requiredBeforeClaim: [
+      "historical PIT universe",
+      "corporate-action normalization",
+      "purged/embargoed validation",
+      "walk-forward OOS",
+      "fees/slippage",
+      "benchmark comparison",
+      "forward shadow outcomes"
+
+--- MATCH @ 68 ---
+  const hypothesis =
+    "Within the point-in-time tradable/liquid universe, stronger recent cross-sectional momentum plus non-collapsing volume may have positive forward relative expectancy. This is a baseline hypothesis, not a production claim.";
+
+  const validationPlan = {
+    historicalBacktestAllowedNow: false,
+    reason: "Historical point-in-time KRX membership including delisted securities is not yet complete.",
+    requiredBeforeClaim: [
+      "historical PIT universe",
+      "corporate-action normalization",
+      "purged/embargoed validation",
+      "walk-forward OOS",
+      "fees/slippage",
+      "benchmark comparison",
+      "forward shadow outcomes"
+    ],
+
+--- MATCH @ 93 ---
+      universe_code:universeCode,
+      universe_as_of_date:screen?.as_of_date ?? new Date().toISOString().slice(0,10),
+      market_date:screen?.market_date ?? null,
+      screening_run_id:screen?.id ?? null,
+      status:"RUNNING",
+      config:{
+        formula:"0.60*pct(return20d)+0.20*pct(return5d)+0.20*pct(volumeRatio5To20)",
+        rules:["return20d>0","return5d>0","volumeRatio5To20>=0.8"],
+        topN,
+        minimumCoverageRate,
+        llmUsed:false,
+        complexEnsembleUsed:false
+      },
+      validation_plan:validationPlan,
+      screened_member_count:screen?.total_members ?? 0,
+
+--- MATCH @ 102 ---
+        minimumCoverageRate,
+        llmUsed:false,
+        complexEnsembleUsed:false
+      },
+      validation_plan:validationPlan,
+      screened_member_count:screen?.total_members ?? 0,
+      data_ready_count:screen?.data_ready_count ?? 0,
+      eligible_input_count:screen?.final_eligible_count ?? 0,
+      production_applied:false
+    })
+    .select("id")
+    .single();
+
+  if (expError || !exp) throw new Error(`v9.0 experiment create failed: ${expError?.message ?? "NO_EXPERIMENT"}`);
+  const experimentId = String(exp.id);
+
+--- MATCH @ 106 ---
+      validation_plan:validationPlan,
+      screened_member_count:screen?.total_members ?? 0,
+      data_ready_count:screen?.data_ready_count ?? 0,
+      eligible_input_count:screen?.final_eligible_count ?? 0,
+      production_applied:false
+    })
+    .select("id")
+    .single();
+
+  if (expError || !exp) throw new Error(`v9.0 experiment create failed: ${expError?.message ?? "NO_EXPERIMENT"}`);
+  const experimentId = String(exp.id);
+
+  try {
+    const coverageRate = Number(screen?.data_coverage_rate ?? 0);
+    const gatePassed = !!screen && screen.status === "SUCCESS" && coverageRate >= minimumCoverageRate;
+
+--- MATCH @ 116 ---
+  const experimentId = String(exp.id);
+
+  try {
+    const coverageRate = Number(screen?.data_coverage_rate ?? 0);
+    const gatePassed = !!screen && screen.status === "SUCCESS" && coverageRate >= minimumCoverageRate;
+    const dataGate = {
+      passed:gatePassed,
+      screeningRunId:screen?.id ?? null,
+      screeningStatus:screen?.status ?? null,
+      totalMembers:screen?.total_members ?? 0,
+      dataReady:screen?.data_ready_count ?? 0,
+      eligibleInput:screen?.final_eligible_count ?? 0,
+      coverageRate,
+      minimumCoverageRate,
+      productionApplied:false
+
+--- MATCH @ 120 ---
+    const gatePassed = !!screen && screen.status === "SUCCESS" && coverageRate >= minimumCoverageRate;
+    const dataGate = {
+      passed:gatePassed,
+      screeningRunId:screen?.id ?? null,
+      screeningStatus:screen?.status ?? null,
+      totalMembers:screen?.total_members ?? 0,
+      dataReady:screen?.data_ready_count ?? 0,
+      eligibleInput:screen?.final_eligible_count ?? 0,
+      coverageRate,
+      minimumCoverageRate,
+      productionApplied:false
+    };
+
+    if (!gatePassed || !screen) {
+      await supabase.from("alpha_research_experiments").update({
+
+--- MATCH @ 126 ---
+      dataReady:screen?.data_ready_count ?? 0,
+      eligibleInput:screen?.final_eligible_count ?? 0,
+      coverageRate,
+      minimumCoverageRate,
+      productionApplied:false
+    };
+
+    if (!gatePassed || !screen) {
+      await supabase.from("alpha_research_experiments").update({
+        status:"BLOCKED_DATA_COVERAGE",
+        data_gate:dataGate,
+        finished_at:new Date().toISOString(),
+        updated_at:new Date().toISOString()
+      }).eq("id",experimentId);
+
+
+--- MATCH @ 131 ---
+    };
+
+    if (!gatePassed || !screen) {
+      await supabase.from("alpha_research_experiments").update({
+        status:"BLOCKED_DATA_COVERAGE",
+        data_gate:dataGate,
+        finished_at:new Date().toISOString(),
+        updated_at:new Date().toISOString()
+      }).eq("id",experimentId);
+
+      return {
+        version:"ALPHA_RESEARCH_FOUNDATION_V9_0",
+        experimentId,
+        status:"BLOCKED_DATA_COVERAGE",
+        hypothesis,
+
+--- MATCH @ 140 ---
+
+      return {
+        version:"ALPHA_RESEARCH_FOUNDATION_V9_0",
+        experimentId,
+        status:"BLOCKED_DATA_COVERAGE",
+        hypothesis,
+        dataGate,
+        validationPlan,
+        message:"Finish v8.3 backfill and rerun v8.2.1. Alpha generation is intentionally blocked until coverage is sufficient.",
+        safety:{productionApplied:false,ordersCreated:false,riskChanged:false,llmLiveSignalUsed:false}
+      };
+    }
+
+    const rows:FeatureRow[] = [];
+    const pageSize = 500;
+
+--- MATCH @ 143 ---
+        experimentId,
+        status:"BLOCKED_DATA_COVERAGE",
+        hypothesis,
+        dataGate,
+        validationPlan,
+        message:"Finish v8.3 backfill and rerun v8.2.1. Alpha generation is intentionally blocked until coverage is sufficient.",
+        safety:{productionApplied:false,ordersCreated:false,riskChanged:false,llmLiveSignalUsed:false}
+      };
+    }
+
+    const rows:FeatureRow[] = [];
+    const pageSize = 500;
+    for (let offset=0;;offset+=pageSize) {
+      const {data,error} = await supabase.rpc("compute_baseline_momentum_features_v9_0",{
+        p_screen_run_id:screen.id,
+
+--- MATCH @ 145 ---
+        hypothesis,
+        dataGate,
+        validationPlan,
+        message:"Finish v8.3 backfill and rerun v8.2.1. Alpha generation is intentionally blocked until coverage is sufficient.",
+        safety:{productionApplied:false,ordersCreated:false,riskChanged:false,llmLiveSignalUsed:false}
+      };
+    }
+
+    const rows:FeatureRow[] = [];
+    const pageSize = 500;
+    for (let offset=0;;offset+=pageSize) {
+      const {data,error} = await supabase.rpc("compute_baseline_momentum_features_v9_0",{
+        p_screen_run_id:screen.id,
+        p_market_date:screen.market_date,
+        p_offset:offset,
+
+--- MATCH @ 204 ---
+          (pv.get(r.stockCode)??0)*0.20
+        ))
+      }))
+      .sort((a,b)=> b.score-a.score || b.avgTv20-a.avgTv20)
+      .map((r,i)=>({...r,rank:i+1,selected:i<topN}));
+
+    for (let i=0;i<ranked.length;i+=500) {
+      const chunk = ranked.slice(i,i+500).map(r=>({
+        experiment_id:experimentId,
+        stock_code:r.stockCode,
+        stock_name:r.stockName,
+        market:r.market,
+        signal_date:screen.market_date,
+        score:r.score,
+        rank:r.rank,
+
+--- MATCH @ 212 ---
+        experiment_id:experimentId,
+        stock_code:r.stockCode,
+        stock_name:r.stockName,
+        market:r.market,
+        signal_date:screen.market_date,
+        score:r.score,
+        rank:r.rank,
+        selected:r.selected,
+        features:{
+          latestClose:r.latestClose,
+          return5d:r.return5d,
+          return20d:r.return20d,
+          averageTradingValue20d:r.avgTv20,
+          volumeRatio5To20:r.volumeRatio,
+          momentum20Percentile:p20.get(r.stockCode)??0,
+
+--- MATCH @ 215 ---
+        market:r.market,
+        signal_date:screen.market_date,
+        score:r.score,
+        rank:r.rank,
+        selected:r.selected,
+        features:{
+          latestClose:r.latestClose,
+          return5d:r.return5d,
+          return20d:r.return20d,
+          averageTradingValue20d:r.avgTv20,
+          volumeRatio5To20:r.volumeRatio,
+          momentum20Percentile:p20.get(r.stockCode)??0,
+          momentum5Percentile:p5.get(r.stockCode)??0,
+          volumePercentile:pv.get(r.stockCode)??0
+        },
+
+--- MATCH @ 227 ---
+          momentum5Percentile:p5.get(r.stockCode)??0,
+          volumePercentile:pv.get(r.stockCode)??0
+        },
+        reasons:["POSITIVE_20D_MOMENTUM","POSITIVE_5D_MOMENTUM","RECENT_VOLUME_NOT_COLLAPSING"],
+        production_applied:false
+      }));
+      const {error} = await supabase.from("alpha_research_signals").insert(chunk);
+      if (error) throw new Error(`v9.0 signal insert failed: ${error.message}`);
+    }
+
+    await supabase.from("alpha_research_experiments").update({
+      status:"COMPLETED",
+      data_gate:dataGate,
+      eligible_input_count:valid.length,
+      signal_count:ranked.length,
+
+--- MATCH @ 229 ---
+        },
+        reasons:["POSITIVE_20D_MOMENTUM","POSITIVE_5D_MOMENTUM","RECENT_VOLUME_NOT_COLLAPSING"],
+        production_applied:false
+      }));
+      const {error} = await supabase.from("alpha_research_signals").insert(chunk);
+      if (error) throw new Error(`v9.0 signal insert failed: ${error.message}`);
+    }
+
+    await supabase.from("alpha_research_experiments").update({
+      status:"COMPLETED",
+      data_gate:dataGate,
+      eligible_input_count:valid.length,
+      signal_count:ranked.length,
+      finished_at:new Date().toISOString(),
+      updated_at:new Date().toISOString()
+
+--- MATCH @ 230 ---
+        reasons:["POSITIVE_20D_MOMENTUM","POSITIVE_5D_MOMENTUM","RECENT_VOLUME_NOT_COLLAPSING"],
+        production_applied:false
+      }));
+      const {error} = await supabase.from("alpha_research_signals").insert(chunk);
+      if (error) throw new Error(`v9.0 signal insert failed: ${error.message}`);
+    }
+
+    await supabase.from("alpha_research_experiments").update({
+      status:"COMPLETED",
+      data_gate:dataGate,
+      eligible_input_count:valid.length,
+      signal_count:ranked.length,
+      finished_at:new Date().toISOString(),
+      updated_at:new Date().toISOString()
+    }).eq("id",experimentId);
+
+--- MATCH @ 234 ---
+      if (error) throw new Error(`v9.0 signal insert failed: ${error.message}`);
+    }
+
+    await supabase.from("alpha_research_experiments").update({
+      status:"COMPLETED",
+      data_gate:dataGate,
+      eligible_input_count:valid.length,
+      signal_count:ranked.length,
+      finished_at:new Date().toISOString(),
+      updated_at:new Date().toISOString()
+    }).eq("id",experimentId);
+
+    return {
+      version:"ALPHA_RESEARCH_FOUNDATION_V9_0",
+      experimentId,
+
+--- MATCH @ 237 ---
+    await supabase.from("alpha_research_experiments").update({
+      status:"COMPLETED",
+      data_gate:dataGate,
+      eligible_input_count:valid.length,
+      signal_count:ranked.length,
+      finished_at:new Date().toISOString(),
+      updated_at:new Date().toISOString()
+    }).eq("id",experimentId);
+
+    return {
+      version:"ALPHA_RESEARCH_FOUNDATION_V9_0",
+      experimentId,
+      status:"COMPLETED",
+      hypothesis,
+      dataGate,
+
+--- MATCH @ 245 ---
+
+    return {
+      version:"ALPHA_RESEARCH_FOUNDATION_V9_0",
+      experimentId,
+      status:"COMPLETED",
+      hypothesis,
+      dataGate,
+      validationPlan,
+      counts:{
+        screenEligible:screen.final_eligible_count,
+        featureReady:valid.length,
+        ruleEligible:ranked.length,
+        selected:ranked.filter(x=>x.selected).length
+      },
+      topSignals:ranked.filter(x=>x.selected).slice(0,50),
+
+--- MATCH @ 248 ---
+      experimentId,
+      status:"COMPLETED",
+      hypothesis,
+      dataGate,
+      validationPlan,
+      counts:{
+        screenEligible:screen.final_eligible_count,
+        featureReady:valid.length,
+        ruleEligible:ranked.length,
+        selected:ranked.filter(x=>x.selected).length
+      },
+      topSignals:ranked.filter(x=>x.selected).slice(0,50),
+      safety:{
+        productionApplied:false,
+        ordersCreated:false,
+
+--- MATCH @ 253 ---
+      counts:{
+        screenEligible:screen.final_eligible_count,
+        featureReady:valid.length,
+        ruleEligible:ranked.length,
+        selected:ranked.filter(x=>x.selected).length
+      },
+      topSignals:ranked.filter(x=>x.selected).slice(0,50),
+      safety:{
+        productionApplied:false,
+        ordersCreated:false,
+        riskChanged:false,
+        llmLiveSignalUsed:false,
+        complexEnsembleUsed:false,
+        historicalBacktestClaimed:false
+      }
+
+--- MATCH @ 255 ---
+        featureReady:valid.length,
+        ruleEligible:ranked.length,
+        selected:ranked.filter(x=>x.selected).length
+      },
+      topSignals:ranked.filter(x=>x.selected).slice(0,50),
+      safety:{
+        productionApplied:false,
+        ordersCreated:false,
+        riskChanged:false,
+        llmLiveSignalUsed:false,
+        complexEnsembleUsed:false,
+        historicalBacktestClaimed:false
+      }
+    };
+  } catch (error) {
+
+--- MATCH @ 257 ---
+        selected:ranked.filter(x=>x.selected).length
+      },
+      topSignals:ranked.filter(x=>x.selected).slice(0,50),
+      safety:{
+        productionApplied:false,
+        ordersCreated:false,
+        riskChanged:false,
+        llmLiveSignalUsed:false,
+        complexEnsembleUsed:false,
+        historicalBacktestClaimed:false
+      }
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "UNKNOWN_V9_0_ALPHA_ERROR";
+    await supabase.from("alpha_research_experiments").update({
+
+--- MATCH @ 260 ---
+      safety:{
+        productionApplied:false,
+        ordersCreated:false,
+        riskChanged:false,
+        llmLiveSignalUsed:false,
+        complexEnsembleUsed:false,
+        historicalBacktestClaimed:false
+      }
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "UNKNOWN_V9_0_ALPHA_ERROR";
+    await supabase.from("alpha_research_experiments").update({
+      status:"FAILED",
+      error_message:message,
+      finished_at:new Date().toISOString(),
+
+--- MATCH @ 268 ---
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "UNKNOWN_V9_0_ALPHA_ERROR";
+    await supabase.from("alpha_research_experiments").update({
+      status:"FAILED",
+      error_message:message,
+      finished_at:new Date().toISOString(),
+      updated_at:new Date().toISOString()
+    }).eq("id",experimentId);
+    throw error;
+  }
+}
+
+============================================================
+V9.5 DATABASE FOUNDATION
+FILE: .\supabase\migrations\052_alpha_backtest_research_gate_v9_5.sql
+============================================================
+
+--- MATCH @ 2 ---
+-- ============================================================
+-- v9.5 Historical Alpha Backtest Research Gate
+-- ============================================================
+-- Purpose:
+-- Prevent historical Alpha backtests from running until the
+-- prerequisites that protect against false performance are present.
+--
+-- This stage does NOT execute a backtest.
+-- It only answers: "Are we allowed to run one?"
+--
+-- Required evidence:
+-- 1) v9.2 Purged/Embargo validation plan is READY.
+
+--- MATCH @ 12 ---
+-- This stage does NOT execute a backtest.
+-- It only answers: "Are we allowed to run one?"
+--
+-- Required evidence:
+-- 1) v9.2 Purged/Embargo validation plan is READY.
+-- 2) non-validation historical PIT compilation is READY.
+-- 3) historical market-data coverage is COMPLETE for the requested range.
+-- 4) corporate-action dataset coverage is COMPLETE for the requested range.
+-- 5) latest Corporate Action synthetic validation is PASS.
+--
+-- All gates fail closed.
+-- ============================================================
+
+create table if not exists public.historical_market_data_coverage_assertions (
+  id uuid primary key default gen_random_uuid(),
+
+--- MATCH @ 13 ---
+-- It only answers: "Are we allowed to run one?"
+--
+-- Required evidence:
+-- 1) v9.2 Purged/Embargo validation plan is READY.
+-- 2) non-validation historical PIT compilation is READY.
+-- 3) historical market-data coverage is COMPLETE for the requested range.
+-- 4) corporate-action dataset coverage is COMPLETE for the requested range.
+-- 5) latest Corporate Action synthetic validation is PASS.
+--
+-- All gates fail closed.
+-- ============================================================
+
+create table if not exists public.historical_market_data_coverage_assertions (
+  id uuid primary key default gen_random_uuid(),
+
+
+--- MATCH @ 18 ---
+-- 3) historical market-data coverage is COMPLETE for the requested range.
+-- 4) corporate-action dataset coverage is COMPLETE for the requested range.
+-- 5) latest Corporate Action synthetic validation is PASS.
+--
+-- All gates fail closed.
+-- ============================================================
+
+create table if not exists public.historical_market_data_coverage_assertions (
+  id uuid primary key default gen_random_uuid(),
+
+  universe_code text not null,
+  start_date date not null,
+  end_date date not null,
+
+  provider text not null,
+
+--- MATCH @ 21 ---
+--
+-- All gates fail closed.
+-- ============================================================
+
+create table if not exists public.historical_market_data_coverage_assertions (
+  id uuid primary key default gen_random_uuid(),
+
+  universe_code text not null,
+  start_date date not null,
+  end_date date not null,
+
+  provider text not null,
+
+  coverage_status text not null default 'UNKNOWN',
+
+
+--- MATCH @ 30 ---
+  end_date date not null,
+
+  provider text not null,
+
+  coverage_status text not null default 'UNKNOWN',
+
+  observed_member_count integer not null default 0,
+  data_ready_member_count integer not null default 0,
+  observed_coverage_rate numeric not null default 0,
+  minimum_required_rate numeric not null default 0.8,
+
+  evidence jsonb not null default '{}'::jsonb,
+
+  is_validation boolean not null default false,
+  production_applied boolean not null default false,
+
+--- MATCH @ 33 ---
+
+  coverage_status text not null default 'UNKNOWN',
+
+  observed_member_count integer not null default 0,
+  data_ready_member_count integer not null default 0,
+  observed_coverage_rate numeric not null default 0,
+  minimum_required_rate numeric not null default 0.8,
+
+  evidence jsonb not null default '{}'::jsonb,
+
+  is_validation boolean not null default false,
+  production_applied boolean not null default false,
+
+  created_at timestamptz not null default now(),
+
+
+--- MATCH @ 44 ---
+  production_applied boolean not null default false,
+
+  created_at timestamptz not null default now(),
+
+  constraint historical_market_data_coverage_assertions_status_check
+    check (
+      coverage_status in (
+        'COMPLETE',
+        'PARTIAL',
+        'UNKNOWN'
+      )
+    ),
+
+  constraint historical_market_data_coverage_assertions_rate_check
+    check (
+
+--- MATCH @ 46 ---
+  created_at timestamptz not null default now(),
+
+  constraint historical_market_data_coverage_assertions_status_check
+    check (
+      coverage_status in (
+        'COMPLETE',
+        'PARTIAL',
+        'UNKNOWN'
+      )
+    ),
+
+  constraint historical_market_data_coverage_assertions_rate_check
+    check (
+      observed_coverage_rate >= 0
+      and observed_coverage_rate <= 1
+
+--- MATCH @ 53 ---
+        'UNKNOWN'
+      )
+    ),
+
+  constraint historical_market_data_coverage_assertions_rate_check
+    check (
+      observed_coverage_rate >= 0
+      and observed_coverage_rate <= 1
+      and minimum_required_rate >= 0
+      and minimum_required_rate <= 1
+    ),
+
+  constraint historical_market_data_coverage_assertions_date_check
+    check (
+      start_date <= end_date
+
+--- MATCH @ 61 ---
+      and minimum_required_rate >= 0
+      and minimum_required_rate <= 1
+    ),
+
+  constraint historical_market_data_coverage_assertions_date_check
+    check (
+      start_date <= end_date
+    ),
+
+  constraint historical_market_data_coverage_assertions_production_check
+    check (
+      production_applied = false
+    )
+);
+
+
+--- MATCH @ 66 ---
+    check (
+      start_date <= end_date
+    ),
+
+  constraint historical_market_data_coverage_assertions_production_check
+    check (
+      production_applied = false
+    )
+);
+
+create index if not exists
+  idx_historical_market_data_coverage_assertions_lookup
+on public.historical_market_data_coverage_assertions (
+  universe_code,
+  start_date,
+
+--- MATCH @ 81 ---
+  end_date,
+  created_at desc
+);
+
+create table if not exists public.corporate_action_coverage_assertions (
+  id uuid primary key default gen_random_uuid(),
+
+  universe_code text not null,
+  start_date date not null,
+  end_date date not null,
+
+  provider text not null,
+
+  coverage_status text not null default 'UNKNOWN',
+
+
+--- MATCH @ 90 ---
+  end_date date not null,
+
+  provider text not null,
+
+  coverage_status text not null default 'UNKNOWN',
+
+  supported_action_types jsonb not null default '[]'::jsonb,
+  unsupported_action_types jsonb not null default '[]'::jsonb,
+
+  evidence jsonb not null default '{}'::jsonb,
+
+  is_validation boolean not null default false,
+  production_applied boolean not null default false,
+
+  created_at timestamptz not null default now(),
+
+--- MATCH @ 102 ---
+  production_applied boolean not null default false,
+
+  created_at timestamptz not null default now(),
+
+  constraint corporate_action_coverage_assertions_status_check
+    check (
+      coverage_status in (
+        'COMPLETE',
+        'PARTIAL',
+        'UNKNOWN'
+      )
+    ),
+
+  constraint corporate_action_coverage_assertions_date_check
+    check (
+
+--- MATCH @ 104 ---
+  created_at timestamptz not null default now(),
+
+  constraint corporate_action_coverage_assertions_status_check
+    check (
+      coverage_status in (
+        'COMPLETE',
+        'PARTIAL',
+        'UNKNOWN'
+      )
+    ),
+
+  constraint corporate_action_coverage_assertions_date_check
+    check (
+      start_date <= end_date
+    ),
+
+--- MATCH @ 111 ---
+        'UNKNOWN'
+      )
+    ),
+
+  constraint corporate_action_coverage_assertions_date_check
+    check (
+      start_date <= end_date
+    ),
+
+  constraint corporate_action_coverage_assertions_production_check
+    check (
+      production_applied = false
+    )
+);
+
+
+--- MATCH @ 116 ---
+    check (
+      start_date <= end_date
+    ),
+
+  constraint corporate_action_coverage_assertions_production_check
+    check (
+      production_applied = false
+    )
+);
+
+create index if not exists
+  idx_corporate_action_coverage_assertions_lookup
+on public.corporate_action_coverage_assertions (
+  universe_code,
+  start_date,
+
+--- MATCH @ 131 ---
+  end_date,
+  created_at desc
+);
+
+create table if not exists public.alpha_backtest_research_gate_runs (
+  id uuid primary key default gen_random_uuid(),
+
+  gate_version text not null default 'ALPHA_BACKTEST_RESEARCH_GATE_V9_5',
+
+  universe_code text not null,
+
+  requested_start_date date not null,
+  requested_end_date date not null,
+
+  status text not null,
+
+--- MATCH @ 134 ---
+
+create table if not exists public.alpha_backtest_research_gate_runs (
+  id uuid primary key default gen_random_uuid(),
+
+  gate_version text not null default 'ALPHA_BACKTEST_RESEARCH_GATE_V9_5',
+
+  universe_code text not null,
+
+  requested_start_date date not null,
+  requested_end_date date not null,
+
+  status text not null,
+
+  checks jsonb not null default '{}'::jsonb,
+
+
+--- MATCH @ 141 ---
+
+  requested_start_date date not null,
+  requested_end_date date not null,
+
+  status text not null,
+
+  checks jsonb not null default '{}'::jsonb,
+
+  blockers jsonb not null default '[]'::jsonb,
+
+  automatic_backtest_started boolean not null default false,
+  production_applied boolean not null default false,
+
+  created_at timestamptz not null default now(),
+
+
+--- MATCH @ 147 ---
+  checks jsonb not null default '{}'::jsonb,
+
+  blockers jsonb not null default '[]'::jsonb,
+
+  automatic_backtest_started boolean not null default false,
+  production_applied boolean not null default false,
+
+  created_at timestamptz not null default now(),
+
+  constraint alpha_backtest_research_gate_runs_status_check
+    check (
+      status in (
+        'READY',
+        'BLOCKED',
+        'FAILED'
+
+--- MATCH @ 152 ---
+  production_applied boolean not null default false,
+
+  created_at timestamptz not null default now(),
+
+  constraint alpha_backtest_research_gate_runs_status_check
+    check (
+      status in (
+        'READY',
+        'BLOCKED',
+        'FAILED'
+      )
+    ),
+
+  constraint alpha_backtest_research_gate_runs_date_check
+    check (
+
+--- MATCH @ 154 ---
+  created_at timestamptz not null default now(),
+
+  constraint alpha_backtest_research_gate_runs_status_check
+    check (
+      status in (
+        'READY',
+        'BLOCKED',
+        'FAILED'
+      )
+    ),
+
+  constraint alpha_backtest_research_gate_runs_date_check
+    check (
+      requested_start_date <= requested_end_date
+    ),
+
+--- MATCH @ 155 ---
+
+  constraint alpha_backtest_research_gate_runs_status_check
+    check (
+      status in (
+        'READY',
+        'BLOCKED',
+        'FAILED'
+      )
+    ),
+
+  constraint alpha_backtest_research_gate_runs_date_check
+    check (
+      requested_start_date <= requested_end_date
+    ),
+
+
+--- MATCH @ 156 ---
+  constraint alpha_backtest_research_gate_runs_status_check
+    check (
+      status in (
+        'READY',
+        'BLOCKED',
+        'FAILED'
+      )
+    ),
+
+  constraint alpha_backtest_research_gate_runs_date_check
+    check (
+      requested_start_date <= requested_end_date
+    ),
+
+  constraint alpha_backtest_research_gate_runs_backtest_check
+
+--- MATCH @ 161 ---
+        'FAILED'
+      )
+    ),
+
+  constraint alpha_backtest_research_gate_runs_date_check
+    check (
+      requested_start_date <= requested_end_date
+    ),
+
+  constraint alpha_backtest_research_gate_runs_backtest_check
+    check (
+      automatic_backtest_started = false
+    ),
+
+  constraint alpha_backtest_research_gate_runs_production_check
+
+--- MATCH @ 166 ---
+    check (
+      requested_start_date <= requested_end_date
+    ),
+
+  constraint alpha_backtest_research_gate_runs_backtest_check
+    check (
+      automatic_backtest_started = false
+    ),
+
+  constraint alpha_backtest_research_gate_runs_production_check
+    check (
+      production_applied = false
+    )
+);
+
+
+--- MATCH @ 168 ---
+    ),
+
+  constraint alpha_backtest_research_gate_runs_backtest_check
+    check (
+      automatic_backtest_started = false
+    ),
+
+  constraint alpha_backtest_research_gate_runs_production_check
+    check (
+      production_applied = false
+    )
+);
+
+create index if not exists
+  idx_alpha_backtest_research_gate_runs_lookup
+
+--- MATCH @ 171 ---
+    check (
+      automatic_backtest_started = false
+    ),
+
+  constraint alpha_backtest_research_gate_runs_production_check
+    check (
+      production_applied = false
+    )
+);
+
+create index if not exists
+  idx_alpha_backtest_research_gate_runs_lookup
+on public.alpha_backtest_research_gate_runs (
+  universe_code,
+  requested_start_date,
+
+--- MATCH @ 178 ---
+    )
+);
+
+create index if not exists
+  idx_alpha_backtest_research_gate_runs_lookup
+on public.alpha_backtest_research_gate_runs (
+  universe_code,
+  requested_start_date,
+  requested_end_date,
+  created_at desc
+);
+
+comment on table public.alpha_backtest_research_gate_runs is
+'v9.5 fail-closed historical Alpha backtest gate. A READY result permits later research execution but never auto-starts a backtest.';
+
+
+--- MATCH @ 179 ---
+);
+
+create index if not exists
+  idx_alpha_backtest_research_gate_runs_lookup
+on public.alpha_backtest_research_gate_runs (
+  universe_code,
+  requested_start_date,
+  requested_end_date,
+  created_at desc
+);
+
+comment on table public.alpha_backtest_research_gate_runs is
+'v9.5 fail-closed historical Alpha backtest gate. A READY result permits later research execution but never auto-starts a backtest.';
+
+comment on table public.historical_market_data_coverage_assertions is
+
+--- MATCH @ 186 ---
+  requested_end_date,
+  created_at desc
+);
+
+comment on table public.alpha_backtest_research_gate_runs is
+'v9.5 fail-closed historical Alpha backtest gate. A READY result permits later research execution but never auto-starts a backtest.';
+
+comment on table public.historical_market_data_coverage_assertions is
+'Explicit evidence that broad historical OHLCV coverage is sufficient over a requested PIT universe/range.';
+
+comment on table public.corporate_action_coverage_assertions is
+'Explicit evidence that corporate-action source coverage is complete over a requested universe/range. Synthetic code validation alone is not data-coverage evidence.';
+
+--- MATCH @ 187 ---
+  created_at desc
+);
+
+comment on table public.alpha_backtest_research_gate_runs is
+'v9.5 fail-closed historical Alpha backtest gate. A READY result permits later research execution but never auto-starts a backtest.';
+
+comment on table public.historical_market_data_coverage_assertions is
+'Explicit evidence that broad historical OHLCV coverage is sufficient over a requested PIT universe/range.';
+
+comment on table public.corporate_action_coverage_assertions is
+'Explicit evidence that corporate-action source coverage is complete over a requested universe/range. Synthetic code validation alone is not data-coverage evidence.';

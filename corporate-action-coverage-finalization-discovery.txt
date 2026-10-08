@@ -1,0 +1,4168 @@
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\app\api\research\data\v9\corporate-action-coverage\status\route.ts
+MATCH @ LINE 35
+============================================================
+          .select(`
+            id,
+            version,
+            universe_code,
+            compilation_run_id,
+            source_coverage_window_id,
+            start_date,
+            end_date,
+            status,
+            pit_member_count,
+            pit_markets,
+            required_action_types,
+            missing_markets,
+            missing_action_types,
+            summary,
+            is_validation,
+            started_at,
+            finished_at,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\app\api\research\data\v9\corporate-action-coverage\status\route.ts
+MATCH @ LINE 89
+============================================================
+          )
+          .limit(20),
+
+        supabase
+          .from(
+            "corporate_action_source_coverage_windows",
+          )
+          .select(`
+            id,
+            universe_code,
+            provider,
+            provider_version,
+            start_date,
+            end_date,
+            coverage_status,
+            markets,
+            action_types,
+            evidence,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\app\api\research\data\v9\corporate-action-source\status\route.ts
+MATCH @ LINE 12
+============================================================
+export const maxDuration = 60;
+export async function GET(request: Request) {
+  const denied = authorizeInventory(request); if (denied) return denied;
+  try {
+    const run = await getInventoryRun(uuid(new URL(request.url).searchParams.get("runId")));
+    return NextResponse.json({ ok: true, run, eventImportComplete: false, expectedV97Status: "BLOCKED_SOURCE_COVERAGE" });
+  } catch (error) { return inventoryError(error); }
+}
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\lib\market\opendart-source-service-v9-7-1.ts
+MATCH @ LINE 7
+============================================================
+import { addDays, date, fetchPage, uuid, type Cursor } from "./opendart-source-core-v9-7-1";
+
+export type InventoryRun = Cursor & {
+  id: string; start_date: string; end_date: string; status: "RUNNING" | "INVENTORY_COMPLETE";
+  stored_pages: number; disclosure_count: number; candidate_count: number;
+  source_coverage_window_id: string | null;
+};
+export async function getInventoryRun(id: string): Promise<InventoryRun> {
+  const { data, error } = await createSupabaseServerClient().from("corporate_action_source_inventory_runs")
+    .select("*").eq("id", uuid(id)).single();
+  if (error || !data) throw new Error("INVENTORY_RUN_LOOKUP_FAILED");
+  return data as InventoryRun;
+}
+export async function createInventoryRun(input: Record<string, unknown>) {
+  // A client-generated ID is persisted before the HTTP call, making creation retry-safe.
+  const id = uuid(input.runId), start = date(input.startDate ?? "2023-01-02"), end = date(input.endDate ?? "2026-07-31");
+  const koreaToday = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+  if (start > end || end >= koreaToday) throw new Error("INVALID_DATE_RANGE_USE_CLOSED_HISTORICAL_DATES");
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\lib\research\evaluate-corporate-action-dataset-coverage-v9-7.ts
+MATCH @ LINE 358
+============================================================
+    createSupabaseServerClient();
+
+  let query =
+    supabase
+      .from(
+        "corporate_action_source_coverage_windows",
+      )
+      .select(`
+        id,
+        universe_code,
+        provider,
+        provider_version,
+        start_date,
+        end_date,
+        coverage_status,
+        markets,
+        action_types,
+        source_fingerprint,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\lib\research\evaluate-corporate-action-dataset-coverage-v9-7.ts
+MATCH @ LINE 578
+============================================================
+        compilation_run_id:
+          compilation
+            ?.id ??
+          null,
+
+        source_coverage_window_id:
+          sourceCoverage
+            ?.id ??
+          null,
+
+        start_date:
+          startDate,
+
+        end_date:
+          endDate,
+
+        status:
+          "RUNNING",
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\lib\research\validate-corporate-action-dataset-coverage-v9-7.ts
+MATCH @ LINE 389
+============================================================
+      data: sourceCoverage,
+      error: sourceCoverageError,
+    } =
+      await supabase
+        .from(
+          "corporate_action_source_coverage_windows",
+        )
+        .insert({
+          universe_code:
+            "KRX_ALL_LISTED",
+
+          provider:
+            "SYNTHETIC_CORPORATE_ACTION_COVERAGE_V9_7",
+
+          provider_version:
+            "SYNTHETIC_V1",
+
+          start_date:
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\lib\research\validate-corporate-action-dataset-coverage-v9-7.ts
+MATCH @ LINE 628
+============================================================
+    if (
+      sourceCoverageWindowId
+    ) {
+      await supabase
+        .from(
+          "corporate_action_source_coverage_windows",
+        )
+        .delete()
+        .eq(
+          "id",
+          sourceCoverageWindowId,
+        );
+    }
+
+    if (
+      compilationRunId
+    ) {
+      await supabase
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\lib\research\validate-corporate-action-dataset-coverage-v9-7.ts
+MATCH @ LINE 778
+============================================================
+    if (
+      sourceCoverageWindowId
+    ) {
+      await supabase
+        .from(
+          "corporate_action_source_coverage_windows",
+        )
+        .delete()
+        .eq(
+          "id",
+          sourceCoverageWindowId,
+        );
+    }
+
+    if (
+      compilationRunId
+    ) {
+      await supabase
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\collect-corporate-action-details-v9-7-2.cjs
+MATCH @ LINE 150
+============================================================
+  config.samples.forEach(validSample);
+  if (new Set(config.samples.map(s=>s.receiptNo+'|'+s.candidateActionType)).size!==config.samples.length) throw new Error('DUPLICATE_SAMPLE');
+  fs.mkdirSync(path.dirname(output),{recursive:true});
+  let state={version:'V9_7_2_DETAIL_PROBE',sampleHash,inventoryRunId:config.inventoryRunId,
+    sourceCoverageWindowId:config.sourceCoverageWindowId,scope:'SAMPLE_ONLY_NOT_COVERAGE',
+    eventImportComplete:false,records:[],status:'RUNNING'};
+  if (fs.existsSync(output)) {
+    state=JSON.parse(fs.readFileSync(output,'utf8'));
+    if (state.sampleHash!==sampleHash || state.version!=='V9_7_2_DETAIL_PROBE') throw new Error('PROBE_STATE_MISMATCH');
+    if (!Array.isArray(state.records)) throw new Error('INVALID_PROBE_STATE');
+  }
+  state.status='RUNNING'; save(output,state);
+  for (const sample of config.samples) {
+    let record=state.records.find(r=>r.candidate.receiptNo===sample.receiptNo && r.candidate.candidateActionType===sample.candidateActionType);
+    if (!record) { record={candidate:sample,reviewFlags:flags(sample)}; state.records.push(record); }
+    for (const kind of ['document','structured']) {
+      if (!refresh && reusable(record[kind])) continue;
+      const endpoint=kind==='document'?'document.xml':structuredEndpoint(sample);
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\finalize-corporate-action-sample-v9-7-6.cjs
+MATCH @ LINE 168
+============================================================
+  const detailMap=new Map(detail.records.map(r=>[keyOf(r.candidate),r]));
+  const chainMap=new Map(chain.records.map(r=>[keyOf(r.candidate),r]));
+  const dividendMap=new Map(dividend.records.map(r=>[keyOf(r.candidate),r]));
+  const state={version:VERSION,inputVersions:[detail.version,parsed.version,chain.version,dividend.version],sampleHash:detail.sampleHash,
+    inventoryRunId:detail.inventoryRunId,sourceCoverageWindowId:detail.sourceCoverageWindowId,scope:'SAMPLE_ONLY_NOT_COVERAGE',
+    eventImportComplete:false,coveragePromoted:false,status:'RUNNING',records:[]};
+
+  for (const p of parsed.records) {
+    const keyId=keyOf(p.candidate);
+    const d=detailMap.get(keyId);
+    const c=chainMap.get(keyId);
+    const dv=dividendMap.get(keyId);
+    let out;
+    try {
+      if (p.parseStatus==='VALIDATED') {
+        out={finalStatus:'VALIDATED',finalReason:p.reason,event:p.event,evidencePolicy:'V9_7_3_EXPLICIT_SOURCE_FIELDS'};
+      } else if (p.parseStatus==='REJECTED') {
+        out={finalStatus:'REJECTED',finalReason:p.reason,event:null,evidencePolicy:'V9_7_3_SCOPE_OR_FOLLOWUP_REJECTION'};
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\inspect-corporate-action-source-coverage.ts
+MATCH @ LINE 59
+============================================================
+        )
+        .limit(20),
+
+      supabase
+        .from(
+          "corporate_action_source_coverage_windows",
+        )
+        .select(`
+          id,
+          universe_code,
+          provider,
+          provider_version,
+          start_date,
+          end_date,
+          coverage_status,
+          markets,
+          action_types,
+          source_fingerprint,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\parse-corporate-action-details-v9-7-3.cjs
+MATCH @ LINE 330
+============================================================
+  };
+}
+
+function validateInput(input) {
+  if (!isObject(input) || input.version!==INPUT_VERSION || !Array.isArray(input.records) || !input.records.length) throw new Error('INVALID_V9_7_2_REPORT');
+  if (input.scope!=='SAMPLE_ONLY_NOT_COVERAGE' || input.eventImportComplete!==false) throw new Error('UNEXPECTED_INPUT_SCOPE');
+  for (const r of input.records) {
+    if (!isObject(r) || !isObject(r.candidate) || !/^\d{14}$/.test(r.candidate.receiptNo??'') || !TYPES.has(r.candidate.candidateActionType)) throw new Error('INVALID_V9_7_2_RECORD');
+  }
+}
+
+function parseProbe(input) {
+  validateInput(input);
+  let totalXml=0;
+  const state={version:VERSION,inputVersion:input.version,sampleHash:input.sampleHash,inventoryRunId:input.inventoryRunId,
+    sourceCoverageWindowId:input.sourceCoverageWindowId,scope:'SAMPLE_ONLY_NOT_COVERAGE',eventImportComplete:false,
+    coveragePromoted:false,status:'RUNNING',records:[]};
+  for (const record of input.records) {
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\parse-corporate-action-details-v9-7-3.cjs
+MATCH @ LINE 340
+============================================================
+
+function parseProbe(input) {
+  validateInput(input);
+  let totalXml=0;
+  const state={version:VERSION,inputVersion:input.version,sampleHash:input.sampleHash,inventoryRunId:input.inventoryRunId,
+    sourceCoverageWindowId:input.sourceCoverageWindowId,scope:'SAMPLE_ONLY_NOT_COVERAGE',eventImportComplete:false,
+    coveragePromoted:false,status:'RUNNING',records:[]};
+  for (const record of input.records) {
+    let parsed;
+    try { parsed=parseRecord(record); }
+    catch(error) { parsed={parseStatus:'ERROR',reason:safeError(error),xml:null,event:null,correctionDocument:hasFlag(record,'CORRECTION_CHAIN_REQUIRED'),correctionChainResolved:false,eventInsertAllowed:false}; }
+    totalXml += parsed.xml?.byteLength||0;
+    if (totalXml>MAX_TOTAL_XML_BYTES) throw new Error('TOTAL_XML_LIMIT');
+    state.records.push({candidate:record.candidate,source:{documentStatus:record.document?.status??null,structuredStatus:record.structured?.status??null},...parsed});
+    console.log(`${record.candidate.candidateActionType} ${record.candidate.receiptNo}: ${parsed.parseStatus} ${parsed.reason}`);
+  }
+  const c=s=>state.records.filter(r=>r.parseStatus===s).length;
+  state.status=c('ERROR')?'HAS_ERRORS':'PARSE_PROBE_FINISHED';
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\resolve-corporate-action-chains-v9-7-4-1.cjs
+MATCH @ LINE 291
+============================================================
+  validateInputs(detail,parsed);
+  const parser=options.parser ?? require(path.join(__dirname,'parse-corporate-action-details-v9-7-3.cjs'));
+  const fetcher=options.fetcher??fetch, delay=options.delay??DELAY_MS;
+  const parsedByKey=new Map(parsed.records.map(r=>[`${r.candidate.receiptNo}|${r.candidate.candidateActionType}`,r]));
+  const state={version:VERSION,inputVersions:[detail.version,parsed.version],sampleHash:detail.sampleHash,inventoryRunId:detail.inventoryRunId,
+    sourceCoverageWindowId:detail.sourceCoverageWindowId,scope:'SAMPLE_ONLY_NOT_COVERAGE',eventImportComplete:false,coveragePromoted:false,status:'RUNNING',records:[]};
+
+  for (const record of detail.records) {
+    const flags=new Set(record.reviewFlags||[]);
+    const isCorrection=[...CORRECTION_FLAGS].some(f=>flags.has(f));
+    const isWithdrawal=flags.has(WITHDRAWAL_FLAG);
+    if (!isCorrection && !isWithdrawal) continue;
+    const parsedRecord=parsedByKey.get(`${record.candidate.receiptNo}|${record.candidate.candidateActionType}`) ?? null;
+    let nodes=null;
+    try { nodes=getNodes(record,parser); } catch {}
+    let result;
+    try {
+      if (isWithdrawal) {
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\resolve-corporate-action-chains-v9-7-4.cjs
+MATCH @ LINE 227
+============================================================
+  validateInputs(detail,parsed);
+  const parser=options.parser ?? require(path.join(__dirname,'parse-corporate-action-details-v9-7-3.cjs'));
+  const fetcher=options.fetcher??fetch, delay=options.delay??DELAY_MS;
+  const parsedByKey=new Map(parsed.records.map(r=>[`${r.candidate.receiptNo}|${r.candidate.candidateActionType}`,r]));
+  const state={version:VERSION,inputVersions:[detail.version,parsed.version],sampleHash:detail.sampleHash,inventoryRunId:detail.inventoryRunId,
+    sourceCoverageWindowId:detail.sourceCoverageWindowId,scope:'SAMPLE_ONLY_NOT_COVERAGE',eventImportComplete:false,coveragePromoted:false,status:'RUNNING',records:[]};
+
+  for (const record of detail.records) {
+    const flags=new Set(record.reviewFlags||[]);
+    const isCorrection=[...CORRECTION_FLAGS].some(f=>flags.has(f));
+    const isWithdrawal=flags.has(WITHDRAWAL_FLAG);
+    if (!isCorrection && !isWithdrawal) continue;
+    const parsedRecord=parsedByKey.get(`${record.candidate.receiptNo}|${record.candidate.candidateActionType}`) ?? null;
+    let nodes=null;
+    try { nodes=getNodes(record,parser); } catch {}
+    let result;
+    try {
+      if (isWithdrawal) {
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\resolve-dividend-market-adjustments-v9-7-5-1.cjs
+MATCH @ LINE 177
+============================================================
+    inputVersions:[parsed.version, market.version],
+    sampleHash:parsed.sampleHash,
+    inventoryRunId:parsed.inventoryRunId,
+    sourceCoverageWindowId:parsed.sourceCoverageWindowId,
+    scope:'SAMPLE_ONLY_NOT_COVERAGE',
+    eventImportComplete:false,
+    coveragePromoted:false,
+    status:'RUNNING',
+    records:[]
+  };
+
+  const holidayCache = new Map();
+  async function ensureYears(recordDate) {
+    const y = yearOf(recordDate);
+    const years = [y-1,y,y+1];
+    const all = new Set();
+    const evidence = [];
+    for (const yr of years) {
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\resolve-dividend-market-adjustments-v9-7-5.cjs
+MATCH @ LINE 296
+============================================================
+async function runProbe(parsed, chain, options={}) {
+  validateInputs(parsed,chain);
+  const fetcher=options.fetcher??fetch, delay=options.delay??DELAY_MS;
+  const targets=parsed.records.filter(r=>r.parseStatus==='PARSED_NEEDS_EFFECTIVE_DATE' && TARGET_TYPES.has(r.candidate?.candidateActionType));
+  const state={version:VERSION,inputVersions:[parsed.version,chain.version],sampleHash:parsed.sampleHash,inventoryRunId:parsed.inventoryRunId,
+    sourceCoverageWindowId:parsed.sourceCoverageWindowId,scope:'SAMPLE_ONLY_NOT_COVERAGE',eventImportComplete:false,coveragePromoted:false,status:'RUNNING',records:[]};
+
+  for (const candidate of targets) {
+    let out;
+    try {
+      const recordDate=candidate.event?.recordDate;
+      if (!recordDate) throw new Error('DIVIDEND_RECORD_DATE_MISSING');
+      const search=await searchKindDividendNotices(candidate.candidate.stockCode,recordDate,{fetcher});
+      const candidates=[];
+      for (const row of search.rows) {
+        if (!/배당락/.test(normalizeTitle(row.title))) continue;
+        let document;
+        try { document=await fetchNoticeDocument(row,{fetcher}); }
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v91001.cjs
+MATCH @ LINE 406
+============================================================
+    'production_applied',
+    'created_at',
+  ].join(',');
+
+  const url =
+    `${baseUrl}/rest/v1/corporate_action_source_coverage_windows` +
+    `?select=${encodeURIComponent(select)}` +
+    `&provider=eq.${encodeURIComponent(PROVIDER)}` +
+    `&order=end_date.desc,created_at.desc` +
+    `&limit=1`;
+
+  const response =
+    await fetch(
+      url,
+      {
+        method: 'GET',
+        headers: {
+          apikey: serviceKey,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v91001.cjs
+MATCH @ LINE 1094
+============================================================
+      0,
+
+    productionApplied:
+      false,
+
+    eventImportComplete:
+      false,
+  };
+
+  if (
+    fs.existsSync(
+      outputFile,
+    ) &&
+    !args.refresh
+  ) {
+    const prior =
+      JSON.parse(
+        fs.readFileSync(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v91001.cjs
+MATCH @ LINE 1437
+============================================================
+      'INVENTORY_COMPLETE',
+
+    productionApplied:
+      false,
+
+    eventImportComplete:
+      false,
+
+    candidateClassificationExhaustive:
+      false,
+
+    note:
+      'Read-only incremental disclosure inventory. Do not advance coverage in DB until downstream detail parsing/canonical production ingestion is proven.',
+  };
+
+  atomicSave(
+    outputFile,
+    state,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v91001.cjs
+MATCH @ LINE 1440
+============================================================
+      false,
+
+    eventImportComplete:
+      false,
+
+    candidateClassificationExhaustive:
+      false,
+
+    note:
+      'Read-only incremental disclosure inventory. Do not advance coverage in DB until downstream detail parsing/canonical production ingestion is proven.',
+  };
+
+  atomicSave(
+    outputFile,
+    state,
+  );
+
+  console.log(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v91002-1.cjs
+MATCH @ LINE 1000
+============================================================
+        0,
+
+      marketDailyBarsModified:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      status ===
+      'WORKSET_CARRY_FORWARD_RECONCILIATION_READY'
+        ? 'BUILD_V9_10_DETAIL_EVIDENCE_FETCH_AND_CHAIN_RECONFIRMATION'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v91002-1.cjs
+MATCH @ LINE 1154
+============================================================
+          0,
+
+        databaseWrites:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+      },
+      null,
+      2,
+    ),
+  );
+
+  process.exitCode =
+    1;
+}
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v91003-common-stock.cjs
+MATCH @ LINE 368
+============================================================
+    ),
+
+  issues: [],
+
+  productionApplied: false,
+  globalCoverageMarkerAdvanced: false,
+
+  databaseWrites: 0,
+  kisRequests: 0,
+
+  source: {
+    inventoryVersion:
+      inventory.version,
+
+    worksetVersion:
+      workset.version,
+
+    reconciliationVersion:
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v91003-common-stock.cjs
+MATCH @ LINE 469
+============================================================
+        futureCashRows.length,
+
+      issues:
+        report.issues,
+
+      globalCoverageMarkerAdvanced:
+        report.globalCoverageMarkerAdvanced,
+
+      databaseWrites:
+        report.databaseWrites,
+
+      kisRequests:
+        report.kisRequests,
+
+      nextGate:
+        report.nextGate,
+
+      outputFile:
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v91003-common-stock.cjs
+MATCH @ LINE 470
+============================================================
+
+      issues:
+        report.issues,
+
+      globalCoverageMarkerAdvanced:
+        report.globalCoverageMarkerAdvanced,
+
+      databaseWrites:
+        report.databaseWrites,
+
+      kisRequests:
+        report.kisRequests,
+
+      nextGate:
+        report.nextGate,
+
+      outputFile:
+        report.outputFile,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9801.cjs
+MATCH @ LINE 406
+============================================================
+    'production_applied',
+    'created_at',
+  ].join(',');
+
+  const url =
+    `${baseUrl}/rest/v1/corporate_action_source_coverage_windows` +
+    `?select=${encodeURIComponent(select)}` +
+    `&provider=eq.${encodeURIComponent(PROVIDER)}` +
+    `&order=end_date.desc,created_at.desc` +
+    `&limit=1`;
+
+  const response =
+    await fetch(
+      url,
+      {
+        method: 'GET',
+        headers: {
+          apikey: serviceKey,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9801.cjs
+MATCH @ LINE 1094
+============================================================
+      0,
+
+    productionApplied:
+      false,
+
+    eventImportComplete:
+      false,
+  };
+
+  if (
+    fs.existsSync(
+      outputFile,
+    ) &&
+    !args.refresh
+  ) {
+    const prior =
+      JSON.parse(
+        fs.readFileSync(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9801.cjs
+MATCH @ LINE 1437
+============================================================
+      'INVENTORY_COMPLETE',
+
+    productionApplied:
+      false,
+
+    eventImportComplete:
+      false,
+
+    candidateClassificationExhaustive:
+      false,
+
+    note:
+      'Read-only incremental disclosure inventory. Do not advance coverage in DB until downstream detail parsing/canonical production ingestion is proven.',
+  };
+
+  atomicSave(
+    outputFile,
+    state,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9801.cjs
+MATCH @ LINE 1440
+============================================================
+      false,
+
+    eventImportComplete:
+      false,
+
+    candidateClassificationExhaustive:
+      false,
+
+    note:
+      'Read-only incremental disclosure inventory. Do not advance coverage in DB until downstream detail parsing/canonical production ingestion is proven.',
+  };
+
+  atomicSave(
+    outputFile,
+    state,
+  );
+
+  console.log(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9803-1.cjs
+MATCH @ LINE 583
+============================================================
+        false,
+
+      canonicalEventsCreated:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+
+      retrySameProvider014Receipt:
+        false,
+    },
+
+    policy: {
+      provider014:
+        'OFFICIAL_SOURCE_FILE_UNAVAILABLE_NOT_TRANSPORT_FAILURE',
+
+      provider014Retry:
+        'DO_NOT_RETRY_IDENTICAL_DOCUMENT_XML_REQUEST',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9803-1.cjs
+MATCH @ LINE 767
+============================================================
+          false,
+
+        canonicalEventsCreated:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    report.status !==
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9803.cjs
+MATCH @ LINE 1684
+============================================================
+      false,
+
+    canonicalEventsCreated:
+      0,
+
+    coverageWindowAdvanced:
+      false,
+
+    results,
+
+    structuredCache:
+      [
+        ...structuredCache.values(),
+      ].map(
+        ({
+          body,
+          ...rest
+        }) => rest,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9803.cjs
+MATCH @ LINE 1735
+============================================================
+          false,
+
+        canonicalEventsCreated:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          finalReport.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    counts.failed >
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9804-1.cjs
+MATCH @ LINE 2039
+============================================================
+        0,
+
+      providerEventIdsPersisted:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+
+      receiptOrderPairingUsed:
+        false,
+
+      ambiguousRowsAutoForced:
+        false,
+
+      networkRequests,
+
+      reusedDocuments,
+    },
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9804-1.cjs
+MATCH @ LINE 2152
+============================================================
+          0,
+
+        providerEventIdsPersisted:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        receiptOrderPairingUsed:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9804-2.cjs
+MATCH @ LINE 2085
+============================================================
+        false,
+      canonicalEventsCreated:
+        0,
+      providerEventIdsPersisted:
+        0,
+      coverageWindowAdvanced:
+        false,
+      receiptOrderPairingUsed:
+        false,
+      concurrentEventForcedMatching:
+        false,
+      similarityThreshold:
+        SIMILARITY_MIN_SCORE,
+      similarityMarginThreshold:
+        SIMILARITY_MIN_MARGIN,
+      minimumTargetTokens:
+        SIMILARITY_MIN_TARGET_TOKENS,
+    },
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9804-2.cjs
+MATCH @ LINE 2173
+============================================================
+          false,
+        canonicalEventsCreated:
+          0,
+        providerEventIdsPersisted:
+          0,
+        coverageWindowAdvanced:
+          false,
+        receiptOrderPairingUsed:
+          false,
+        concurrentEventForcedMatching:
+          false,
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9804.cjs
+MATCH @ LINE 1695
+============================================================
+        0,
+
+      providerEventIdsPersisted:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    policy: {
+      historySource:
+        'OPENDART_DISCLOSURE_LIST',
+
+      historyStart:
+        HISTORY_START,
+
+      lastReportOnly:
+        false,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9804.cjs
+MATCH @ LINE 1841
+============================================================
+          0,
+
+        providerEventIdsPersisted:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+main().catch(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9805-1.cjs
+MATCH @ LINE 1037
+============================================================
+        false,
+
+      factorsComputed:
+        false,
+
+      coverageWindowAdvanced:
+        false,
+
+      unaccountedNonWithdrawalReceipts:
+        blockingRows.filter(
+          (row) =>
+            row.reason ===
+            'UNACCOUNTED_NON_WITHDRAWAL_RECEIPT',
+        ).length,
+
+      unresolvedWithdrawalRoots:
+        blockingRows.filter(
+          (row) =>
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9805-1.cjs
+MATCH @ LINE 1220
+============================================================
+          false,
+
+        factorsComputed:
+          false,
+
+        coverageWindowAdvanced:
+          false,
+
+        carryInProductionMutationsPerformed:
+          0,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9805.cjs
+MATCH @ LINE 1318
+============================================================
+        false,
+
+      factorsComputed:
+        false,
+
+      coverageWindowAdvanced:
+        false,
+
+      unresolvedChainsForced:
+        0,
+
+      withdrawnRootsActive:
+        activeChains.filter(
+          (row) =>
+            withdrawnRoots.has(
+              row.rootReceiptNo,
+            ),
+        ).length,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9805.cjs
+MATCH @ LINE 1494
+============================================================
+          false,
+
+        factorsComputed:
+          false,
+
+        coverageWindowAdvanced:
+          false,
+
+        unresolvedChainsForced:
+          0,
+
+        withdrawnRootsActive:
+          report
+            .safety
+            .withdrawnRootsActive,
+
+        outputFile:
+          report.outputFile,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9806-1-backup-check.cjs
+MATCH @ LINE 2220
+============================================================
+        0,
+
+      marketFactorsComputed:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+
+      identityCountStable,
+
+      structuralCountStable,
+
+      oldGenericNearbyNumberParserUsed:
+        false,
+
+      provenV973XmlNodeContractUsed:
+        true,
+    },
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9806-1-backup-check.cjs
+MATCH @ LINE 2387
+============================================================
+          0,
+
+        marketFactorsComputed:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        identityCountStable,
+
+        structuralCountStable,
+
+        provenV973XmlNodeContractUsed:
+          true,
+
+        outputFile:
+          report.outputFile,
+      },
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9806-1.cjs
+MATCH @ LINE 2202
+============================================================
+        0,
+
+      marketFactorsComputed:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+
+      identityCountStable,
+
+      structuralCountStable,
+
+      oldGenericNearbyNumberParserUsed:
+        false,
+
+      provenV973XmlNodeContractUsed:
+        true,
+    },
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9806-1.cjs
+MATCH @ LINE 2369
+============================================================
+          0,
+
+        marketFactorsComputed:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        identityCountStable,
+
+        structuralCountStable,
+
+        provenV973XmlNodeContractUsed:
+          true,
+
+        outputFile:
+          report.outputFile,
+      },
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9806-2.cjs
+MATCH @ LINE 635
+============================================================
+      productionApplied: false,
+      canonicalEventsCreated: 0,
+      providerEventIdsPersisted: 0,
+      finalEffectiveDatesAssigned: 0,
+      marketFactorsComputed: 0,
+      coverageWindowAdvanced: false,
+    },
+
+    rows,
+
+    outputFile: path
+      .relative(root, outputFile)
+      .replaceAll('\\', '/'),
+  };
+
+  report.outputFingerprint =
+    sha256(
+      JSON.stringify({
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9806-3.cjs
+MATCH @ LINE 1205
+============================================================
+        0,
+
+      marketFactorsComputed:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+
+      identityCountStable,
+
+      untouchedRowsStable,
+
+      patchedRows:
+        repaired.length,
+
+      nonTargetRowsModified:
+        0,
+
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9806-3.cjs
+MATCH @ LINE 1448
+============================================================
+          0,
+
+        marketFactorsComputed:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        identityCountStable,
+
+        untouchedRowsStable,
+
+        fallbackSchedulePromotedToCanonical:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9806.cjs
+MATCH @ LINE 2566
+============================================================
+        0,
+
+      marketFactorsComputed:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+
+      sourceSelectionMutated:
+        false,
+    },
+
+    policy: {
+      effectiveDate:
+        'DEFER_TO_V9_8_7_MARKET_DATE_RESOLUTION',
+
+      cashDividend:
+        'EXTRACT_CASH_PER_SHARE_AND_RECORD_DATE_ONLY',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9806.cjs
+MATCH @ LINE 2720
+============================================================
+          0,
+
+        marketFactorsComputed:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9807-1.ts
+MATCH @ LINE 750
+============================================================
+        false,
+
+      factorsPersisted:
+        false,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    outputFile:
+      "logs/opendart-corporate-action-kis-boundary-probe-v9-8-7-1.json",
+  };
+
+  (report as any).outputFingerprint =
+    sha256(
+      JSON.stringify({
+        version:
+          VERSION,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9807-1.ts
+MATCH @ LINE 824
+============================================================
+          0,
+
+        effectiveDatePersisted:
+          false,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+main().catch(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9807-2.cjs
+MATCH @ LINE 796
+============================================================
+        0,
+
+      marketFactorsPersisted:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+
+      eventInsertAllowed:
+        false,
+
+      untouchedRowsStable,
+    },
+
+    policy: {
+      suspendedReverseSplit:
+        'OFFICIAL_KRX_DART_EFFECTIVE_DATE_OVERRIDES_INCONCLUSIVE_KIS_MODE_RATIO_BOUNDARY',
+
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9807-2.cjs
+MATCH @ LINE 902
+============================================================
+          0,
+
+        effectiveDatesPersisted:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        untouchedRowsStable,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9807.cjs
+MATCH @ LINE 1122
+============================================================
+        0,
+
+      marketFactorsComputed:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+
+      fallbackSchedulePromoted:
+        fallbackPromoted.length,
+
+      structuralEffectiveDatesPromoted:
+        structuralPromoted.length,
+
+      eventInsertAllowed:
+        false,
+    },
+
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9807.cjs
+MATCH @ LINE 1349
+============================================================
+          0,
+
+        marketFactorsComputed:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        fallbackSchedulePromoted:
+          fallbackPromoted.length,
+
+        structuralEffectiveDatesPromoted:
+          structuralPromoted.length,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9808.cjs
+MATCH @ LINE 671
+============================================================
+      canonicalEventsCreated: 0,
+      providerEventIdsPersisted: 0,
+      factorsPersisted: 0,
+      cumulativeFactorsComputed: false,
+      canonicalAdjustedBarsMutated: false,
+      coverageWindowAdvanced: false,
+      eventInsertAllowed: false,
+    },
+
+    policy: {
+      ratioFactor:
+        'PRICE_RATIO_FROM_OVER_TO_SHARE_RATIO_TO_OVER_FROM',
+      cashFactor:
+        'LATEST_MARKET_CLOSE_STRICTLY_BEFORE_EFFECTIVE_DATE',
+      cashFormula:
+        '(REFERENCE_CLOSE_MINUS_CASH_PER_SHARE)_DIVIDED_BY_REFERENCE_CLOSE',
+      cashReferenceBar:
+        'REQUIRE_CANONICAL_ADJUSTED_PRICE_TRUE',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9808.cjs
+MATCH @ LINE 749
+============================================================
+        productionApplied: false,
+        canonicalEventsCreated: 0,
+        factorsPersisted: 0,
+        cumulativeFactorsComputed: false,
+        canonicalAdjustedBarsMutated: false,
+        coverageWindowAdvanced: false,
+        outputFile: report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+    'PER_EVENT_FACTOR_VALIDATION_INVALID'
+  ) {
+    process.exitCode = 2;
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9809.cjs
+MATCH @ LINE 681
+============================================================
+        false,
+
+      canonicalAdjustedBarsMutated:
+        false,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    policy: {
+      ordering:
+        'EFFECTIVE_DATE_THEN_PROVIDER_EVENT_ID_THEN_SOURCE_RECEIPT',
+
+      sameDateCollision:
+        'AUDIT_ONLY_DO_NOT_ACCUMULATE_UNTIL_EXPLICIT_POLICY',
+
+      cumulativeFactor:
+        'NOT_COMPUTED_IN_V9_8_9',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9809.cjs
+MATCH @ LINE 781
+============================================================
+          false,
+
+        cumulativeFactorsPersisted:
+          false,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9810-1.cjs
+MATCH @ LINE 610
+============================================================
+        0,
+
+      factorsComputed:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    policy: {
+      mergerCanonicalDate:
+        'MERGER_DATE_합병기일',
+
+      spinOffCanonicalDate:
+        'SPLIT_DATE_분할기일_OR_분할합병기일',
+
+      genericFactor:
+        'STRUCTURAL_ACTIONS_REMAIN_BLOCKED',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9810-1.cjs
+MATCH @ LINE 705
+============================================================
+          0,
+
+        structuralEffectiveDatesPromoted:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9810-2-1.cjs
+MATCH @ LINE 743
+============================================================
+      databaseReads: 0,
+      databaseWrites: 0,
+      productionApplied: false,
+      canonicalEventsCreated: 0,
+      structuralEffectiveDatesPromoted: 0,
+      coverageWindowAdvanced: false,
+    },
+
+    outputFile: path
+      .relative(root, outputFile)
+      .replaceAll('\\', '/'),
+  };
+
+  report.outputFingerprint = sha256(
+    JSON.stringify({
+      version: report.version,
+      auditFingerprint:
+        report.source.auditFingerprint,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9810-2-1.cjs
+MATCH @ LINE 787
+============================================================
+        networkRequests: 0,
+        databaseWrites: 0,
+        productionApplied: false,
+        canonicalEventsCreated: 0,
+        structuralEffectiveDatesPromoted: 0,
+        coverageWindowAdvanced: false,
+        outputFile: report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+    'STRUCTURAL_EVIDENCE_PATH_PROBE_COUNT_MISMATCH'
+  ) {
+    process.exitCode = 2;
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9810-2.cjs
+MATCH @ LINE 1197
+============================================================
+        0,
+
+      structuralEffectiveDatesPromoted:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    outputFile:
+      path
+        .relative(
+          root,
+          outputFile,
+        )
+        .replaceAll('\\', '/'),
+  };
+
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9810-2.cjs
+MATCH @ LINE 1268
+============================================================
+          0,
+
+        structuralEffectiveDatesPromoted:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9810-3.cjs
+MATCH @ LINE 569
+============================================================
+      productionApplied: false,
+      canonicalEventsCreated: 0,
+      structuralEffectiveDatesPersisted: 0,
+      factorsPersisted: 0,
+      canonicalAdjustedBarsMutated: false,
+      coverageWindowAdvanced: false,
+      eventInsertAllowed: false,
+    },
+
+    policy: {
+      auditSafeRows:
+        'USE_V9_8_10_1_PRIMARY_DATE_CANDIDATE',
+
+      reviewRows:
+        'USE_EXACT_STRUCTURED_SOURCE_OR_CANONICAL_ROOT_RECEIPT_DATE',
+
+      correctedXml:
+        'EXACT_STRUCTURED_SOURCE_RECEIPT_OUTRANKS_OLDER_DATES_COEXISTING_IN_XML',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9810-3.cjs
+MATCH @ LINE 634
+============================================================
+        databaseWrites: 0,
+        productionApplied: false,
+        canonicalEventsCreated: 0,
+        structuralEffectiveDatesPersisted: 0,
+        factorsPersisted: 0,
+        coverageWindowAdvanced: false,
+        outputFile: report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+    'STRUCTURAL_CANONICAL_DATE_FINALIZATION_PREVIEW_INVALID'
+  ) {
+    process.exitCode = 2;
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9810.cjs
+MATCH @ LINE 675
+============================================================
+        0,
+
+      canonicalAdjustedBarsMutated:
+        false,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    policy: {
+      currentBatchAccumulation:
+        'ONE_FACTOR_READY_EVENT_PER_STOCK',
+
+      cumulativePriceFactor:
+        'EQUALS_EVENT_PRICE_FACTOR',
+
+      cumulativeShareFactor:
+        'EQUALS_EVENT_SHARE_FACTOR',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9810.cjs
+MATCH @ LINE 775
+============================================================
+          0,
+
+        canonicalAdjustedBarsMutated:
+          false,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-1.cjs
+MATCH @ LINE 1322
+============================================================
+        0,
+
+      productionApplied:
+        false,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    policy: {
+      appliedDependency:
+        'FAIL_CLOSED_DO_NOT_MUTATE',
+
+      lifecycleOnly:
+        'EXISTING_CANONICAL_ROW_MAY_BE_REUSED_AFTER_CONTROLLED_LIFECYCLE_PROMOTION',
+
+      staleCanonical:
+        'CONTROLLED_REPAIR_REQUIRED_BEFORE_PRODUCTION_APPLY',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-1.cjs
+MATCH @ LINE 1435
+============================================================
+          0,
+
+        runRowsDeleted:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-10-1.cjs
+MATCH @ LINE 429
+============================================================
+        0,
+
+      corporateActionFactorsAppliedToCanonicalBars:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      status ===
+      'RATIO_KIS_REFRESH_ELIGIBILITY_READY'
+        ? 'BUILD_EXISTING_MARKET_DAILY_BAR_COVERAGE_PREFLIGHT_FOR_ELIGIBLE_RATIO_STOCKS'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-10-2-1.cjs
+MATCH @ LINE 376
+============================================================
+      databaseReads: 0,
+      databaseWrites: 0,
+      kisRequests: 0,
+      marketDailyBarsModified: 0,
+      corporateActionFactorsAppliedToCanonicalBars: 0,
+      coverageWindowAdvanced: false,
+    },
+
+    nextGate:
+      status ===
+      'RATIO_REFRESH_COVERAGE_DISPOSITION_READY'
+        ? 'BUILD_16_STOCK_KIS_ADJUSTED_HISTORY_REFRESH_APPLY'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(
+          root,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-10-2.cjs
+MATCH @ LINE 856
+============================================================
+        0,
+
+      corporateActionFactorsAppliedToCanonicalBars:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      status ===
+      'RATIO_MARKET_DAILY_BAR_COVERAGE_PREFLIGHT_READY'
+        ? 'BUILD_18_STOCK_KIS_ADJUSTED_HISTORY_REFRESH_APPLY'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-10.cjs
+MATCH @ LINE 1059
+============================================================
+        0,
+
+      corporateActionFactorsAppliedToCanonicalBars:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      status ===
+      'POST_PERSISTENCE_VERIFICATION_AND_REFRESH_MANIFEST_READY'
+        ? 'INSPECT_EXISTING_KIS_DAILY_SYNC_PATH_AND_BUILD_42_STOCK_REFRESH_APPLY'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(root, outputFile)
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-10.cjs
+MATCH @ LINE 1151
+============================================================
+          0,
+
+        marketDailyBarsModified:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        nextGate:
+          report.nextGate,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-11-1.ts
+MATCH @ LINE 1001
+============================================================
+          false,
+
+        resumeSafe:
+          true,
+
+        corporateActionCoverageWindowAdvanced:
+          false,
+      },
+
+      outputFile:
+        path
+          .relative(
+            root,
+            outputFile,
+          )
+          .replaceAll(
+            "\\",
+            "/",
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-11-1.ts
+MATCH @ LINE 1416
+============================================================
+          false,
+
+        resumeSafe:
+          true,
+
+        corporateActionCoverageWindowAdvanced:
+          false,
+      };
+
+      progress.outputFingerprint =
+        buildFingerprint(
+          progress,
+        );
+
+      atomicSaveJson(
+        outputFile,
+        progress,
+      );
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-11-1.ts
+MATCH @ LINE 1604
+============================================================
+      false,
+
+    resumeSafe:
+      true,
+
+    corporateActionCoverageWindowAdvanced:
+      false,
+  };
+
+  progress.outputFingerprint =
+    buildFingerprint(
+      progress,
+    );
+
+  atomicSaveJson(
+    outputFile,
+    progress,
+  );
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-11.ts
+MATCH @ LINE 963
+============================================================
+          0,
+
+        automaticDeleteRollbackUsed:
+          false,
+
+        corporateActionCoverageWindowAdvanced:
+          false,
+      },
+
+      outputFile:
+        path
+          .relative(
+            root,
+            outputFile,
+          )
+          .replaceAll(
+            "\\",
+            "/",
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-11.ts
+MATCH @ LINE 1240
+============================================================
+            .length,
+
+        requestedWindowExpansion:
+          false,
+
+        corporateActionCoverageWindowAdvanced:
+          false,
+      };
+
+      progress.outputFingerprint =
+        buildFingerprint(
+          progress,
+        );
+
+      atomicSaveJson(
+        outputFile,
+        progress,
+      );
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-11.ts
+MATCH @ LINE 1421
+============================================================
+      false,
+
+    resumeSafe:
+      true,
+
+    corporateActionCoverageWindowAdvanced:
+      false,
+  };
+
+  progress.outputFingerprint =
+    buildFingerprint(
+      progress,
+    );
+
+  atomicSaveJson(
+    outputFile,
+    progress,
+  );
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-12.ts
+MATCH @ LINE 566
+============================================================
+      databaseReadsOnly: true,
+      databaseWrites: 0,
+      kisReadRequests: kisRequests,
+      marketDailyBarsModified: 0,
+      corporateActionFactorsAppliedToCanonicalBars: 0,
+      coverageWindowAdvanced: false,
+    },
+
+    nextGate:
+      status ===
+      "POST_REFRESH_VENDOR_ADJUSTED_VERIFICATION_COMPLETE"
+        ? "CLOSE_CURRENT_V9_8_CORPORATE_ACTION_REFRESH_CYCLE_AND_REVIEW_COVERAGE_ADVANCEMENT"
+        : "STOP_AND_REVIEW",
+
+    outputFile:
+      path
+        .relative(root, outputFile)
+        .replaceAll("\\", "/"),
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-13.cjs
+MATCH @ LINE 602
+============================================================
+        snapshotEligibleClosure,
+
+      vendorAdjustedVerificationClosed:
+        snapshotEligibleClosure,
+
+      globalCoverageMarkerAdvanced:
+        false,
+
+      safeCoverageStatement:
+        snapshotEligibleClosure
+          ? 'CORPORATE_ACTION_PIPELINE_PROCESSED_AND_VERIFIED_THROUGH_EVIDENCE_SNAPSHOT_2026_10_01_FOR_CURRENTLY_ELIGIBLE_SUPPORTED_SURFACES'
+          : null,
+
+      notClaimed:
+        [
+          'GLOBAL_HISTORICAL_UNIFORMITY',
+          'FUTURE_ACTION_FINALITY',
+          'GENERIC_STRUCTURAL_ACTION_FACTORS',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-13.cjs
+MATCH @ LINE 762
+============================================================
+        0,
+
+      corporateActionFactorsAppliedToCanonicalBars:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      snapshotEligibleClosure
+        ? 'START_NEXT_INCREMENTAL_DART_CYCLE_FROM_2026_10_02_WITH_CARRY_FORWARD_RECONFIRMATION'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(root, outputFile)
+        .replaceAll('\\', '/'),
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-13.cjs
+MATCH @ LINE 836
+============================================================
+          report.carryForward.futureCashDividend.stockCode,
+
+        issues:
+          report.issues,
+
+        globalCoverageMarkerAdvanced:
+          false,
+
+        databaseWrites:
+          0,
+
+        kisRequests:
+          0,
+
+        nextGate:
+          report.nextGate,
+
+        outputFile:
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-13.cjs
+MATCH @ LINE 882
+============================================================
+          0,
+
+        kisRequests:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+      },
+      null,
+      2,
+    ),
+  );
+
+  process.exitCode = 1;
+}
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-2.cjs
+MATCH @ LINE 1306
+============================================================
+        0,
+
+      productionApplied:
+        false,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    applyContract: {
+      updateStrategy:
+        'PATCH_EXISTING_EVENT_ID_IN_PLACE',
+
+      deleteReinsert:
+        false,
+
+      optimisticLock:
+        'RE_READ_AND_REQUIRE_EXACT_EXPECTED_BEFORE_IMMEDIATELY_BEFORE_EACH_PATCH',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-2.cjs
+MATCH @ LINE 1460
+============================================================
+          0,
+
+        eventRowsUpdated:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-3-2.cjs
+MATCH @ LINE 470
+============================================================
+      databaseWrites: 0,
+      patchRequestsExecuted: 0,
+      eventRowsUpdated: 0,
+      eventRowsDeleted: 0,
+      eventRowsInserted: 0,
+      coverageWindowAdvanced: false,
+    },
+
+    nextGate:
+      status === 'DB_CONTRACT_REPAIR_DRY_RUN_READY'
+        ? 'BUILD_3_ROW_CONTROLLED_REPAIR_APPLY'
+        : 'STOP_AND_REVIEW',
+    outputFile: path
+      .relative(root, outputFile)
+      .replaceAll('\\', '/'),
+  };
+
+  atomicSaveJson(outputFile, report);
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-3-3.cjs
+MATCH @ LINE 1108
+============================================================
+        0,
+
+      adjustmentRunRowsModified:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+
+      failFast:
+        true,
+    },
+
+    nextGate:
+      status ===
+      'DB_CONTRACT_REPAIR_APPLY_COMPLETE'
+        ? 'BUILD_CORRECTED_V9_8_11_PRODUCTION_PREFLIGHT'
+        : 'STOP_AND_REVIEW',
+
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-3-3.cjs
+MATCH @ LINE 1240
+============================================================
+          0,
+
+        eventRowsInserted:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        nextGate:
+          report.nextGate,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-3.cjs
+MATCH @ LINE 803
+============================================================
+        0,
+
+      adjustmentRunRowsModified:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+
+      failFast:
+        true,
+    },
+
+    nextGate:
+      status ===
+      'CONTROLLED_REPAIR_APPLY_COMPLETE'
+        ? 'RERUN_V9_8_11_PRODUCTION_EVENT_PREFLIGHT'
+        : 'STOP_AND_REVIEW',
+
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-3.cjs
+MATCH @ LINE 937
+============================================================
+          0,
+
+        eventRowsInserted:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        nextGate:
+          report.nextGate,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-4.cjs
+MATCH @ LINE 1464
+============================================================
+        0,
+
+      factorRowsInserted:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    policy: {
+      canonicalIdentity:
+        'UNIQUE_PROVIDER_PROVIDER_EVENT_ID_IS_VALIDATION',
+
+      desiredLifecycle:
+        'RECORDED_IS_VALIDATION_FALSE_PRODUCTION_APPLIED_FALSE',
+
+      canonicalValidity:
+        'METADATA_CANONICAL_VALIDATION_STATUS_VALIDATED',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-4.cjs
+MATCH @ LINE 1610
+============================================================
+          0,
+
+        factorRowsInserted:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-5-1.cjs
+MATCH @ LINE 434
+============================================================
+        0,
+
+      canonicalEventsInserted:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      status ===
+      'SNAPSHOT_ASOF_ELIGIBILITY_GATE_READY'
+        ? 'BUILD_123_ROW_BULK_INSERT_APPLY'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-5.cjs
+MATCH @ LINE 706
+============================================================
+      httpMethodsUsed: ['GET'],
+      databaseReads: 1,
+      databaseWrites: 0,
+      insertRequestsExecuted: 0,
+      canonicalEventsInserted: 0,
+      coverageWindowAdvanced: false,
+    },
+
+    nextGate:
+      status === 'CANONICAL_EVENT_BULK_INSERT_DRY_RUN_READY'
+        ? 'BUILD_V9_8_11_6_BULK_INSERT_APPLY'
+        : 'STOP_AND_REVIEW',
+
+    outputFile: path
+      .relative(root, outputFile)
+      .replaceAll('\\', '/'),
+  };
+
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-6.cjs
+MATCH @ LINE 1546
+============================================================
+        0,
+
+      factorRowsInserted:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      'BUILD_POST_INSERT_128_EVENT_CANONICAL_VERIFICATION_AND_EVENT_ID_MAP',
+
+    outputFile:
+      path
+        .relative(
+          root,
+          outputFile,
+        )
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-6.cjs
+MATCH @ LINE 1643
+============================================================
+          0,
+
+        factorRowsInserted:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        nextGate:
+          report.nextGate,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-7.cjs
+MATCH @ LINE 761
+============================================================
+      databaseWrites: 0,
+      canonicalEventsInserted: 0,
+      canonicalEventsUpdated: 0,
+      adjustmentRunsInserted: 0,
+      factorRowsInserted: 0,
+      coverageWindowAdvanced: false,
+    },
+
+    nextGate:
+      status === 'POST_INSERT_128_EVENT_VERIFICATION_COMPLETE'
+        ? 'BUILD_128_ADJUSTMENT_RUN_AND_121_FACTOR_PREFLIGHT'
+        : status ===
+            'POST_INSERT_128_EVENT_VERIFICATION_COMPLETE_WITH_GROUPING_REVIEW'
+          ? 'REVIEW_MULTI_EVENT_GROUPING_BEFORE_ADJUSTMENT_PERSISTENCE'
+          : 'STOP_AND_REVIEW',
+
+    outputFile: path
+      .relative(root, outputFile)
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-8-1.cjs
+MATCH @ LINE 1448
+============================================================
+        0,
+
+      canonicalEventsModified:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      status ===
+      'ADJUSTMENT_PERSISTENCE_PREFLIGHT_READY'
+        ? 'BUILD_V9_8_11_9_128_RUN_121_FACTOR_APPLY'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-8.cjs
+MATCH @ LINE 1471
+============================================================
+        0,
+
+      canonicalEventsModified:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      status ===
+      'ADJUSTMENT_PERSISTENCE_PREFLIGHT_READY'
+        ? 'BUILD_V9_8_11_9_128_RUN_121_FACTOR_APPLY'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-9.cjs
+MATCH @ LINE 1320
+============================================================
+      runInsertRequests,
+      factorInsertRequests,
+      rowByRowInsertUsed: false,
+      automaticDeleteRollbackUsed: false,
+      canonicalEventsModified: 0,
+      coverageWindowAdvanced: false,
+    },
+
+    nextGate:
+      'BUILD_POST_PERSISTENCE_VERIFICATION_AND_HISTORY_REFRESH_PLAN',
+
+    outputFile:
+      path
+        .relative(root, outputFile)
+        .replaceAll('\\', '/'),
+  };
+
+  report.outputFingerprint =
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811-9.cjs
+MATCH @ LINE 1384
+============================================================
+          report.safety.runInsertRequests,
+        factorInsertRequests:
+          report.safety.factorInsertRequests,
+        rowByRowInsertUsed: false,
+        automaticDeleteRollbackUsed: false,
+        coverageWindowAdvanced: false,
+        nextGate: report.nextGate,
+        outputFile: report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+main().catch((error) => {
+  console.error(
+    JSON.stringify(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811.cjs
+MATCH @ LINE 1454
+============================================================
+        0,
+
+      factorRowsInserted:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    policy: {
+      canonicalIdentity:
+        'UNIQUE_PROVIDER_PROVIDER_EVENT_ID_IS_VALIDATION',
+
+      desiredLifecycle:
+        'RECORDED_IS_VALIDATION_FALSE_PRODUCTION_APPLIED_TRUE',
+
+      canonicalValidity:
+        'METADATA_CANONICAL_VALIDATION_STATUS_VALIDATED',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9811.cjs
+MATCH @ LINE 1601
+============================================================
+          0,
+
+        factorRowsInserted:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9902-1-1.cjs
+MATCH @ LINE 993
+============================================================
+        0,
+
+      marketDailyBarsModified:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      status ===
+      'WORKSET_CARRY_FORWARD_RECONCILIATION_READY'
+        ? 'BUILD_V9_9_DETAIL_EVIDENCE_FETCH_AND_CHAIN_RECONFIRMATION'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9902-1-1.cjs
+MATCH @ LINE 1147
+============================================================
+          0,
+
+        databaseWrites:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+      },
+      null,
+      2,
+    ),
+  );
+
+  process.exitCode =
+    1;
+}
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9902-1.cjs
+MATCH @ LINE 989
+============================================================
+        0,
+
+      marketDailyBarsModified:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      status ===
+      'WORKSET_CARRY_FORWARD_RECONCILIATION_READY'
+        ? 'BUILD_V9_9_DETAIL_EVIDENCE_FETCH_AND_CHAIN_RECONFIRMATION'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9902-1.cjs
+MATCH @ LINE 1143
+============================================================
+          0,
+
+        databaseWrites:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+      },
+      null,
+      2,
+    ),
+  );
+
+  process.exitCode =
+    1;
+}
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9903.cjs
+MATCH @ LINE 1684
+============================================================
+      false,
+
+    canonicalEventsCreated:
+      0,
+
+    coverageWindowAdvanced:
+      false,
+
+    results,
+
+    structuredCache:
+      [
+        ...structuredCache.values(),
+      ].map(
+        ({
+          body,
+          ...rest
+        }) => rest,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9903.cjs
+MATCH @ LINE 1735
+============================================================
+          false,
+
+        canonicalEventsCreated:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          finalReport.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    counts.failed >
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9908-common-stock.cjs
+MATCH @ LINE 671
+============================================================
+      canonicalEventsCreated: 0,
+      providerEventIdsPersisted: 0,
+      factorsPersisted: 0,
+      cumulativeFactorsComputed: false,
+      canonicalAdjustedBarsMutated: false,
+      coverageWindowAdvanced: false,
+      eventInsertAllowed: false,
+    },
+
+    policy: {
+      ratioFactor:
+        'PRICE_RATIO_FROM_OVER_TO_SHARE_RATIO_TO_OVER_FROM',
+      cashFactor:
+        'LATEST_MARKET_CLOSE_STRICTLY_BEFORE_EFFECTIVE_DATE',
+      cashFormula:
+        '(REFERENCE_CLOSE_MINUS_CASH_PER_SHARE)_DIVIDED_BY_REFERENCE_CLOSE',
+      cashReferenceBar:
+        'REQUIRE_CANONICAL_ADJUSTED_PRICE_TRUE',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9908-common-stock.cjs
+MATCH @ LINE 749
+============================================================
+        productionApplied: false,
+        canonicalEventsCreated: 0,
+        factorsPersisted: 0,
+        cumulativeFactorsComputed: false,
+        canonicalAdjustedBarsMutated: false,
+        coverageWindowAdvanced: false,
+        outputFile: report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+    'PER_EVENT_FACTOR_VALIDATION_INVALID'
+  ) {
+    process.exitCode = 2;
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9908.cjs
+MATCH @ LINE 671
+============================================================
+      canonicalEventsCreated: 0,
+      providerEventIdsPersisted: 0,
+      factorsPersisted: 0,
+      cumulativeFactorsComputed: false,
+      canonicalAdjustedBarsMutated: false,
+      coverageWindowAdvanced: false,
+      eventInsertAllowed: false,
+    },
+
+    policy: {
+      ratioFactor:
+        'PRICE_RATIO_FROM_OVER_TO_SHARE_RATIO_TO_OVER_FROM',
+      cashFactor:
+        'LATEST_MARKET_CLOSE_STRICTLY_BEFORE_EFFECTIVE_DATE',
+      cashFormula:
+        '(REFERENCE_CLOSE_MINUS_CASH_PER_SHARE)_DIVIDED_BY_REFERENCE_CLOSE',
+      cashReferenceBar:
+        'REQUIRE_CANONICAL_ADJUSTED_PRICE_TRUE',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9908.cjs
+MATCH @ LINE 749
+============================================================
+        productionApplied: false,
+        canonicalEventsCreated: 0,
+        factorsPersisted: 0,
+        cumulativeFactorsComputed: false,
+        canonicalAdjustedBarsMutated: false,
+        coverageWindowAdvanced: false,
+        outputFile: report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+    'PER_EVENT_FACTOR_VALIDATION_INVALID'
+  ) {
+    process.exitCode = 2;
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9909-common-stock.cjs
+MATCH @ LINE 681
+============================================================
+        false,
+
+      canonicalAdjustedBarsMutated:
+        false,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    policy: {
+      ordering:
+        'EFFECTIVE_DATE_THEN_PROVIDER_EVENT_ID_THEN_SOURCE_RECEIPT',
+
+      sameDateCollision:
+        'AUDIT_ONLY_DO_NOT_ACCUMULATE_UNTIL_EXPLICIT_POLICY',
+
+      cumulativeFactor:
+        'NOT_COMPUTED_IN_V9_8_9',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9909-common-stock.cjs
+MATCH @ LINE 781
+============================================================
+          false,
+
+        cumulativeFactorsPersisted:
+          false,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9910-1-common-stock.cjs
+MATCH @ LINE 610
+============================================================
+        0,
+
+      factorsComputed:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    policy: {
+      mergerCanonicalDate:
+        'MERGER_DATE_합병기일',
+
+      spinOffCanonicalDate:
+        'SPLIT_DATE_분할기일_OR_분할합병기일',
+
+      genericFactor:
+        'STRUCTURAL_ACTIONS_REMAIN_BLOCKED',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9910-1-common-stock.cjs
+MATCH @ LINE 705
+============================================================
+          0,
+
+        structuralEffectiveDatesPromoted:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9910-2-1-common-stock.cjs
+MATCH @ LINE 743
+============================================================
+      databaseReads: 0,
+      databaseWrites: 0,
+      productionApplied: false,
+      canonicalEventsCreated: 0,
+      structuralEffectiveDatesPromoted: 0,
+      coverageWindowAdvanced: false,
+    },
+
+    outputFile: path
+      .relative(root, outputFile)
+      .replaceAll('\\', '/'),
+  };
+
+  report.outputFingerprint = sha256(
+    JSON.stringify({
+      version: report.version,
+      auditFingerprint:
+        report.source.auditFingerprint,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9910-2-1-common-stock.cjs
+MATCH @ LINE 787
+============================================================
+        networkRequests: 0,
+        databaseWrites: 0,
+        productionApplied: false,
+        canonicalEventsCreated: 0,
+        structuralEffectiveDatesPromoted: 0,
+        coverageWindowAdvanced: false,
+        outputFile: report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+    'STRUCTURAL_EVIDENCE_PATH_PROBE_COUNT_MISMATCH'
+  ) {
+    process.exitCode = 2;
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9910-3-common-stock.cjs
+MATCH @ LINE 569
+============================================================
+      productionApplied: false,
+      canonicalEventsCreated: 0,
+      structuralEffectiveDatesPersisted: 0,
+      factorsPersisted: 0,
+      canonicalAdjustedBarsMutated: false,
+      coverageWindowAdvanced: false,
+      eventInsertAllowed: false,
+    },
+
+    policy: {
+      auditSafeRows:
+        'USE_V9_8_10_1_PRIMARY_DATE_CANDIDATE',
+
+      reviewRows:
+        'USE_EXACT_STRUCTURED_SOURCE_OR_CANONICAL_ROOT_RECEIPT_DATE',
+
+      correctedXml:
+        'EXACT_STRUCTURED_SOURCE_RECEIPT_OUTRANKS_OLDER_DATES_COEXISTING_IN_XML',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9910-3-common-stock.cjs
+MATCH @ LINE 634
+============================================================
+        databaseWrites: 0,
+        productionApplied: false,
+        canonicalEventsCreated: 0,
+        structuralEffectiveDatesPersisted: 0,
+        factorsPersisted: 0,
+        coverageWindowAdvanced: false,
+        outputFile: report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+    'STRUCTURAL_CANONICAL_DATE_FINALIZATION_PREVIEW_INVALID'
+  ) {
+    process.exitCode = 2;
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9910-common-stock.cjs
+MATCH @ LINE 675
+============================================================
+        0,
+
+      canonicalAdjustedBarsMutated:
+        false,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    policy: {
+      currentBatchAccumulation:
+        'ONE_FACTOR_READY_EVENT_PER_STOCK',
+
+      cumulativePriceFactor:
+        'EQUALS_EVENT_PRICE_FACTOR',
+
+      cumulativeShareFactor:
+        'EQUALS_EVENT_SHARE_FACTOR',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9910-common-stock.cjs
+MATCH @ LINE 775
+============================================================
+          0,
+
+        canonicalAdjustedBarsMutated:
+          false,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-10-1-common-stock.cjs
+MATCH @ LINE 429
+============================================================
+        0,
+
+      corporateActionFactorsAppliedToCanonicalBars:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      status ===
+      'RATIO_KIS_REFRESH_ELIGIBILITY_READY'
+        ? 'BUILD_EXISTING_MARKET_DAILY_BAR_COVERAGE_PREFLIGHT_FOR_ELIGIBLE_RATIO_STOCKS'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-10-2-1-common-stock.cjs
+MATCH @ LINE 373
+============================================================
+      databaseReads: 0,
+      databaseWrites: 0,
+      kisRequests: 0,
+      marketDailyBarsModified: 0,
+      corporateActionFactorsAppliedToCanonicalBars: 0,
+      coverageWindowAdvanced: false,
+    },
+
+    nextGate:
+      status ===
+      'RATIO_REFRESH_COVERAGE_DISPOSITION_READY'
+        ? 'BUILD_1_STOCK_KIS_ADJUSTED_HISTORY_REFRESH_APPLY'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(
+          root,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-10-2-common-stock.cjs
+MATCH @ LINE 856
+============================================================
+        0,
+
+      corporateActionFactorsAppliedToCanonicalBars:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      status ===
+      'RATIO_MARKET_DAILY_BAR_COVERAGE_PREFLIGHT_READY'
+        ? 'BUILD_1_STOCK_KIS_ADJUSTED_HISTORY_REFRESH_APPLY'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-10-common-stock.cjs
+MATCH @ LINE 1059
+============================================================
+        0,
+
+      corporateActionFactorsAppliedToCanonicalBars:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      status ===
+      'POST_PERSISTENCE_VERIFICATION_AND_REFRESH_MANIFEST_READY'
+        ? 'BUILD_1_STOCK_KIS_ADJUSTED_HISTORY_REFRESH_APPLY'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(root, outputFile)
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-10-common-stock.cjs
+MATCH @ LINE 1151
+============================================================
+          0,
+
+        marketDailyBarsModified:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        nextGate:
+          report.nextGate,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-11-1-common-stock.ts
+MATCH @ LINE 1001
+============================================================
+          false,
+
+        resumeSafe:
+          true,
+
+        corporateActionCoverageWindowAdvanced:
+          false,
+      },
+
+      outputFile:
+        path
+          .relative(
+            root,
+            outputFile,
+          )
+          .replaceAll(
+            "\\",
+            "/",
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-11-1-common-stock.ts
+MATCH @ LINE 1416
+============================================================
+          false,
+
+        resumeSafe:
+          true,
+
+        corporateActionCoverageWindowAdvanced:
+          false,
+      };
+
+      progress.outputFingerprint =
+        buildFingerprint(
+          progress,
+        );
+
+      atomicSaveJson(
+        outputFile,
+        progress,
+      );
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-11-1-common-stock.ts
+MATCH @ LINE 1604
+============================================================
+      false,
+
+    resumeSafe:
+      true,
+
+    corporateActionCoverageWindowAdvanced:
+      false,
+  };
+
+  progress.outputFingerprint =
+    buildFingerprint(
+      progress,
+    );
+
+  atomicSaveJson(
+    outputFile,
+    progress,
+  );
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-12-common-stock.ts
+MATCH @ LINE 566
+============================================================
+      databaseReadsOnly: true,
+      databaseWrites: 0,
+      kisReadRequests: kisRequests,
+      marketDailyBarsModified: 0,
+      corporateActionFactorsAppliedToCanonicalBars: 0,
+      coverageWindowAdvanced: false,
+    },
+
+    nextGate:
+      status ===
+      "POST_REFRESH_VENDOR_ADJUSTED_VERIFICATION_COMPLETE"
+        ? "CLOSE_CURRENT_V9_9_CORPORATE_ACTION_REFRESH_CYCLE_AND_REVIEW_COVERAGE_ADVANCEMENT"
+        : "STOP_AND_REVIEW",
+
+    outputFile:
+      path
+        .relative(root, outputFile)
+        .replaceAll("\\", "/"),
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-13-common-stock.cjs
+MATCH @ LINE 602
+============================================================
+        snapshotEligibleClosure,
+
+      vendorAdjustedVerificationClosed:
+        snapshotEligibleClosure,
+
+      globalCoverageMarkerAdvanced:
+        false,
+
+      safeCoverageStatement:
+        snapshotEligibleClosure
+          ? 'CORPORATE_ACTION_PIPELINE_PROCESSED_AND_VERIFIED_THROUGH_EVIDENCE_SNAPSHOT_2026_10_04_FOR_CURRENTLY_ELIGIBLE_SUPPORTED_SURFACES'
+          : null,
+
+      notClaimed:
+        [
+          'GLOBAL_HISTORICAL_UNIFORMITY',
+          'FUTURE_ACTION_FINALITY',
+          'GENERIC_STRUCTURAL_ACTION_FACTORS',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-13-common-stock.cjs
+MATCH @ LINE 760
+============================================================
+        0,
+
+      corporateActionFactorsAppliedToCanonicalBars:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      snapshotEligibleClosure
+        ? 'START_NEXT_INCREMENTAL_DART_CYCLE_FROM_2026_10_05_WITH_CARRY_FORWARD_RECONFIRMATION'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(root, outputFile)
+        .replaceAll('\\', '/'),
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-13-common-stock.cjs
+MATCH @ LINE 834
+============================================================
+          report.carryForward.futureCashDividend.stockCode,
+
+        issues:
+          report.issues,
+
+        globalCoverageMarkerAdvanced:
+          false,
+
+        databaseWrites:
+          0,
+
+        kisRequests:
+          0,
+
+        nextGate:
+          report.nextGate,
+
+        outputFile:
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-13-common-stock.cjs
+MATCH @ LINE 880
+============================================================
+          0,
+
+        kisRequests:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+      },
+      null,
+      2,
+    ),
+  );
+
+  process.exitCode = 1;
+}
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-4-common-stock.cjs
+MATCH @ LINE 1464
+============================================================
+        0,
+
+      factorRowsInserted:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    policy: {
+      canonicalIdentity:
+        'UNIQUE_PROVIDER_PROVIDER_EVENT_ID_IS_VALIDATION',
+
+      desiredLifecycle:
+        'RECORDED_IS_VALIDATION_FALSE_PRODUCTION_APPLIED_FALSE',
+
+      canonicalValidity:
+        'METADATA_CANONICAL_VALIDATION_STATUS_VALIDATED',
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-4-common-stock.cjs
+MATCH @ LINE 1610
+============================================================
+          0,
+
+        factorRowsInserted:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (
+    status ===
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-5-1-common-stock.cjs
+MATCH @ LINE 432
+============================================================
+        0,
+
+      canonicalEventsInserted:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      status ===
+      'SNAPSHOT_ASOF_ELIGIBILITY_GATE_READY'
+        ? 'BUILD_123_ROW_BULK_INSERT_APPLY'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-5-common-stock.cjs
+MATCH @ LINE 706
+============================================================
+      httpMethodsUsed: ['GET'],
+      databaseReads: 1,
+      databaseWrites: 0,
+      insertRequestsExecuted: 0,
+      canonicalEventsInserted: 0,
+      coverageWindowAdvanced: false,
+    },
+
+    nextGate:
+      status === 'CANONICAL_EVENT_BULK_INSERT_DRY_RUN_READY'
+        ? 'BUILD_V9_8_11_6_BULK_INSERT_APPLY'
+        : 'STOP_AND_REVIEW',
+
+    outputFile: path
+      .relative(root, outputFile)
+      .replaceAll('\\', '/'),
+  };
+
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-6-common-stock.cjs
+MATCH @ LINE 1546
+============================================================
+        0,
+
+      factorRowsInserted:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      'BUILD_POST_INSERT_2_EVENT_CANONICAL_VERIFICATION_AND_EVENT_ID_MAP',
+
+    outputFile:
+      path
+        .relative(
+          root,
+          outputFile,
+        )
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-6-common-stock.cjs
+MATCH @ LINE 1643
+============================================================
+          0,
+
+        factorRowsInserted:
+          0,
+
+        coverageWindowAdvanced:
+          false,
+
+        nextGate:
+          report.nextGate,
+
+        outputFile:
+          report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-7-common-stock.cjs
+MATCH @ LINE 761
+============================================================
+      databaseWrites: 0,
+      canonicalEventsInserted: 0,
+      canonicalEventsUpdated: 0,
+      adjustmentRunsInserted: 0,
+      factorRowsInserted: 0,
+      coverageWindowAdvanced: false,
+    },
+
+    nextGate:
+      status === 'POST_INSERT_2_EVENT_VERIFICATION_COMPLETE'
+        ? 'BUILD_2_ADJUSTMENT_RUN_AND_2_FACTOR_PREFLIGHT'
+        : status ===
+            'POST_INSERT_2_EVENT_VERIFICATION_COMPLETE_WITH_GROUPING_REVIEW'
+          ? 'REVIEW_MULTI_EVENT_GROUPING_BEFORE_ADJUSTMENT_PERSISTENCE'
+          : 'STOP_AND_REVIEW',
+
+    outputFile: path
+      .relative(root, outputFile)
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-8-1-common-stock.cjs
+MATCH @ LINE 1445
+============================================================
+        0,
+
+      canonicalEventsModified:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      status ===
+      'ADJUSTMENT_PERSISTENCE_PREFLIGHT_READY'
+        ? 'BUILD_V9_9_11_9_2_RUN_2_FACTOR_APPLY'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-8-common-stock.cjs
+MATCH @ LINE 1466
+============================================================
+        0,
+
+      canonicalEventsModified:
+        0,
+
+      coverageWindowAdvanced:
+        false,
+    },
+
+    nextGate:
+      status ===
+      'ADJUSTMENT_PERSISTENCE_PREFLIGHT_READY'
+        ? 'BUILD_V9_9_11_9_128_RUN_121_FACTOR_APPLY'
+        : 'STOP_AND_REVIEW',
+
+    outputFile:
+      path
+        .relative(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-9-common-stock.cjs
+MATCH @ LINE 1319
+============================================================
+      runInsertRequests,
+      factorInsertRequests,
+      rowByRowInsertUsed: false,
+      automaticDeleteRollbackUsed: false,
+      canonicalEventsModified: 0,
+      coverageWindowAdvanced: false,
+    },
+
+    nextGate:
+      'BUILD_POST_PERSISTENCE_VERIFICATION_AND_HISTORY_REFRESH_PLAN',
+
+    outputFile:
+      path
+        .relative(root, outputFile)
+        .replaceAll('\\', '/'),
+  };
+
+  report.outputFingerprint =
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\scripts\v9911-9-common-stock.cjs
+MATCH @ LINE 1383
+============================================================
+          report.safety.runInsertRequests,
+        factorInsertRequests:
+          report.safety.factorInsertRequests,
+        rowByRowInsertUsed: false,
+        automaticDeleteRollbackUsed: false,
+        coverageWindowAdvanced: false,
+        nextGate: report.nextGate,
+        outputFile: report.outputFile,
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+main().catch((error) => {
+  console.error(
+    JSON.stringify(
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\054_corporate_action_dataset_coverage_v9_7.sql
+MATCH @ LINE 20
+============================================================
+-- 4) provider coverage includes every required action type.
+--
+-- Current universe is never substituted for missing historical PIT.
+-- ============================================================
+
+create table if not exists public.corporate_action_source_coverage_windows (
+  id uuid primary key default gen_random_uuid(),
+
+  universe_code text not null,
+
+  provider text not null,
+  provider_version text not null,
+
+  start_date date not null,
+  end_date date not null,
+
+  coverage_status text not null default 'UNKNOWN',
+
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\054_corporate_action_dataset_coverage_v9_7.sql
+MATCH @ LINE 53
+============================================================
+    end_date,
+    source_fingerprint,
+    is_validation
+  ),
+
+  constraint corporate_action_source_coverage_windows_status_check
+    check (
+      coverage_status in (
+        'COMPLETE',
+        'PARTIAL',
+        'UNKNOWN'
+      )
+    ),
+
+  constraint corporate_action_source_coverage_windows_date_check
+    check (
+      start_date <= end_date
+    ),
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\054_corporate_action_dataset_coverage_v9_7.sql
+MATCH @ LINE 62
+============================================================
+        'PARTIAL',
+        'UNKNOWN'
+      )
+    ),
+
+  constraint corporate_action_source_coverage_windows_date_check
+    check (
+      start_date <= end_date
+    ),
+
+  constraint corporate_action_source_coverage_windows_production_check
+    check (
+      production_applied = false
+    )
+);
+
+create index if not exists
+  idx_corporate_action_source_coverage_windows_lookup
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\054_corporate_action_dataset_coverage_v9_7.sql
+MATCH @ LINE 67
+============================================================
+  constraint corporate_action_source_coverage_windows_date_check
+    check (
+      start_date <= end_date
+    ),
+
+  constraint corporate_action_source_coverage_windows_production_check
+    check (
+      production_applied = false
+    )
+);
+
+create index if not exists
+  idx_corporate_action_source_coverage_windows_lookup
+on public.corporate_action_source_coverage_windows (
+  universe_code,
+  start_date,
+  end_date,
+  created_at desc
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\054_corporate_action_dataset_coverage_v9_7.sql
+MATCH @ LINE 74
+============================================================
+      production_applied = false
+    )
+);
+
+create index if not exists
+  idx_corporate_action_source_coverage_windows_lookup
+on public.corporate_action_source_coverage_windows (
+  universe_code,
+  start_date,
+  end_date,
+  created_at desc
+);
+
+create table if not exists public.corporate_action_dataset_coverage_runs (
+  id uuid primary key default gen_random_uuid(),
+
+  version text not null default 'CORPORATE_ACTION_DATASET_COVERAGE_V9_7',
+
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\054_corporate_action_dataset_coverage_v9_7.sql
+MATCH @ LINE 75
+============================================================
+    )
+);
+
+create index if not exists
+  idx_corporate_action_source_coverage_windows_lookup
+on public.corporate_action_source_coverage_windows (
+  universe_code,
+  start_date,
+  end_date,
+  created_at desc
+);
+
+create table if not exists public.corporate_action_dataset_coverage_runs (
+  id uuid primary key default gen_random_uuid(),
+
+  version text not null default 'CORPORATE_ACTION_DATASET_COVERAGE_V9_7',
+
+  universe_code text not null,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\054_corporate_action_dataset_coverage_v9_7.sql
+MATCH @ LINE 93
+============================================================
+
+  compilation_run_id uuid
+    references public.historical_universe_compilation_runs(id)
+    on delete restrict,
+
+  source_coverage_window_id uuid
+    references public.corporate_action_source_coverage_windows(id)
+    on delete restrict,
+
+  start_date date not null,
+  end_date date not null,
+
+  status text not null default 'RUNNING',
+
+  pit_member_count integer not null default 0,
+
+  pit_markets jsonb not null default '[]'::jsonb,
+  required_action_types jsonb not null default '[]'::jsonb,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\054_corporate_action_dataset_coverage_v9_7.sql
+MATCH @ LINE 94
+============================================================
+  compilation_run_id uuid
+    references public.historical_universe_compilation_runs(id)
+    on delete restrict,
+
+  source_coverage_window_id uuid
+    references public.corporate_action_source_coverage_windows(id)
+    on delete restrict,
+
+  start_date date not null,
+  end_date date not null,
+
+  status text not null default 'RUNNING',
+
+  pit_member_count integer not null default 0,
+
+  pit_markets jsonb not null default '[]'::jsonb,
+  required_action_types jsonb not null default '[]'::jsonb,
+
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\054_corporate_action_dataset_coverage_v9_7.sql
+MATCH @ LINE 218
+============================================================
+    finished_at = now()
+  where id = p_run_id;
+end;
+$$;
+
+comment on table public.corporate_action_source_coverage_windows is
+'Explicit provider evidence that a date range, set of markets, and set of corporate-action types were covered. Absence of event rows is never treated as coverage evidence.';
+
+comment on table public.corporate_action_dataset_coverage_runs is
+'v9.7 fail-closed evaluation of real corporate-action dataset coverage against exact historical PIT markets and required action types.';
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\061_corporate_action_source_inventory_v9_7_1.sql
+MATCH @ LINE 18
+============================================================
+  next_page integer not null default 1 check (next_page > 0),
+  segment_total integer,
+  stored_pages integer not null default 0,
+  disclosure_count integer not null default 0,
+  candidate_count integer not null default 0,
+  source_coverage_window_id uuid references public.corporate_action_source_coverage_windows(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  finished_at timestamptz,
+  check (start_date <= end_date),
+  check (start_date <= chunk_start and chunk_start <= chunk_end and chunk_end <= end_date)
+);
+create table public.corporate_action_source_inventory_pages (
+  run_id uuid not null references public.corporate_action_source_inventory_runs(id),
+  chunk_start date not null,
+  chunk_end date not null,
+  corp_cls text not null check (corp_cls in ('Y','K')),
+  page_no integer not null check (page_no > 0),
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\061_corporate_action_source_inventory_v9_7_1.sql
+MATCH @ LINE 113
+============================================================
+   else
+     r.status:='INVENTORY_COMPLETE'; r.finished_at:=now();
+     select encode(sha256(convert_to(string_agg(response_sha256,'' order by chunk_start,corp_cls,page_no),'UTF8')),'hex')
+       into inventory_hash from public.corporate_action_source_inventory_pages where run_id=r.id;
+     -- Empty action_types: no action type has been proven complete by a title scan.
+     insert into public.corporate_action_source_coverage_windows
+       (universe_code,provider,provider_version,start_date,end_date,coverage_status,markets,action_types,source_fingerprint,evidence,is_validation,production_applied)
+     values (r.universe_code,'OPENDART_DISCLOSURE_LIST','V9_7_1_DB_INVENTORY',r.start_date,r.end_date,'PARTIAL',
+       '["KOSPI","KOSDAQ"]','[]',inventory_hash,
+       jsonb_build_object('inventoryRunId',r.id,'scope','DISCLOSURE_RECEIPT_DATE_ONLY',
+         'allRequestedPagesStored',true,'storedPages',r.stored_pages,'disclosureCount',r.disclosure_count,
+         'candidateCount',r.candidate_count,'rawResponseHashesStored',true,
+         'effectiveDateCoverageProven',false,'historicalPitMembershipReconciled',false,
+         'candidateClassificationExhaustive',false,'eventImportComplete',false,
+         'eventAbsenceInterpretedAsNoAction',false,'productionApplied',false),false,false)
+     on conflict (universe_code,provider,start_date,end_date,source_fingerprint,is_validation)
+       do update set source_fingerprint=excluded.source_fingerprint
+     returning id into coverage_id;
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\061_corporate_action_source_inventory_v9_7_1.sql
+MATCH @ LINE 115
+============================================================
+     select encode(sha256(convert_to(string_agg(response_sha256,'' order by chunk_start,corp_cls,page_no),'UTF8')),'hex')
+       into inventory_hash from public.corporate_action_source_inventory_pages where run_id=r.id;
+     -- Empty action_types: no action type has been proven complete by a title scan.
+     insert into public.corporate_action_source_coverage_windows
+       (universe_code,provider,provider_version,start_date,end_date,coverage_status,markets,action_types,source_fingerprint,evidence,is_validation,production_applied)
+     values (r.universe_code,'OPENDART_DISCLOSURE_LIST','V9_7_1_DB_INVENTORY',r.start_date,r.end_date,'PARTIAL',
+       '["KOSPI","KOSDAQ"]','[]',inventory_hash,
+       jsonb_build_object('inventoryRunId',r.id,'scope','DISCLOSURE_RECEIPT_DATE_ONLY',
+         'allRequestedPagesStored',true,'storedPages',r.stored_pages,'disclosureCount',r.disclosure_count,
+         'candidateCount',r.candidate_count,'rawResponseHashesStored',true,
+         'effectiveDateCoverageProven',false,'historicalPitMembershipReconciled',false,
+         'candidateClassificationExhaustive',false,'eventImportComplete',false,
+         'eventAbsenceInterpretedAsNoAction',false,'productionApplied',false),false,false)
+     on conflict (universe_code,provider,start_date,end_date,source_fingerprint,is_validation)
+       do update set source_fingerprint=excluded.source_fingerprint
+     returning id into coverage_id;
+     r.source_coverage_window_id:=coverage_id;
+   end if;
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\061_corporate_action_source_inventory_v9_7_1.sql
+MATCH @ LINE 118
+============================================================
+     insert into public.corporate_action_source_coverage_windows
+       (universe_code,provider,provider_version,start_date,end_date,coverage_status,markets,action_types,source_fingerprint,evidence,is_validation,production_applied)
+     values (r.universe_code,'OPENDART_DISCLOSURE_LIST','V9_7_1_DB_INVENTORY',r.start_date,r.end_date,'PARTIAL',
+       '["KOSPI","KOSDAQ"]','[]',inventory_hash,
+       jsonb_build_object('inventoryRunId',r.id,'scope','DISCLOSURE_RECEIPT_DATE_ONLY',
+         'allRequestedPagesStored',true,'storedPages',r.stored_pages,'disclosureCount',r.disclosure_count,
+         'candidateCount',r.candidate_count,'rawResponseHashesStored',true,
+         'effectiveDateCoverageProven',false,'historicalPitMembershipReconciled',false,
+         'candidateClassificationExhaustive',false,'eventImportComplete',false,
+         'eventAbsenceInterpretedAsNoAction',false,'productionApplied',false),false,false)
+     on conflict (universe_code,provider,start_date,end_date,source_fingerprint,is_validation)
+       do update set source_fingerprint=excluded.source_fingerprint
+     returning id into coverage_id;
+     r.source_coverage_window_id:=coverage_id;
+   end if;
+ end if;
+ update public.corporate_action_source_inventory_runs set
+   status=r.status,chunk_start=r.chunk_start,chunk_end=r.chunk_end,corp_cls=r.corp_cls,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\061_corporate_action_source_inventory_v9_7_1.sql
+MATCH @ LINE 119
+============================================================
+       (universe_code,provider,provider_version,start_date,end_date,coverage_status,markets,action_types,source_fingerprint,evidence,is_validation,production_applied)
+     values (r.universe_code,'OPENDART_DISCLOSURE_LIST','V9_7_1_DB_INVENTORY',r.start_date,r.end_date,'PARTIAL',
+       '["KOSPI","KOSDAQ"]','[]',inventory_hash,
+       jsonb_build_object('inventoryRunId',r.id,'scope','DISCLOSURE_RECEIPT_DATE_ONLY',
+         'allRequestedPagesStored',true,'storedPages',r.stored_pages,'disclosureCount',r.disclosure_count,
+         'candidateCount',r.candidate_count,'rawResponseHashesStored',true,
+         'effectiveDateCoverageProven',false,'historicalPitMembershipReconciled',false,
+         'candidateClassificationExhaustive',false,'eventImportComplete',false,
+         'eventAbsenceInterpretedAsNoAction',false,'productionApplied',false),false,false)
+     on conflict (universe_code,provider,start_date,end_date,source_fingerprint,is_validation)
+       do update set source_fingerprint=excluded.source_fingerprint
+     returning id into coverage_id;
+     r.source_coverage_window_id:=coverage_id;
+   end if;
+ end if;
+ update public.corporate_action_source_inventory_runs set
+   status=r.status,chunk_start=r.chunk_start,chunk_end=r.chunk_end,corp_cls=r.corp_cls,
+   next_page=r.next_page,segment_total=r.segment_total,stored_pages=r.stored_pages,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\061_corporate_action_source_inventory_v9_7_1.sql
+MATCH @ LINE 120
+============================================================
+     values (r.universe_code,'OPENDART_DISCLOSURE_LIST','V9_7_1_DB_INVENTORY',r.start_date,r.end_date,'PARTIAL',
+       '["KOSPI","KOSDAQ"]','[]',inventory_hash,
+       jsonb_build_object('inventoryRunId',r.id,'scope','DISCLOSURE_RECEIPT_DATE_ONLY',
+         'allRequestedPagesStored',true,'storedPages',r.stored_pages,'disclosureCount',r.disclosure_count,
+         'candidateCount',r.candidate_count,'rawResponseHashesStored',true,
+         'effectiveDateCoverageProven',false,'historicalPitMembershipReconciled',false,
+         'candidateClassificationExhaustive',false,'eventImportComplete',false,
+         'eventAbsenceInterpretedAsNoAction',false,'productionApplied',false),false,false)
+     on conflict (universe_code,provider,start_date,end_date,source_fingerprint,is_validation)
+       do update set source_fingerprint=excluded.source_fingerprint
+     returning id into coverage_id;
+     r.source_coverage_window_id:=coverage_id;
+   end if;
+ end if;
+ update public.corporate_action_source_inventory_runs set
+   status=r.status,chunk_start=r.chunk_start,chunk_end=r.chunk_end,corp_cls=r.corp_cls,
+   next_page=r.next_page,segment_total=r.segment_total,stored_pages=r.stored_pages,
+   disclosure_count=r.disclosure_count,candidate_count=r.candidate_count,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\061_corporate_action_source_inventory_v9_7_1.sql
+MATCH @ LINE 121
+============================================================
+       '["KOSPI","KOSDAQ"]','[]',inventory_hash,
+       jsonb_build_object('inventoryRunId',r.id,'scope','DISCLOSURE_RECEIPT_DATE_ONLY',
+         'allRequestedPagesStored',true,'storedPages',r.stored_pages,'disclosureCount',r.disclosure_count,
+         'candidateCount',r.candidate_count,'rawResponseHashesStored',true,
+         'effectiveDateCoverageProven',false,'historicalPitMembershipReconciled',false,
+         'candidateClassificationExhaustive',false,'eventImportComplete',false,
+         'eventAbsenceInterpretedAsNoAction',false,'productionApplied',false),false,false)
+     on conflict (universe_code,provider,start_date,end_date,source_fingerprint,is_validation)
+       do update set source_fingerprint=excluded.source_fingerprint
+     returning id into coverage_id;
+     r.source_coverage_window_id:=coverage_id;
+   end if;
+ end if;
+ update public.corporate_action_source_inventory_runs set
+   status=r.status,chunk_start=r.chunk_start,chunk_end=r.chunk_end,corp_cls=r.corp_cls,
+   next_page=r.next_page,segment_total=r.segment_total,stored_pages=r.stored_pages,
+   disclosure_count=r.disclosure_count,candidate_count=r.candidate_count,
+   source_coverage_window_id=r.source_coverage_window_id,finished_at=r.finished_at,updated_at=now()
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\061_corporate_action_source_inventory_v9_7_1.sql
+MATCH @ LINE 126
+============================================================
+         'candidateClassificationExhaustive',false,'eventImportComplete',false,
+         'eventAbsenceInterpretedAsNoAction',false,'productionApplied',false),false,false)
+     on conflict (universe_code,provider,start_date,end_date,source_fingerprint,is_validation)
+       do update set source_fingerprint=excluded.source_fingerprint
+     returning id into coverage_id;
+     r.source_coverage_window_id:=coverage_id;
+   end if;
+ end if;
+ update public.corporate_action_source_inventory_runs set
+   status=r.status,chunk_start=r.chunk_start,chunk_end=r.chunk_end,corp_cls=r.corp_cls,
+   next_page=r.next_page,segment_total=r.segment_total,stored_pages=r.stored_pages,
+   disclosure_count=r.disclosure_count,candidate_count=r.candidate_count,
+   source_coverage_window_id=r.source_coverage_window_id,finished_at=r.finished_at,updated_at=now()
+ where id=r.id returning * into r;
+ return jsonb_build_object('staleRequest',false,'run',to_jsonb(r));
+end;
+$$;
+revoke all on function public.append_corporate_action_source_page_v9_7_1(uuid,date,text,integer,integer,integer,text,jsonb,jsonb) from public,anon,authenticated;
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\supabase\migrations\061_corporate_action_source_inventory_v9_7_1.sql
+MATCH @ LINE 133
+============================================================
+ end if;
+ update public.corporate_action_source_inventory_runs set
+   status=r.status,chunk_start=r.chunk_start,chunk_end=r.chunk_end,corp_cls=r.corp_cls,
+   next_page=r.next_page,segment_total=r.segment_total,stored_pages=r.stored_pages,
+   disclosure_count=r.disclosure_count,candidate_count=r.candidate_count,
+   source_coverage_window_id=r.source_coverage_window_id,finished_at=r.finished_at,updated_at=now()
+ where id=r.id returning * into r;
+ return jsonb_build_object('staleRequest',false,'run',to_jsonb(r));
+end;
+$$;
+revoke all on function public.append_corporate_action_source_page_v9_7_1(uuid,date,text,integer,integer,integer,text,jsonb,jsonb) from public,anon,authenticated;
+grant execute on function public.append_corporate_action_source_page_v9_7_1(uuid,date,text,integer,integer,integer,text,jsonb,jsonb) to service_role;
+commit;
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\verification\verify-corporate-action-source-v9-7-1.sql
+MATCH @ LINE 33
+============================================================
+ -- Repeated old cursor: no second page insert.
+ result:=public.append_corporate_action_source_page_v9_7_1(rid,'2024-01-02','Y',1,0,0,repeat('a',64),'{"status":"013"}','[]');
+ if result->>'staleRequest'<>'true' then raise exception 'TEST_FAILED_STALE_REQUEST'; end if;
+ result:=public.append_corporate_action_source_page_v9_7_1(rid,'2024-01-02','K',1,0,0,repeat('b',64),'{"status":"013"}','[]');
+ if result->'run'->>'status'<>'INVENTORY_COMPLETE' then raise exception 'TEST_FAILED_INVENTORY_FINISH'; end if;
+ coverage_id:=(result->'run'->>'source_coverage_window_id')::uuid;
+ select w.coverage_status,w.action_types into coverage_status,covered_types
+ from public.corporate_action_source_coverage_windows w where id=coverage_id;
+ if coverage_status is distinct from 'PARTIAL' or covered_types is distinct from '[]'::jsonb then raise exception 'TEST_FAILED_FAIL_CLOSED'; end if;
+ if (select count(*) from public.corporate_action_source_inventory_pages where run_id=rid)<>2 then raise exception 'TEST_FAILED_PAGE_COUNT'; end if;
+ select count(*) into after_events from public.corporate_action_events;
+ if before_events<>after_events then raise exception 'TEST_FAILED_EVENT_MUTATION'; end if;
+ raise notice 'PASS: invalid page rejected, cursor durable, retry idempotent, empty inventory PARTIAL, events untouched. Rolling back.';
+end;
+$$;
+rollback;
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\verification\verify-corporate-action-source-v9-7-1.sql
+MATCH @ LINE 35
+============================================================
+ if result->>'staleRequest'<>'true' then raise exception 'TEST_FAILED_STALE_REQUEST'; end if;
+ result:=public.append_corporate_action_source_page_v9_7_1(rid,'2024-01-02','K',1,0,0,repeat('b',64),'{"status":"013"}','[]');
+ if result->'run'->>'status'<>'INVENTORY_COMPLETE' then raise exception 'TEST_FAILED_INVENTORY_FINISH'; end if;
+ coverage_id:=(result->'run'->>'source_coverage_window_id')::uuid;
+ select w.coverage_status,w.action_types into coverage_status,covered_types
+ from public.corporate_action_source_coverage_windows w where id=coverage_id;
+ if coverage_status is distinct from 'PARTIAL' or covered_types is distinct from '[]'::jsonb then raise exception 'TEST_FAILED_FAIL_CLOSED'; end if;
+ if (select count(*) from public.corporate_action_source_inventory_pages where run_id=rid)<>2 then raise exception 'TEST_FAILED_PAGE_COUNT'; end if;
+ select count(*) into after_events from public.corporate_action_events;
+ if before_events<>after_events then raise exception 'TEST_FAILED_EVENT_MUTATION'; end if;
+ raise notice 'PASS: invalid page rejected, cursor durable, retry idempotent, empty inventory PARTIAL, events untouched. Rolling back.';
+end;
+$$;
+rollback;
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\corporate-action-dataset-v9-7-status-route.ts
+MATCH @ LINE 35
+============================================================
+          .select(`
+            id,
+            version,
+            universe_code,
+            compilation_run_id,
+            source_coverage_window_id,
+            start_date,
+            end_date,
+            status,
+            pit_member_count,
+            pit_markets,
+            required_action_types,
+            missing_markets,
+            missing_action_types,
+            summary,
+            is_validation,
+            started_at,
+            finished_at,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\corporate-action-dataset-v9-7-status-route.ts
+MATCH @ LINE 89
+============================================================
+          )
+          .limit(20),
+
+        supabase
+          .from(
+            "corporate_action_source_coverage_windows",
+          )
+          .select(`
+            id,
+            universe_code,
+            provider,
+            provider_version,
+            start_date,
+            end_date,
+            coverage_status,
+            markets,
+            action_types,
+            evidence,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\evaluate-corporate-action-dataset-coverage-v9-7.ts
+MATCH @ LINE 358
+============================================================
+    createSupabaseServerClient();
+
+  let query =
+    supabase
+      .from(
+        "corporate_action_source_coverage_windows",
+      )
+      .select(`
+        id,
+        universe_code,
+        provider,
+        provider_version,
+        start_date,
+        end_date,
+        coverage_status,
+        markets,
+        action_types,
+        source_fingerprint,
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\evaluate-corporate-action-dataset-coverage-v9-7.ts
+MATCH @ LINE 578
+============================================================
+        compilation_run_id:
+          compilation
+            ?.id ??
+          null,
+
+        source_coverage_window_id:
+          sourceCoverage
+            ?.id ??
+          null,
+
+        start_date:
+          startDate,
+
+        end_date:
+          endDate,
+
+        status:
+          "RUNNING",
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\validate-corporate-action-dataset-coverage-v9-7.ts
+MATCH @ LINE 389
+============================================================
+      data: sourceCoverage,
+      error: sourceCoverageError,
+    } =
+      await supabase
+        .from(
+          "corporate_action_source_coverage_windows",
+        )
+        .insert({
+          universe_code:
+            "KRX_ALL_LISTED",
+
+          provider:
+            "SYNTHETIC_CORPORATE_ACTION_COVERAGE_V9_7",
+
+          provider_version:
+            "SYNTHETIC_V1",
+
+          start_date:
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\validate-corporate-action-dataset-coverage-v9-7.ts
+MATCH @ LINE 628
+============================================================
+    if (
+      sourceCoverageWindowId
+    ) {
+      await supabase
+        .from(
+          "corporate_action_source_coverage_windows",
+        )
+        .delete()
+        .eq(
+          "id",
+          sourceCoverageWindowId,
+        );
+    }
+
+    if (
+      compilationRunId
+    ) {
+      await supabase
+
+============================================================
+FILE: C:\Users\user\desktop\ai-stock-lab\validate-corporate-action-dataset-coverage-v9-7.ts
+MATCH @ LINE 778
+============================================================
+    if (
+      sourceCoverageWindowId
+    ) {
+      await supabase
+        .from(
+          "corporate_action_source_coverage_windows",
+        )
+        .delete()
+        .eq(
+          "id",
+          sourceCoverageWindowId,
+        );
+    }
+
+    if (
+      compilationRunId
+    ) {
+      await supabase

@@ -1,0 +1,144 @@
+const fs = require("fs");
+const path = require("path");
+
+const root = process.cwd();
+
+const routeFile = path.resolve(
+  root,
+  "app/api/trading/automation/cycle/route.ts"
+);
+
+if (!fs.existsSync(routeFile)) {
+  throw new Error(
+    "AUTOMATION_CYCLE_ROUTE_NOT_FOUND"
+  );
+}
+
+const text =
+  fs.readFileSync(
+    routeFile,
+    "utf8"
+  );
+
+const probeMarkerIndex =
+  text.indexOf(
+    "ALPHA_V3_PROBE_ONLY_V1"
+  );
+
+const maintenanceIndex =
+  text.indexOf(
+    "runCommittedRiskMaintenance"
+  );
+
+const automationRunIndex =
+  text.indexOf(
+    "/api/trading/automation/run"
+  );
+
+const executorIndex =
+  text.indexOf(
+    "executeApprovedPaperOrders"
+  );
+
+const checks = {
+  probeMarkerPresent:
+    probeMarkerIndex >= 0,
+
+  usesRequestClone:
+    /request\s*\.\s*clone\s*\(\s*\)/m.test(
+      text
+    ),
+
+  probeOnlyStrictTrue:
+    /probeOnly\s*===\s*true/m.test(
+      text
+    ),
+
+  requiresTradingAutomationSecret:
+    /ALPHA_V3_PROBE_ONLY_V1[\s\S]{0,2200}?TRADING_AUTOMATION_SECRET/m.test(
+      text
+    ),
+
+  requiresSecretHeader:
+    /ALPHA_V3_PROBE_ONLY_V1[\s\S]{0,2200}?x-automation-secret/m.test(
+      text
+    ),
+
+  unauthorizedProbeReturns401:
+    /UNAUTHORIZED_AUTOMATION_CYCLE_PROBE[\s\S]{0,250}?status:\s*401/m.test(
+      text
+    ),
+
+  probeSuccessReturns200:
+    /AUTOMATION_CYCLE_ROUTE_REACHABLE[\s\S]{0,700}?status:\s*200/m.test(
+      text
+    ),
+
+  probeDeclaresZeroOrderSideEffects:
+    /ordersCreated:\s*0[\s\S]{0,200}?ordersChanged:\s*0[\s\S]{0,200}?positionsChanged:\s*0/m.test(
+      text
+    ),
+
+  probeBranchBeforeMaintenance:
+    probeMarkerIndex >= 0 &&
+    maintenanceIndex >= 0 &&
+    probeMarkerIndex <
+      maintenanceIndex,
+
+  probeBranchBeforeAutomationRun:
+    probeMarkerIndex >= 0 &&
+    automationRunIndex >= 0 &&
+    probeMarkerIndex <
+      automationRunIndex,
+
+  probeBranchBeforeApprovedExecutor:
+    probeMarkerIndex >= 0 &&
+    executorIndex >= 0 &&
+    probeMarkerIndex <
+      executorIndex,
+};
+
+const failed =
+  Object.entries(checks)
+    .filter(
+      ([, value]) =>
+        !value
+    )
+    .map(
+      ([key]) =>
+        key
+    );
+
+console.log(
+  JSON.stringify(
+    {
+      status:
+        failed.length === 0
+          ? "ALPHA_V3_CYCLE_PROBE_ONLY_STATIC_VERIFIED"
+          : "ALPHA_V3_CYCLE_PROBE_ONLY_STATIC_REVIEW",
+
+      checks,
+      failed,
+
+      safety: {
+        databaseReads: 0,
+        databaseWrites: 0,
+        networkCalls: 0,
+        cyclePostRequests: 0,
+        ordersCreated: 0,
+        positionsChanged: 0,
+      },
+
+      nextGate:
+        failed.length === 0
+          ? "RUN_PROBE_ONLY_LIVE_SMOKE"
+          : "REVIEW_PROBE_ONLY_PATCH",
+    },
+    null,
+    2
+  )
+);
+
+if (failed.length > 0) {
+  process.exitCode = 2;
+}

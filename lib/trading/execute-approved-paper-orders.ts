@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase";
 import { executePaperOrder } from "@/lib/trading/execute-paper-order";
 
+import { assertKillSwitchAllows } from "@/lib/trading/kill-switch-guard";
 interface ApprovedOrderRecord {
   id: string;
   stock_code: string;
@@ -18,6 +19,8 @@ export interface ApprovedOrderExecutionResult {
 export async function executeApprovedPaperOrders(
   requestedMaxOrders = 5,
 ) {
+  await assertKillSwitchAllows("PAPER_BUY_EXECUTE");
+
   const maxOrders = Math.min(
     20,
     Math.max(

@@ -171,7 +171,7 @@ export default function AutomationRunPanel({
 
     try {
       const response = await fetch(
-        "/api/trading/automation/run",
+        "/api/trading/automation/manual",
         {
           method: "POST",
 

@@ -406,7 +406,9 @@ const requestedAutoOrder =
  */
 const autoOrder =
   requestedAutoOrder &&
-  control.paperOrderEnabled;
+  control.automationEnabled &&
+  control.paperOrderEnabled &&
+  !control.emergencyStop;
 
 /*
  * 요청값과 시스템 제한값 중

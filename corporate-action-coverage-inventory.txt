@@ -1,0 +1,282 @@
+============================================================
+CORPORATE ACTION COVERAGE RELATED FILES
+============================================================
+C:\Users\user\desktop\ai-stock-lab\lib\dart\client.ts:10: export async function listDartDisclosures(query: DartDisclosureQuery) {
+C:\Users\user\desktop\ai-stock-lab\lib\market\bootstrap-legacy-universe-v8.ts:414: coverage_status:
+C:\Users\user\desktop\ai-stock-lab\lib\market\bootstrap-legacy-universe-v8.ts:716: coverage_status:
+C:\Users\user\desktop\ai-stock-lab\lib\market\compile-historical-universe-intervals-v9-3b.ts:73: .eq("coverage_status", "COMPLETE")
+C:\Users\user\desktop\ai-stock-lab\lib\market\create-historical-pit-chunked-compilation-v9-3b-3.ts:181: "coverage_status",
+C:\Users\user\desktop\ai-stock-lab\lib\market\get-point-in-time-universe-v8.ts:48: coverage_status:
+C:\Users\user\desktop\ai-stock-lab\lib\market\get-point-in-time-universe-v8.ts:208: coverage_status
+C:\Users\user\desktop\ai-stock-lab\lib\market\get-point-in-time-universe-v8.ts:311: row.coverage_status,
+C:\Users\user\desktop\ai-stock-lab\lib\market\ingest-historical-universe-snapshot-v9-3a.ts:55: throw new Error("V9_3A_INVALID_COVERAGE_STATUS");
+C:\Users\user\desktop\ai-stock-lab\lib\market\ingest-historical-universe-snapshot-v9-3a.ts:128: coverage_status:input.coverageStatus,
+C:\Users\user\desktop\ai-stock-lab\lib\market\ingest-krx-historical-pit-date-v9-3c.ts:21: .eq("coverage_status", "COMPLETE")
+C:\Users\user\desktop\ai-stock-lab\lib\market\sync-dart-disclosures.ts:3: interface SyncDartDisclosuresInput {
+C:\Users\user\desktop\ai-stock-lab\lib\market\sync-dart-disclosures.ts:47: export interface SyncDartDisclosuresResult {
+C:\Users\user\desktop\ai-stock-lab\lib\market\sync-dart-disclosures.ts:429: export async function syncDartDisclosures(
+C:\Users\user\desktop\ai-stock-lab\lib\market\sync-dart-disclosures.ts:430: input: SyncDartDisclosuresInput = {},
+C:\Users\user\desktop\ai-stock-lab\lib\market\sync-dart-disclosures.ts:431: ): Promise<SyncDartDisclosuresResult> {
+C:\Users\user\desktop\ai-stock-lab\lib\market\sync-dart-disclosures.ts:760: "dart_disclosures",
+C:\Users\user\desktop\ai-stock-lab\lib\market\sync-krx-point-in-time-universe-v8-1.ts:1655: coverage_status:
+C:\Users\user\desktop\ai-stock-lab\lib\market\sync-krx-point-in-time-universe-v8-1.ts:1996: coverage_status:
+C:\Users\user\desktop\ai-stock-lab\lib\research\build-purged-walk-forward-plan-v9-2.ts:23: coverage_status:
+C:\Users\user\desktop\ai-stock-lab\lib\research\build-purged-walk-forward-plan-v9-2.ts:314: row.coverage_status,
+C:\Users\user\desktop\ai-stock-lab\lib\research\build-purged-walk-forward-plan-v9-2.ts:824: pit_coverage_status:
+C:\Users\user\desktop\ai-stock-lab\lib\research\build-purged-walk-forward-plan-v9-2-1.ts:14: coverage_status:
+C:\Users\user\desktop\ai-stock-lab\lib\research\build-purged-walk-forward-plan-v9-2-1.ts:303: row.coverage_status,
+C:\Users\user\desktop\ai-stock-lab\lib\research\build-purged-walk-forward-plan-v9-2-1.ts:804: pit_coverage_status:
+C:\Users\user\desktop\ai-stock-lab\lib\research\evaluate-alpha-backtest-research-gate-v9-5.ts:165: coverage_status,
+C:\Users\user\desktop\ai-stock-lab\lib\research\evaluate-alpha-backtest-research-gate-v9-5.ts:202: "corporate_action_coverage_assertions",
+C:\Users\user\desktop\ai-stock-lab\lib\research\evaluate-alpha-backtest-research-gate-v9-5.ts:207: coverage_status,
+C:\Users\user\desktop\ai-stock-lab\lib\research\evaluate-alpha-backtest-research-gate-v9-5.ts:344: ?.coverage_status ===
+C:\Users\user\desktop\ai-stock-lab\lib\research\evaluate-alpha-backtest-research-gate-v9-5.ts:365: ?.coverage_status ===
+C:\Users\user\desktop\ai-stock-lab\lib\research\evaluate-corporate-action-dataset-coverage-v9-7.ts:57: coverage_status:
+C:\Users\user\desktop\ai-stock-lab\lib\research\evaluate-corporate-action-dataset-coverage-v9-7.ts:367: coverage_status,
+C:\Users\user\desktop\ai-stock-lab\lib\research\evaluate-corporate-action-dataset-coverage-v9-7.ts:727: sourceCoverage.coverage_status !==
+C:\Users\user\desktop\ai-stock-lab\lib\research\evaluate-corporate-action-dataset-coverage-v9-7.ts:901: sourceCoverage.coverage_status,
+C:\Users\user\desktop\ai-stock-lab\lib\research\evaluate-corporate-action-dataset-coverage-v9-7.ts:975: "corporate_action_coverage_assertions",
+C:\Users\user\desktop\ai-stock-lab\lib\research\evaluate-corporate-action-dataset-coverage-v9-7.ts:990: coverage_status:
+C:\Users\user\desktop\ai-stock-lab\lib\research\evaluate-historical-market-data-coverage-v9-6.ts:974: coverage_status:
+C:\Users\user\desktop\ai-stock-lab\lib\research\validate-corporate-action-dataset-coverage-v9-7.ts:407: coverage_status:
+C:\Users\user\desktop\ai-stock-lab\lib\research\validate-corporate-action-dataset-coverage-v9-7.ts:600: "corporate_action_coverage_assertions",
+C:\Users\user\desktop\ai-stock-lab\lib\research\validate-corporate-action-dataset-coverage-v9-7.ts:750: "corporate_action_coverage_assertions",
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-entry-signals.ts:68: disclosureScore: number | null;
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-entry-signals.ts:504: disclosureScore:
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-entry-signals.ts:505: prediction.disclosureScore,
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-stock-predictions.ts:292: const disclosureSince =
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-stock-predictions.ts:355: "dart_disclosures",
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-stock-predictions.ts:366: disclosureSince,
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-stock-predictions.ts:411: const disclosures =
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-stock-predictions.ts:471: disclosures
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-stock-predictions.ts:473: const stockDisclosures =
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-stock-predictions.ts:479: stockDisclosures.push(
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-stock-predictions.ts:485: stockDisclosures,
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-stock-predictions.ts:619: const stockDisclosures =
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-stock-predictions.ts:637: stockDisclosures
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-stock-predictions.ts:708: const disclosureScore =
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-stock-predictions.ts:763: disclosureScore *
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-stock-predictions.ts:818: stockDisclosures.length /
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-stock-predictions.ts:913: stockDisclosures[0]
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-stock-predictions.ts:971: disclosureScore,
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-stock-predictions.ts:998: disclosureScore,
+C:\Users\user\desktop\ai-stock-lab\lib\trading\generate-stock-predictions.ts:1029: stockDisclosures.length,
+C:\Users\user\desktop\ai-stock-lab\lib\trading\get-latest-prediction-candidates.ts:71: disclosureScore: number | null;
+C:\Users\user\desktop\ai-stock-lab\lib\trading\get-latest-prediction-candidates.ts:373: disclosureScore:
+C:\Users\user\desktop\ai-stock-lab\lib\trading\get-stock-prediction-dashboard.ts:101: disclosureScore: number | null;
+C:\Users\user\desktop\ai-stock-lab\lib\trading\get-stock-prediction-dashboard.ts:452: disclosureScore:
+C:\Users\user\desktop\ai-stock-lab\scripts\corporate-action-daily.cjs:278: const disclosures =
+C:\Users\user\desktop\ai-stock-lab\scripts\corporate-action-daily.cjs:279: Number(inventory.disclosures ?? 0);
+C:\Users\user\desktop\ai-stock-lab\scripts\corporate-action-daily.cjs:310: disclosures,
+C:\Users\user\desktop\ai-stock-lab\scripts\corporate-action-daily.cjs:357: disclosures,
+C:\Users\user\desktop\ai-stock-lab\scripts\resolve-dividend-market-adjustments-v9-7-5.cjs:4: // V9.7.3 intentionally left pending. Source: KRX KIND market-action disclosures.
+C:\Users\user\desktop\ai-stock-lab\scripts\resolve-dividend-market-adjustments-v9-7-5.cjs:339: marketAdjustmentDatesUnresolved:unresolved,errors,source:'KRX_KIND_MARKET_ACTION_DISCLOSURES',
+C:\Users\user\desktop\ai-stock-lab\scripts\resolve-dividend-market-adjustments-v9-7-5-1.cjs:3: // Primary evidence remains V9.7.5 direct KRX KIND market-action disclosures.
+C:\Users\user\desktop\ai-stock-lab\scripts\resolve-dividend-market-adjustments-v9-7-5-1.cjs:254: primarySource:'KRX_KIND_MARKET_ACTION_DISCLOSURES',
+C:\Users\user\desktop\ai-stock-lab\scripts\v91001.cjs:17: *   5) Stores normalized disclosures, candidate rows, page hashes and progress.
+C:\Users\user\desktop\ai-stock-lab\scripts\v91001.cjs:399: 'coverage_status',
+C:\Users\user\desktop\ai-stock-lab\scripts\v91001.cjs:869: state.disclosures.filter(
+C:\Users\user\desktop\ai-stock-lab\scripts\v91001.cjs:879: disclosures:
+C:\Users\user\desktop\ai-stock-lab\scripts\v91001.cjs:880: state.disclosures.length,
+C:\Users\user\desktop\ai-stock-lab\scripts\v91001.cjs:1072: disclosures:
+C:\Users\user\desktop\ai-stock-lab\scripts\v91001.cjs:1144: state.disclosures.map(
+C:\Users\user\desktop\ai-stock-lab\scripts\v91001.cjs:1270: .disclosures
+C:\Users\user\desktop\ai-stock-lab\scripts\v91001.cjs:1374: `disclosures=${state.summary.disclosures}`,
+C:\Users\user\desktop\ai-stock-lab\scripts\v91002.cjs:17: *   - separate true decision disclosures from follow-up notices
+C:\Users\user\desktop\ai-stock-lab\scripts\v91002.cjs:19: *   - quarantine subsidiary / other-entity disclosures
+C:\Users\user\desktop\ai-stock-lab\scripts\v91003-common-stock.cjs:144: if (Number(inventory.disclosures) !== 0) {
+C:\Users\user\desktop\ai-stock-lab\scripts\v91003-common-stock.cjs:146: `EXPECTED_0_DISCLOSURES_GOT_${inventory.disclosures}`
+C:\Users\user\desktop\ai-stock-lab\scripts\v91003-common-stock.cjs:318: disclosures:
+C:\Users\user\desktop\ai-stock-lab\scripts\v91003-common-stock.cjs:319: Number(inventory.disclosures),
+C:\Users\user\desktop\ai-stock-lab\scripts\v91003-common-stock.cjs:368: globalCoverageMarkerAdvanced: false,
+C:\Users\user\desktop\ai-stock-lab\scripts\v91003-common-stock.cjs:443: disclosures:
+C:\Users\user\desktop\ai-stock-lab\scripts\v91003-common-stock.cjs:444: report.counts.disclosures,
+C:\Users\user\desktop\ai-stock-lab\scripts\v91003-common-stock.cjs:469: globalCoverageMarkerAdvanced:
+C:\Users\user\desktop\ai-stock-lab\scripts\v91003-common-stock.cjs:470: report.globalCoverageMarkerAdvanced,
+C:\Users\user\desktop\ai-stock-lab\scripts\v9801.cjs:17: *   5) Stores normalized disclosures, candidate rows, page hashes and progress.
+C:\Users\user\desktop\ai-stock-lab\scripts\v9801.cjs:399: 'coverage_status',
+C:\Users\user\desktop\ai-stock-lab\scripts\v9801.cjs:869: state.disclosures.filter(
+C:\Users\user\desktop\ai-stock-lab\scripts\v9801.cjs:879: disclosures:
+C:\Users\user\desktop\ai-stock-lab\scripts\v9801.cjs:880: state.disclosures.length,
+C:\Users\user\desktop\ai-stock-lab\scripts\v9801.cjs:1072: disclosures:
+C:\Users\user\desktop\ai-stock-lab\scripts\v9801.cjs:1144: state.disclosures.map(
+C:\Users\user\desktop\ai-stock-lab\scripts\v9801.cjs:1270: .disclosures
+C:\Users\user\desktop\ai-stock-lab\scripts\v9801.cjs:1374: `disclosures=${state.summary.disclosures}`,
+C:\Users\user\desktop\ai-stock-lab\scripts\v9802.cjs:17: *   - separate true decision disclosures from follow-up notices
+C:\Users\user\desktop\ai-stock-lab\scripts\v9802.cjs:19: *   - quarantine subsidiary / other-entity disclosures
+C:\Users\user\desktop\ai-stock-lab\scripts\v9803.cjs:1506: * exact receipt match for corrections/subsidiary disclosures.
+C:\Users\user\desktop\ai-stock-lab\scripts\v9805-1.cjs:22: *   disclosures. However, resolved withdrawal controls whose root chain was
+C:\Users\user\desktop\ai-stock-lab\scripts\v9811-13.cjs:26: *   coverage marker yet.
+C:\Users\user\desktop\ai-stock-lab\scripts\v9811-13.cjs:602: globalCoverageMarkerAdvanced:
+C:\Users\user\desktop\ai-stock-lab\scripts\v9811-13.cjs:836: globalCoverageMarkerAdvanced:
+C:\Users\user\desktop\ai-stock-lab\scripts\v9903.cjs:1506: * exact receipt match for corrections/subsidiary disclosures.
+C:\Users\user\desktop\ai-stock-lab\scripts\v9911-13-common-stock.cjs:26: *   coverage marker yet.
+C:\Users\user\desktop\ai-stock-lab\scripts\v9911-13-common-stock.cjs:602: globalCoverageMarkerAdvanced:
+C:\Users\user\desktop\ai-stock-lab\scripts\v9911-13-common-stock.cjs:834: globalCoverageMarkerAdvanced:
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\022_dart_disclosures.sql:4: public.dart_disclosures (
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\022_dart_disclosures.sql:61: dart_disclosures_stock_date_idx
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\022_dart_disclosures.sql:62: on public.dart_disclosures (
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\022_dart_disclosures.sql:68: dart_disclosures_importance_idx
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\022_dart_disclosures.sql:69: on public.dart_disclosures (
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\022_dart_disclosures.sql:75: dart_disclosures_sentiment_idx
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\022_dart_disclosures.sql:76: on public.dart_disclosures (
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\022_dart_disclosures.sql:82: public.dart_disclosures
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\022_dart_disclosures.sql:86: on public.dart_disclosures
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\022_dart_disclosures.sql:90: on public.dart_disclosures
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\040_point_in_time_universe_foundation_v8_0.sql:196: coverage_status text not null,
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\040_point_in_time_universe_foundation_v8_0.sql:209: coverage_status in (
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\040_point_in_time_universe_foundation_v8_0.sql:313: coverage_status text not null default 'UNKNOWN',
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\040_point_in_time_universe_foundation_v8_0.sql:338: coverage_status in (
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\040_point_in_time_universe_foundation_v8_0.sql:400: coverage_status text
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\040_point_in_time_universe_foundation_v8_0.sql:420: m.coverage_status
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\048_purged_embargo_validation_foundation_v9_2.sql:143: pit_coverage_status text not null default 'UNKNOWN',
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\048_purged_embargo_validation_foundation_v9_2.sql:180: pit_coverage_status in (
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\048_purged_embargo_validation_foundation_v9_2.sql:216: coverage_status text
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\048_purged_embargo_validation_foundation_v9_2.sql:224: m.coverage_status
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\048_purged_embargo_validation_foundation_v9_2.sql:238: where coverage_status = 'COMPLETE'
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\048_purged_embargo_validation_foundation_v9_2.sql:241: where coverage_status <> 'COMPLETE'
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\048_purged_embargo_validation_foundation_v9_2.sql:242: or coverage_status is null
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\048_purged_embargo_validation_foundation_v9_2.sql:280: end as coverage_status
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\049_historical_pit_ingestion_foundation_v9_3a.sql:11: coverage_status text not null default 'UNKNOWN',
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\049_historical_pit_ingestion_foundation_v9_3a.sql:23: check (coverage_status in ('COMPLETE','PARTIAL','UNKNOWN')),
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\052_alpha_backtest_research_gate_v9_5.sql:30: coverage_status text not null default 'UNKNOWN',
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\052_alpha_backtest_research_gate_v9_5.sql:46: coverage_status in (
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\052_alpha_backtest_research_gate_v9_5.sql:81: create table if not exists public.corporate_action_coverage_assertions (
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\052_alpha_backtest_research_gate_v9_5.sql:90: coverage_status text not null default 'UNKNOWN',
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\052_alpha_backtest_research_gate_v9_5.sql:102: constraint corporate_action_coverage_assertions_status_check
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\052_alpha_backtest_research_gate_v9_5.sql:104: coverage_status in (
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\052_alpha_backtest_research_gate_v9_5.sql:111: constraint corporate_action_coverage_assertions_date_check
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\052_alpha_backtest_research_gate_v9_5.sql:116: constraint corporate_action_coverage_assertions_production_check
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\052_alpha_backtest_research_gate_v9_5.sql:123: idx_corporate_action_coverage_assertions_lookup
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\052_alpha_backtest_research_gate_v9_5.sql:124: on public.corporate_action_coverage_assertions (
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\052_alpha_backtest_research_gate_v9_5.sql:192: comment on table public.corporate_action_coverage_assertions is
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\054_corporate_action_dataset_coverage_v9_7.sql:31: coverage_status text not null default 'UNKNOWN',
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\054_corporate_action_dataset_coverage_v9_7.sql:55: coverage_status in (
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\057_historical_pit_db_compiler_v9_3b_2.sql:46: and i.coverage_status = 'COMPLETE'
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\057_historical_pit_db_compiler_v9_3b_2.sql:95: and i.coverage_status = 'COMPLETE'
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\058_historical_pit_chunked_compiler_v9_3b_3.sql:216: and i.coverage_status = 'COMPLETE'
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\058_historical_pit_chunked_compiler_v9_3b_3.sql:331: and i.coverage_status = 'COMPLETE'
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\059_historical_pit_binding_v9_2_1.sql:39: coverage_status text
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\059_historical_pit_binding_v9_2_1.sql:129: end as coverage_status
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\061_corporate_action_source_inventory_v9_7_1.sql:18: source_coverage_window_id uuid references public.corporate_action_source_coverage_windows(id),
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\061_corporate_action_source_inventory_v9_7_1.sql:114: (universe_code,provider,provider_version,start_date,end_date,coverage_status,markets,action_types,source_fingerprint,evidence,is_validation,production_applied)
+C:\Users\user\desktop\ai-stock-lab\supabase\migrations\061_corporate_action_source_inventory_v9_7_1.sql:115: values (r.universe_code,'OPENDART_DISCLOSURE_LIST','V9_7_1_DB_INVENTORY',r.start_date,r.end_date,'PARTIAL',
+
+============================================================
+CORPORATE ACTION LOG FILES
+============================================================
+2026-09-01 18:40:00 | 28438 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-v9-7-1-state.json
+2026-09-30 16:33:30 | 164 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-source-db-v9-7-1.json
+2026-09-30 19:09:36 | 348586 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-detail-probe-v9-7-2.json
+2026-09-30 19:18:39 | 24209 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-parse-probe-v9-7-3.json
+2026-09-30 19:23:21 | 18907 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-chain-probe-v9-7-4.json
+2026-09-30 19:28:41 | 19830 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-chain-repair-probe-v9-7-4-1.json
+2026-09-30 19:38:55 | 561437 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-dividend-market-adjustment-probe-v9-7-5.json
+2026-09-30 19:47:27 | 563477 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-dividend-market-adjustment-repair-v9-7-5-1.json
+2026-09-30 19:51:22 | 21689 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-canonical-sample-v9-7-6.json
+2026-09-30 19:55:42 | 147570 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-db-contract-probe-v9-7-7.json
+2026-09-30 20:02:22 | 78775 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-idempotency-contract-probe-v9-7-8.json
+2026-09-30 20:05:44 | 129911 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-column-semantics-probe-v9-7-9.json
+2026-09-30 20:08:24 | 23830 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-column-semantics-clean-probe-v9-7-9-1.json
+2026-09-30 20:10:11 | 6419 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-cash-mapping-probe-v9-7-9-2.json
+2026-09-30 20:12:03 | 8815 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-cash-consumer-unit-probe-v9-7-9-3.json
+2026-09-30 20:16:32 | 3396 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-schema-proposal-v9-7-10.sql
+2026-09-30 20:16:32 | 24641 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-contract-mapping-preview-v9-7-10.json
+2026-09-30 22:02:09 | 4915 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-live-db-preflight-v9-7-11.json
+2026-09-30 22:23:15 | 1520 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-validation-import-v9-7-13.json
+2026-09-30 22:25:20 | 26353 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-adjustment-readiness-v9-7-14.json
+2026-09-30 22:28:12 | 94431 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-price-source-discovery-v9-7-15.json
+2026-10-01 10:07:28 | 9842 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-reference-price-continuity-v9-7-16-1.json
+2026-10-01 10:07:34 | 8501 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-cash-reference-price-probe-v9-7-16.json
+2026-10-01 10:14:28 | 10905 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-full-factor-preview-v9-7-17.json
+2026-10-01 12:00:13 | 1547 | C:\Users\user\desktop\ai-stock-lab\logs\corporate-action-stale-history-refresh-install-v9-7-26.json
+2026-10-01 12:13:09 | 2497 | C:\Users\user\desktop\ai-stock-lab\logs\final-corporate-action-price-history-integration-v9-7-27-1.json
+2026-10-01 14:35:28 | 7603771 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-incremental-v9-8-1.json
+2026-10-01 14:39:51 | 1410554 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-detail-workset-v9-8-2.json
+2026-10-01 14:44:33 | 690832 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-detail-evidence-v9-8-3.json
+2026-10-01 14:57:37 | 827502 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-detail-evidence-v9-8-3-1.json
+2026-10-01 15:04:59 | 696878 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-chain-resolution-v9-8-4.json
+2026-10-01 15:14:20 | 98097 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-chain-resolution-v9-8-4-1.json
+2026-10-01 15:24:25 | 23515 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-chain-resolution-v9-8-4-2.json
+2026-10-01 15:30:31 | 263897 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-canonical-source-selection-v9-8-5.json
+2026-10-01 15:38:02 | 269889 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-canonical-source-selection-v9-8-5-1.json
+2026-10-01 15:43:35 | 1104671 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-field-extraction-v9-8-6.json
+2026-10-01 15:51:51 | 404885 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-field-extraction-v9-8-6-1.json
+2026-10-01 15:54:48 | 89514 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-reverse-split-probe-v9-8-6-2.json
+2026-10-01 16:04:49 | 421843 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-field-extraction-v9-8-6-3.json
+2026-10-01 16:10:19 | 547525 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-market-effective-date-v9-8-7.json
+2026-10-01 16:26:33 | 28319 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-kis-boundary-probe-v9-8-7-1.json
+2026-10-04 11:25:28 | 520356 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-market-effective-date-v9-8-7-2.json
+2026-10-04 11:29:29 | 614362 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-factor-validation-v9-8-8.json
+2026-10-04 11:31:07 | 91415 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-multi-event-audit-v9-8-9.json
+2026-10-04 11:33:45 | 253640 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-cumulative-factor-preview-v9-8-10.json
+2026-10-04 11:36:23 | 44672 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-structural-date-audit-v9-8-10-1.json
+2026-10-04 11:39:11 | 478951 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-structural-date-probe-v9-8-10-2.json
+2026-10-04 11:43:11 | 117256 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-structural-date-probe-v9-8-10-2-1.json
+2026-10-04 11:45:23 | 671976 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-structural-date-finalization-v9-8-10-3.json
+2026-10-04 11:52:22 | 135784 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-production-event-preflight-v9-8-11.json
+2026-10-04 11:55:14 | 13653 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-existing-conflict-dependency-probe-v9-8-11-1.json
+2026-10-04 11:57:55 | 42746 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-controlled-repair-dry-run-v9-8-11-2.json
+2026-10-04 12:14:39 | 30256 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-db-contract-repair-dry-run-v9-8-11-3-2.json
+2026-10-04 12:30:39 | 10416 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-db-contract-repair-apply-v9-8-11-3-3.json
+2026-10-04 12:33:19 | 150142 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-production-event-preflight-v9-8-11-4.json
+2026-10-04 12:35:30 | 147106 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-bulk-insert-dry-run-v9-8-11-5.json
+2026-10-04 12:37:42 | 127452 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-snapshot-eligibility-v9-8-11-5-1.json
+2026-10-04 12:40:52 | 37629 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-bulk-insert-apply-v9-8-11-6.json
+2026-10-04 12:48:50 | 326743 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-128-event-id-map-v9-8-11-7.json
+2026-10-04 12:58:31 | 250207 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-adjustment-persistence-preflight-v9-8-11-8-1.json
+2026-10-04 13:01:15 | 108590 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-adjustment-persistence-apply-v9-8-11-9.json
+2026-10-04 13:03:28 | 63655 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-post-persistence-refresh-plan-v9-8-11-10.json
+2026-10-04 13:06:04 | 29706 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-ratio-refresh-eligibility-v9-8-11-10-1.json
+2026-10-04 13:08:32 | 24643 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-ratio-refresh-coverage-preflight-v9-8-11-10-2.json
+2026-10-04 13:11:24 | 22791 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-ratio-refresh-coverage-disposition-v9-8-11-10-2-1.json
+2026-10-04 13:29:52 | 15681 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-ratio-refresh-direct-apply-v9-8-11-11-1.json
+2026-10-04 13:54:43 | 8786 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-post-refresh-vendor-verification-v9-8-11-12.json
+2026-10-04 13:57:08 | 9196 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-cycle-closure-v9-8-11-13.json
+2026-10-04 14:00:00 | 215866 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-incremental-v9-9-1.json
+2026-10-04 14:03:44 | 33846 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-detail-workset-v9-9-2.json
+2026-10-04 14:09:09 | 34124 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-workset-carryforward-reconciliation-v9-9-2-1-1.json
+2026-10-04 14:17:10 | 34719 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-detail-evidence-v9-9-3.json
+2026-10-04 14:21:03 | 37355 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-detail-evidence-v9-9-3-1.json
+2026-10-04 14:22:00 | 12076 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-chain-resolution-v9-9-4.json
+2026-10-04 14:36:01 | 187 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-chain-resolution-v9-9-4-1-empty.json
+2026-10-04 14:36:01 | 213 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-chain-resolution-v9-9-4-2-empty.json
+2026-10-04 14:36:25 | 12223 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-canonical-source-selection-v9-9-5.json
+2026-10-04 14:41:01 | 12588 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-canonical-source-selection-v9-9-5-1.json
+2026-10-04 14:49:30 | 24707 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-field-extraction-v9-9-6.json
+2026-10-04 14:50:47 | 15636 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-field-extraction-v9-9-6-1.json
+2026-10-04 14:58:06 | 186 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-reverse-split-probe-v9-9-6-2-empty.json
+2026-10-04 14:58:37 | 16134 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-field-extraction-v9-9-6-3.json
+2026-10-04 14:59:21 | 21272 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-market-effective-date-v9-9-7.json
+2026-10-04 15:01:43 | 18298 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-effective-date-finalization-v9-9-7-2.json
+2026-10-04 15:07:25 | 22935 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-factor-validation-v9-9-8.json
+2026-10-04 15:29:02 | 16575 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-field-extraction-v9-9-6-1-patched-test.json
+2026-10-04 15:34:31 | 15161 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-field-extraction-v9-9-6-1-common-stock-scope.json
+2026-10-04 15:35:15 | 14094 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-field-extraction-v9-9-6-3-common-stock-scope.json
+2026-10-04 15:36:00 | 18203 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-market-effective-date-v9-9-7-common-stock-scope.json
+2026-10-04 15:36:24 | 15342 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-effective-date-finalization-v9-9-7-2-common-stock-scope.json
+2026-10-04 15:42:47 | 19189 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-factor-validation-v9-9-8-common-stock-scope.json
+2026-10-04 15:49:59 | 3062 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-multi-event-audit-v9-9-9-common-stock-scope.json
+2026-10-04 16:05:52 | 6075 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-cumulative-factor-preview-v9-9-10-common-stock-scope.json
+2026-10-04 16:10:06 | 5047 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-structural-date-audit-v9-9-10-1-common-stock-scope.json
+2026-10-04 16:17:15 | 9714 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-structural-date-probe-v9-9-10-2-1-common-stock-scope.json
+2026-10-04 16:22:23 | 23172 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-structural-date-finalization-v9-9-10-3-common-stock-scope.json
+2026-10-04 16:30:38 | 8334 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-production-event-preflight-v9-9-11-4-common-stock-scope.json
+2026-10-04 16:38:15 | 6948 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-bulk-insert-dry-run-v9-9-11-5-common-stock-scope.json
+2026-10-04 16:45:14 | 4376 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-snapshot-eligibility-v9-9-11-5-1-common-stock-scope.json
+2026-10-04 16:55:01 | 2344 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-bulk-insert-apply-v9-9-11-6-common-stock-scope.json
+2026-10-04 16:59:55 | 6842 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-2-event-id-map-v9-9-11-7-common-stock-scope.json
+2026-10-04 17:22:01 | 6730 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-adjustment-persistence-preflight-v9-9-11-8-common-stock-scope.json
+2026-10-04 17:25:40 | 7366 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-adjustment-persistence-preflight-v9-9-11-8-1-common-stock-scope.json
+2026-10-04 17:29:24 | 3703 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-adjustment-persistence-apply-v9-9-11-9-common-stock-scope.json
+2026-10-04 17:33:05 | 3024 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-post-persistence-refresh-plan-v9-9-11-10-common-stock-scope.json
+2026-10-04 17:42:34 | 2491 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-ratio-refresh-eligibility-v9-9-11-10-1-common-stock-scope.json
+2026-10-04 17:42:35 | 3069 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-ratio-refresh-coverage-preflight-v9-9-11-10-2-common-stock-scope.json
+2026-10-04 17:42:35 | 2958 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-ratio-refresh-coverage-disposition-v9-9-11-10-2-1-common-stock-scope.json
+2026-10-04 17:44:08 | 2305 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-ratio-refresh-direct-apply-v9-9-11-11-1-common-stock-scope.json
+2026-10-04 17:54:08 | 2066 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-post-refresh-vendor-verification-v9-9-11-12-common-stock-scope.json
+2026-10-04 17:58:52 | 2740 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-cycle-closure-v9-9-11-13-common-stock-scope.json
+2026-10-05 13:41:49 | 2987 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-incremental-v9-10-1.json
+2026-10-05 13:43:39 | 2197 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-detail-workset-v9-10-2.json
+2026-10-05 13:53:31 | 3104 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-workset-carryforward-reconciliation-v9-10-2-1.json
+2026-10-05 14:00:14 | 3113 | C:\Users\user\desktop\ai-stock-lab\logs\opendart-corporate-action-cycle-closure-v9-10-3-common-stock-scope.json

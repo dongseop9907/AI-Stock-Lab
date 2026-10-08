@@ -77,6 +77,25 @@ export async function POST(
       );
     }
 
+    /*
+     * V9.7.25.1 storage contract:
+     * this endpoint only persists adjusted-price daily bars.
+     */
+    if (
+      body.adjustedPrice ===
+      false
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "MARKET_DAILY_BARS_REQUIRES_ADJUSTED_PRICE",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
     const result =
       await syncDailyBars({
         startDate,

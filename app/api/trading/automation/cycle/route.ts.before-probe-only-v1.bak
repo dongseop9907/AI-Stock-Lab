@@ -1,0 +1,374 @@
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  AUTOMATION_CYCLE_CONTRACT,
+  AUTOMATION_CYCLE_MAX_APPROVED_ORDERS,
+} from "@/lib/trading/automation-cycle-contract";
+
+import {
+  executeApprovedPaperOrders,
+} from "@/lib/trading/execute-approved-paper-orders";
+
+import {
+  runCommittedRiskMaintenance,
+} from "@/lib/trading/run-committed-risk-maintenance";
+
+export const runtime =
+  "nodejs";
+
+export const dynamic =
+  "force-dynamic";
+
+function authorizeAutomationRequest(
+  request: NextRequest,
+) {
+  const expectedSecret =
+    process.env
+      .TRADING_AUTOMATION_SECRET
+      ?.trim();
+
+  if (!expectedSecret) {
+    return {
+      ok: true as const,
+      secret: null,
+    };
+  }
+
+  const providedSecret =
+    request.headers
+      .get(
+        "x-automation-secret",
+      )
+      ?.trim();
+
+  if (
+    !providedSecret ||
+    providedSecret !==
+      expectedSecret
+  ) {
+    return {
+      ok: false as const,
+      response:
+        NextResponse.json(
+          {
+            ok: false,
+            error:
+              "UNAUTHORIZED_AUTOMATION_CYCLE",
+          },
+          {
+            status: 401,
+          },
+        ),
+    };
+  }
+
+  return {
+    ok: true as const,
+    secret:
+      providedSecret,
+  };
+}
+
+async function parseResponsePayload(
+  response: Response,
+) {
+  const text =
+    await response.text();
+
+  if (!text.trim()) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {
+      raw:
+        text,
+    };
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+) {
+  const authorization =
+    authorizeAutomationRequest(
+      request,
+    );
+
+  if (!authorization.ok) {
+    return authorization.response;
+  }
+
+  const startedAt =
+    new Date().toISOString();
+
+  const rawBody =
+    await request.text();
+
+  let preMaintenance:
+    Awaited<
+      ReturnType<
+        typeof runCommittedRiskMaintenance
+      >
+    > | null = null;
+
+  let automationRun:
+    {
+      ok: boolean;
+      status: number;
+      payload: unknown;
+    } | null = null;
+
+  let approvedExecution:
+    Awaited<
+      ReturnType<
+        typeof executeApprovedPaperOrders
+      >
+    > | null = null;
+
+  let postMaintenance:
+    Awaited<
+      ReturnType<
+        typeof runCommittedRiskMaintenance
+      >
+    > | null = null;
+
+  try {
+    /*
+     * Fail closed before generating new work:
+     * committed-risk state must be internally consistent first.
+     */
+    preMaintenance =
+      await runCommittedRiskMaintenance(
+        {
+          phase:
+            "PRE_CYCLE",
+
+          runExpiry:
+            true,
+        },
+      );
+
+    const origin =
+      new URL(
+        request.url,
+      ).origin;
+
+    const headers:
+      Record<string, string> =
+      {
+        "Content-Type":
+          request.headers.get(
+            "content-type",
+          ) ??
+          "application/json",
+      };
+
+    if (
+      authorization.secret
+    ) {
+      headers[
+        "x-automation-secret"
+      ] =
+        authorization.secret;
+    }
+
+    const automationResponse =
+      await fetch(
+        `${origin}/api/trading/automation/run`,
+        {
+          method:
+            "POST",
+
+          headers,
+
+          body:
+            rawBody.trim()
+              ? rawBody
+              : "{}",
+
+          cache:
+            "no-store",
+        },
+      );
+
+    const automationPayload =
+      await parseResponsePayload(
+        automationResponse,
+      );
+
+    automationRun = {
+      ok:
+        automationResponse.ok,
+
+      status:
+        automationResponse.status,
+
+      payload:
+        automationPayload,
+    };
+
+    /*
+     * Existing automation pipeline is authoritative.
+     * Never execute approved orders when that pipeline failed.
+     */
+    if (!automationResponse.ok) {
+      postMaintenance =
+        await runCommittedRiskMaintenance(
+          {
+            phase:
+              "POST_EXECUTION",
+
+            runExpiry:
+              false,
+          },
+        );
+
+      return NextResponse.json(
+        {
+          ok: false,
+
+          error:
+            "AUTOMATION_PIPELINE_FAILED",
+
+          contract:
+            AUTOMATION_CYCLE_CONTRACT,
+
+          startedAt,
+
+          finishedAt:
+            new Date()
+              .toISOString(),
+
+          preMaintenance,
+
+          automationRun,
+
+          approvedExecution:
+            null,
+
+          postMaintenance,
+        },
+        {
+          status:
+            automationResponse.status >= 400
+              ? automationResponse.status
+              : 500,
+        },
+      );
+    }
+
+    approvedExecution =
+      await executeApprovedPaperOrders(
+        AUTOMATION_CYCLE_MAX_APPROVED_ORDERS,
+      );
+
+    postMaintenance =
+      await runCommittedRiskMaintenance(
+        {
+          phase:
+            "POST_EXECUTION",
+
+          runExpiry:
+            false,
+        },
+      );
+
+    return NextResponse.json(
+      {
+        ok: true,
+
+        contract:
+          AUTOMATION_CYCLE_CONTRACT,
+
+        startedAt,
+
+        finishedAt:
+          new Date()
+            .toISOString(),
+
+        preMaintenance,
+
+        automationRun,
+
+        approvedExecution,
+
+        postMaintenance,
+      },
+    );
+  } catch (error) {
+    /*
+     * Best-effort decrease-only cleanup after a cycle failure.
+     * Never mask the original error if cleanup also fails.
+     */
+    let failureCleanup:
+      unknown =
+      null;
+
+    try {
+      failureCleanup =
+        await runCommittedRiskMaintenance(
+          {
+            phase:
+              "POST_EXECUTION",
+
+            runExpiry:
+              false,
+          },
+        );
+    } catch (
+      cleanupError
+    ) {
+      failureCleanup = {
+        ok: false,
+
+        error:
+          cleanupError instanceof Error
+            ? cleanupError.message
+            : String(
+                cleanupError,
+              ),
+      };
+    }
+
+    return NextResponse.json(
+      {
+        ok: false,
+
+        error:
+          error instanceof Error
+            ? error.message
+            : String(
+                error,
+              ),
+
+        contract:
+          AUTOMATION_CYCLE_CONTRACT,
+
+        startedAt,
+
+        finishedAt:
+          new Date()
+            .toISOString(),
+
+        preMaintenance,
+
+        automationRun,
+
+        approvedExecution,
+
+        postMaintenance,
+
+        failureCleanup,
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}

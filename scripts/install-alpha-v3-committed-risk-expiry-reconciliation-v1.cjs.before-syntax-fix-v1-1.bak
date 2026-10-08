@@ -1,0 +1,900 @@
+const fs = require("fs");
+const path = require("path");
+
+const root = process.cwd();
+
+const sourceRel =
+  "supabase/migrations/20261008000100_committed_risk_reservation_v3.sql";
+
+const targetRel =
+  "supabase/migrations/20261008001000_committed_risk_expiry_reconciliation_v1.sql";
+
+const verifierRel =
+  "scripts/alpha-v3-committed-risk-expiry-reconciliation-verify.cjs";
+
+const sourceFile =
+  path.resolve(root, sourceRel);
+
+const targetFile =
+  path.resolve(root, targetRel);
+
+const verifierFile =
+  path.resolve(root, verifierRel);
+
+if (!fs.existsSync(sourceFile)) {
+  throw new Error(
+    `SOURCE_MIGRATION_NOT_FOUND:${sourceRel}`
+  );
+}
+
+const sourceSql =
+  fs.readFileSync(
+    sourceFile,
+    "utf8"
+  );
+
+const requiredSourceEvidence = {
+  reservationColumns:
+    /reserved_risk_amount/i.test(sourceSql) &&
+    /reserved_risk_at/i.test(sourceSql) &&
+    /reserved_risk_released_at/i.test(sourceSql),
+
+  expiredTerminalTrigger:
+    /release_terminal_paper_order_reserved_risk_v3/i.test(sourceSql) &&
+    /\bEXPIRED\b/.test(sourceSql),
+
+  filledTerminalTrigger:
+    /release_terminal_paper_order_reserved_risk_v3/i.test(sourceSql) &&
+    /\bFILLED\b/.test(sourceSql),
+
+  accountLockKey:
+    /AI_STOCK_LAB_COMMITTED_RISK_V3:/i.test(sourceSql),
+};
+
+const missingEvidence =
+  Object.entries(requiredSourceEvidence)
+    .filter(([, value]) => !value)
+    .map(([name]) => name);
+
+if (missingEvidence.length > 0) {
+  throw new Error(
+    `SOURCE_CONTRACT_MISSING:${missingEvidence.join(",")}`
+  );
+}
+
+const migrationSql = String.raw`
+-- Alpha V3: committed-risk expiry + reconciliation.
+--
+-- Goals:
+-- 1) Expire stale RISK_APPROVED BUY reservations under the same account-scoped
+--    advisory lock used by reservation/fill.
+-- 2) Let the existing terminal-status trigger release reservation risk inside
+--    the same transaction when status becomes EXPIRED.
+-- 3) Reconcile legacy/abnormal terminal rows that still retain reserved risk.
+-- 4) Report active RISK_APPROVED anomalies without ever increasing risk.
+--
+-- No scheduler is installed here. The caller must explicitly choose the
+-- stale interval based on execution SLA / polling cadence.
+
+create index if not exists
+  idx_paper_order_requests_committed_risk_expiry_v3
+on public.paper_order_requests (
+  (coalesce(reserved_risk_at, created_at)),
+  account_id,
+  id
+)
+where
+  status = 'RISK_APPROVED'
+  and side = 'BUY'
+  and reserved_risk_amount > 0
+  and reserved_risk_released_at is null;
+
+create or replace function public.expire_stale_paper_buy_reservations_v3(
+  p_stale_after interval,
+  p_limit integer default 100
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_candidate record;
+  v_order public.paper_order_requests%rowtype;
+  v_expired_count integer := 0;
+  v_skipped_count integer := 0;
+  v_total_released numeric := 0;
+  v_cutoff timestamptz;
+begin
+  if p_stale_after is null
+     or p_stale_after < interval '1 minute'
+     or p_stale_after > interval '24 hours' then
+    raise exception 'STALE_AFTER_OUT_OF_RANGE';
+  end if;
+
+  if p_limit is null
+     or p_limit < 1
+     or p_limit > 1000 then
+    raise exception 'LIMIT_OUT_OF_RANGE';
+  end if;
+
+  v_cutoff := now() - p_stale_after;
+
+  for v_candidate in
+    select
+      por.id,
+      por.account_id
+    from public.paper_order_requests por
+    where por.status = 'RISK_APPROVED'
+      and por.side = 'BUY'
+      and por.reserved_risk_amount > 0
+      and por.reserved_risk_released_at is null
+      and coalesce(
+        por.reserved_risk_at,
+        por.created_at
+      ) <= v_cutoff
+    order by
+      por.account_id,
+      coalesce(
+        por.reserved_risk_at,
+        por.created_at
+      ),
+      por.id
+    limit p_limit
+  loop
+    perform pg_advisory_xact_lock(
+      hashtext(
+        'AI_STOCK_LAB_COMMITTED_RISK_V3:' ||
+        v_candidate.account_id::text
+      )
+    );
+
+    select *
+    into v_order
+    from public.paper_order_requests
+    where id = v_candidate.id
+    for update;
+
+    if not found then
+      v_skipped_count :=
+        v_skipped_count + 1;
+
+      continue;
+    end if;
+
+    -- Re-check after both locks are held. A fill/cancel may have won the race.
+    if v_order.account_id <> v_candidate.account_id
+       or v_order.status <> 'RISK_APPROVED'
+       or v_order.side <> 'BUY'
+       or coalesce(v_order.reserved_risk_amount, 0) <= 0
+       or v_order.reserved_risk_released_at is not null
+       or coalesce(
+         v_order.reserved_risk_at,
+         v_order.created_at
+       ) > v_cutoff then
+      v_skipped_count :=
+        v_skipped_count + 1;
+
+      continue;
+    end if;
+
+    v_total_released :=
+      v_total_released +
+      coalesce(
+        v_order.reserved_risk_amount,
+        0
+      );
+
+    update public.paper_order_requests
+    set
+      status = 'EXPIRED',
+      committed_risk_reason =
+        'STALE_RISK_APPROVED_EXPIRED',
+      committed_risk_snapshot =
+        coalesce(
+          committed_risk_snapshot,
+          '{}'::jsonb
+        ) ||
+        jsonb_build_object(
+          'expiry', jsonb_build_object(
+            'expiredAt', now(),
+            'staleAfterSeconds',
+              extract(
+                epoch from p_stale_after
+              ),
+            'reservedRiskBefore',
+              v_order.reserved_risk_amount
+          )
+        )
+    where id = v_order.id;
+
+    -- Existing terminal-status trigger releases:
+    -- reserved_risk_amount -> 0
+    -- reserved_risk_released_at -> timestamp
+    -- reserved_risk_release_reason -> terminal reason
+    -- in this same transaction.
+    v_expired_count :=
+      v_expired_count + 1;
+  end loop;
+
+  return jsonb_build_object(
+    'ok', true,
+    'cutoff', v_cutoff,
+    'staleAfterSeconds',
+      extract(
+        epoch from p_stale_after
+      ),
+    'limit', p_limit,
+    'expiredCount', v_expired_count,
+    'skippedCount', v_skipped_count,
+    'releasedRiskObservedBeforeTrigger',
+      v_total_released
+  );
+end;
+$$;
+
+create or replace function public.reconcile_paper_buy_reserved_risk_v3(
+  p_limit integer default 500
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_candidate record;
+  v_order public.paper_order_requests%rowtype;
+
+  v_terminal_released_count integer := 0;
+  v_terminal_released_risk numeric := 0;
+
+  v_active_zero_reservation_count integer := 0;
+  v_active_missing_reserved_at_count integer := 0;
+  v_active_released_at_conflict_count integer := 0;
+
+  v_active_zero_ids uuid[] := '{}'::uuid[];
+  v_active_missing_time_ids uuid[] := '{}'::uuid[];
+  v_active_release_conflict_ids uuid[] := '{}'::uuid[];
+begin
+  if p_limit is null
+     or p_limit < 1
+     or p_limit > 5000 then
+    raise exception 'LIMIT_OUT_OF_RANGE';
+  end if;
+
+  -- Repair only one safe class:
+  -- terminal orders that somehow still retain reservation risk.
+  -- Lock order matches all committed-risk mutation paths.
+  for v_candidate in
+    select
+      por.id,
+      por.account_id
+    from public.paper_order_requests por
+    where por.side = 'BUY'
+      and por.status in (
+        'FILLED',
+        'RISK_REJECTED',
+        'REJECTED',
+        'CANCELLED',
+        'CANCELED',
+        'EXPIRED',
+        'FAILED',
+        'CLOSED'
+      )
+      and por.reserved_risk_amount > 0
+    order by
+      por.account_id,
+      por.id
+    limit p_limit
+  loop
+    perform pg_advisory_xact_lock(
+      hashtext(
+        'AI_STOCK_LAB_COMMITTED_RISK_V3:' ||
+        v_candidate.account_id::text
+      )
+    );
+
+    select *
+    into v_order
+    from public.paper_order_requests
+    where id = v_candidate.id
+    for update;
+
+    if not found then
+      continue;
+    end if;
+
+    if v_order.account_id <> v_candidate.account_id
+       or v_order.side <> 'BUY'
+       or v_order.status not in (
+         'FILLED',
+         'RISK_REJECTED',
+         'REJECTED',
+         'CANCELLED',
+         'CANCELED',
+         'EXPIRED',
+         'FAILED',
+         'CLOSED'
+       )
+       or coalesce(
+         v_order.reserved_risk_amount,
+         0
+       ) <= 0 then
+      continue;
+    end if;
+
+    v_terminal_released_risk :=
+      v_terminal_released_risk +
+      v_order.reserved_risk_amount;
+
+    update public.paper_order_requests
+    set
+      reserved_risk_amount = 0,
+      reserved_risk_released_at =
+        coalesce(
+          reserved_risk_released_at,
+          now()
+        ),
+      reserved_risk_release_reason =
+        coalesce(
+          reserved_risk_release_reason,
+          'RECONCILED_TERMINAL_STATUS:' ||
+            v_order.status
+        ),
+      committed_risk_reason =
+        coalesce(
+          committed_risk_reason,
+          'RECONCILED_TERMINAL_RESERVED_RISK'
+        ),
+      committed_risk_snapshot =
+        coalesce(
+          committed_risk_snapshot,
+          '{}'::jsonb
+        ) ||
+        jsonb_build_object(
+          'reconciliation',
+          jsonb_build_object(
+            'reconciledAt', now(),
+            'status', v_order.status,
+            'reservedRiskBefore',
+              v_order.reserved_risk_amount
+          )
+        )
+    where id = v_order.id;
+
+    v_terminal_released_count :=
+      v_terminal_released_count + 1;
+  end loop;
+
+  -- Active anomalies are REPORT ONLY.
+  -- Reconciliation must never manufacture/increase reserved risk.
+  select
+    count(*),
+    coalesce(
+      array_agg(id order by id)
+        filter (
+          where id is not null
+        ),
+      '{}'::uuid[]
+    )
+  into
+    v_active_zero_reservation_count,
+    v_active_zero_ids
+  from (
+    select por.id
+    from public.paper_order_requests por
+    where por.side = 'BUY'
+      and por.status = 'RISK_APPROVED'
+      and coalesce(
+        por.reserved_risk_amount,
+        0
+      ) <= 0
+    order by por.id
+    limit p_limit
+  ) q;
+
+  select
+    count(*),
+    coalesce(
+      array_agg(id order by id)
+        filter (
+          where id is not null
+        ),
+      '{}'::uuid[]
+    )
+  into
+    v_active_missing_reserved_at_count,
+    v_active_missing_time_ids
+  from (
+    select por.id
+    from public.paper_order_requests por
+    where por.side = 'BUY'
+      and por.status = 'RISK_APPROVED'
+      and por.reserved_risk_amount > 0
+      and por.reserved_risk_at is null
+    order by por.id
+    limit p_limit
+  ) q;
+
+  select
+    count(*),
+    coalesce(
+      array_agg(id order by id)
+        filter (
+          where id is not null
+        ),
+      '{}'::uuid[]
+    )
+  into
+    v_active_released_at_conflict_count,
+    v_active_release_conflict_ids
+  from (
+    select por.id
+    from public.paper_order_requests por
+    where por.side = 'BUY'
+      and por.status = 'RISK_APPROVED'
+      and por.reserved_risk_amount > 0
+      and por.reserved_risk_released_at is not null
+    order by por.id
+    limit p_limit
+  ) q;
+
+  return jsonb_build_object(
+    'ok', true,
+    'limit', p_limit,
+    'terminalRepair', jsonb_build_object(
+      'releasedCount',
+        v_terminal_released_count,
+      'releasedRisk',
+        v_terminal_released_risk
+    ),
+    'activeAnomalies', jsonb_build_object(
+      'zeroReservationCount',
+        v_active_zero_reservation_count,
+      'zeroReservationIds',
+        v_active_zero_ids,
+      'missingReservedAtCount',
+        v_active_missing_reserved_at_count,
+      'missingReservedAtIds',
+        v_active_missing_time_ids,
+      'releasedAtConflictCount',
+        v_active_released_at_conflict_count,
+      'releasedAtConflictIds',
+        v_active_release_conflict_ids
+    ),
+    'invariant',
+      'RECONCILIATION_NEVER_INCREASES_RESERVED_RISK'
+  );
+end;
+$$;
+
+revoke all on function public.expire_stale_paper_buy_reservations_v3(
+  interval,
+  integer
+) from public;
+revoke all on function public.expire_stale_paper_buy_reservations_v3(
+  interval,
+  integer
+) from anon;
+revoke all on function public.expire_stale_paper_buy_reservations_v3(
+  interval,
+  integer
+) from authenticated;
+grant execute on function public.expire_stale_paper_buy_reservations_v3(
+  interval,
+  integer
+) to service_role;
+
+revoke all on function public.reconcile_paper_buy_reserved_risk_v3(
+  integer
+) from public;
+revoke all on function public.reconcile_paper_buy_reserved_risk_v3(
+  integer
+) from anon;
+revoke all on function public.reconcile_paper_buy_reserved_risk_v3(
+  integer
+) from authenticated;
+grant execute on function public.reconcile_paper_buy_reserved_risk_v3(
+  integer
+) to service_role;
+`.trim() + "\n";
+
+if (fs.existsSync(targetFile)) {
+  const existing =
+    fs.readFileSync(
+      targetFile,
+      "utf8"
+    );
+
+  if (existing !== migrationSql) {
+    throw new Error(
+      `TARGET_MIGRATION_ALREADY_EXISTS_WITH_DIFFERENT_CONTENT:${targetRel}`
+    );
+  }
+} else {
+  fs.writeFileSync(
+    targetFile,
+    migrationSql,
+    "utf8"
+  );
+}
+
+const verifier = String.raw`const fs = require("fs");
+const path = require("path");
+
+const root = process.cwd();
+
+const migrationRel =
+  "supabase/migrations/20261008001000_committed_risk_expiry_reconciliation_v1.sql";
+
+const file =
+  path.resolve(root, migrationRel);
+
+if (!fs.existsSync(file)) {
+  throw new Error(
+    "EXPIRY_RECONCILIATION_MIGRATION_NOT_FOUND"
+  );
+}
+
+const sql =
+  fs.readFileSync(
+    file,
+    "utf8"
+  );
+
+function functionSlice(name) {
+  const escaped =
+    name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  const start =
+    new RegExp(
+      `create\\s+(?:or\\s+replace\\s+)?function\\s+public\\.${escaped}\\s*\\(`,
+      "i"
+    ).exec(sql);
+
+  if (!start) {
+    return null;
+  }
+
+  const rest =
+    sql.slice(start.index);
+
+  const asMatch =
+    /\bas\s+(\$[A-Za-z0-9_]*\$)/i.exec(rest);
+
+  if (!asMatch) {
+    return rest.slice(0, 18000);
+  }
+
+  const delimiter =
+    asMatch[1];
+
+  const firstDelimiterIndex =
+    start.index +
+    asMatch.index +
+    asMatch[0].length -
+    delimiter.length;
+
+  const bodyStart =
+    firstDelimiterIndex +
+    delimiter.length;
+
+  const closing =
+    sql.indexOf(
+      delimiter,
+      bodyStart
+    );
+
+  if (closing < 0) {
+    return rest.slice(0, 18000);
+  }
+
+  const semicolon =
+    sql.indexOf(
+      ";",
+      closing +
+      delimiter.length
+    );
+
+  return sql.slice(
+    start.index,
+    semicolon >= 0
+      ? semicolon + 1
+      : closing +
+        delimiter.length
+  );
+}
+
+const expireFn =
+  functionSlice(
+    "expire_stale_paper_buy_reservations_v3"
+  );
+
+const reconcileFn =
+  functionSlice(
+    "reconcile_paper_buy_reserved_risk_v3"
+  );
+
+const expireLock =
+  expireFn
+    ? expireFn.search(
+        /pg_advisory_xact_lock/i
+      )
+    : -1;
+
+const expireRowLock =
+  expireFn
+    ? expireFn.search(
+        /from\s+public\.paper_order_requests[\s\S]{0,800}?for\s+update\s*;/i
+      )
+    : -1;
+
+const expireStatusUpdate =
+  expireFn
+    ? expireFn.search(
+        /status\s*=\s*['"]EXPIRED['"]/i
+      )
+    : -1;
+
+const reconcileLock =
+  reconcileFn
+    ? reconcileFn.search(
+        /pg_advisory_xact_lock/i
+      )
+    : -1;
+
+const reconcileRowLock =
+  reconcileFn
+    ? reconcileFn.search(
+        /from\s+public\.paper_order_requests[\s\S]{0,800}?for\s+update\s*;/i
+      )
+    : -1;
+
+const reconcileZero =
+  reconcileFn
+    ? reconcileFn.search(
+        /reserved_risk_amount\s*=\s*0/i
+      )
+    : -1;
+
+const checks = {
+  expiryFunctionPresent:
+    Boolean(expireFn),
+
+  reconciliationFunctionPresent:
+    Boolean(reconcileFn),
+
+  expiryUsesExplicitStaleInterval:
+    Boolean(
+      expireFn &&
+      /p_stale_after\s+interval/i.test(
+        expireFn
+      )
+    ),
+
+  noSchedulerPolicyEmbedded:
+    !/\bcron\b|\bpg_cron\b|\bschedule\b/i.test(
+      sql
+    ),
+
+  expiryUsesReservedRiskAtFallbackCreatedAt:
+    Boolean(
+      expireFn &&
+      /coalesce\s*\(\s*(?:por\.)?reserved_risk_at\s*,\s*(?:por\.)?created_at\s*\)/i.test(
+        expireFn
+      )
+    ),
+
+  expiryAccountLockBeforeRowLock:
+    expireLock >= 0 &&
+    expireRowLock >= 0 &&
+    expireLock <
+      expireRowLock,
+
+  expiryRechecksRiskApprovedAfterLocks:
+    Boolean(
+      expireFn &&
+      /v_order\.status\s*<>\s*['"]RISK_APPROVED['"]/i.test(
+        expireFn
+      )
+    ),
+
+  expirySetsTerminalExpired:
+    expireStatusUpdate >= 0,
+
+  expiryDoesNotDirectlyCreatePosition:
+    Boolean(
+      expireFn &&
+      !/insert\s+into\s+public\.paper_positions/i.test(
+        expireFn
+      )
+    ),
+
+  reconciliationAccountLockBeforeRowLock:
+    reconcileLock >= 0 &&
+    reconcileRowLock >= 0 &&
+    reconcileLock <
+      reconcileRowLock,
+
+  reconciliationOnlyDecreasesReservedRisk:
+    reconcileZero >= 0 &&
+    !/reserved_risk_amount\s*=\s*(?!0\b)[^,\n]+/i.test(
+      reconcileFn ??
+      ""
+    ),
+
+  reconciliationReportsActiveZeroReservation:
+    Boolean(
+      reconcileFn &&
+      /status\s*=\s*['"]RISK_APPROVED['"][\s\S]{0,500}?reserved_risk_amount[\s\S]{0,120}?<=\s*0/i.test(
+        reconcileFn
+      )
+    ),
+
+  reconciliationReportsMissingReservedAt:
+    Boolean(
+      reconcileFn &&
+      /reserved_risk_at\s+is\s+null/i.test(
+        reconcileFn
+      )
+    ),
+
+  reconciliationReportsReleasedAtConflict:
+    Boolean(
+      reconcileFn &&
+      /reserved_risk_released_at\s+is\s+not\s+null/i.test(
+        reconcileFn
+      )
+    ),
+
+  expiryServiceRoleOnly:
+    /revoke\s+all\s+on\s+function\s+public\.expire_stale_paper_buy_reservations_v3[\s\S]{0,500}?from\s+public/i.test(
+      sql
+    ) &&
+    /from\s+anon/i.test(
+      sql
+    ) &&
+    /from\s+authenticated/i.test(
+      sql
+    ) &&
+    /grant\s+execute\s+on\s+function\s+public\.expire_stale_paper_buy_reservations_v3[\s\S]{0,500}?to\s+service_role/i.test(
+      sql
+    ),
+
+  reconciliationServiceRoleOnly:
+    /revoke\s+all\s+on\s+function\s+public\.reconcile_paper_buy_reserved_risk_v3[\s\S]{0,500}?from\s+public/i.test(
+      sql
+    ) &&
+    /grant\s+execute\s+on\s+function\s+public\.reconcile_paper_buy_reserved_risk_v3[\s\S]{0,500}?to\s+service_role/i.test(
+      sql
+    ),
+
+  fixedSearchPath:
+    (
+      sql.match(
+        /set\s+search_path\s*=\s*public\s*,\s*pg_temp/gi
+      ) ?? []
+    ).length >= 2,
+
+  productionPolicyChanged:
+    false,
+};
+
+const expectedFalseChecks = new Set([
+  "productionPolicyChanged",
+]);
+
+const failed =
+  Object.entries(checks)
+    .filter(
+      ([name, value]) =>
+        expectedFalseChecks.has(name)
+          ? value !== false
+          : value !== true
+    )
+    .map(
+      ([name]) =>
+        name
+    );
+
+const result = {
+  status:
+    failed.length === 0
+      ? "ALPHA_V3_COMMITTED_RISK_EXPIRY_RECONCILIATION_VERIFIED"
+      : "ALPHA_V3_COMMITTED_RISK_EXPIRY_RECONCILIATION_REVIEW",
+
+  checks,
+  failed,
+
+  contract: {
+    expiryAction:
+      "ACCOUNT_LOCK_THEN_ROW_LOCK_THEN_RECHECK_THEN_STATUS_EXPIRED",
+
+    releaseMechanism:
+      "EXISTING_TERMINAL_STATUS_TRIGGER_RELEASES_RESERVED_RISK_IN_SAME_TRANSACTION",
+
+    reconciliation:
+      "REPAIR_TERMINAL_LEFTOVER_RISK_AND_REPORT_ACTIVE_ANOMALIES",
+
+    reconciliationCanIncreaseRisk:
+      false,
+
+    schedulerInstalled:
+      false,
+
+    databaseApplied:
+      false,
+  },
+
+  nextGate:
+    failed.length === 0
+      ? "DRY_RUN_APPLY_AND_ISOLATED_EXPIRY_RECONCILIATION_TEST"
+      : "REVIEW_EXPIRY_RECONCILIATION_PATCH",
+};
+
+console.log(
+  JSON.stringify(
+    result,
+    null,
+    2
+  )
+);
+
+if (failed.length > 0) {
+  process.exitCode = 2;
+}
+`;
+
+fs.mkdirSync(
+  path.dirname(verifierFile),
+  { recursive: true }
+);
+
+fs.writeFileSync(
+  verifierFile,
+  verifier,
+  "utf8"
+);
+
+console.log(
+  JSON.stringify(
+    {
+      status:
+        "ALPHA_V3_COMMITTED_RISK_EXPIRY_RECONCILIATION_V1_INSTALLED",
+
+      sourceMigration:
+        sourceRel,
+
+      generatedMigration:
+        targetRel,
+
+      generatedVerifier:
+        verifierRel,
+
+      design: {
+        expiryRequiresExplicitStaleInterval:
+          true,
+
+        schedulerInstalled:
+          false,
+
+        terminalReleaseUsesExistingTrigger:
+          true,
+
+        reconciliationCanIncreaseReservedRisk:
+          false,
+
+        canonicalLockOrder:
+          "ACCOUNT_ADVISORY_LOCK_THEN_ORDER_ROW_FOR_UPDATE",
+      },
+
+      databaseApplied:
+        false,
+
+      nextAction:
+        "RUN_EXPIRY_RECONCILIATION_VERIFY"
+    },
+    null,
+    2
+  )
+);

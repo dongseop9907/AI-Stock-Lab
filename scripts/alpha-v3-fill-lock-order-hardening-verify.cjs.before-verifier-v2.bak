@@ -1,0 +1,178 @@
+const fs = require("fs");
+const path = require("path");
+
+const root = process.cwd();
+
+const migrationRel =
+  "supabase/migrations/20261008000700_execute_paper_buy_order_lock_order_v2.sql";
+
+const file =
+  path.resolve(
+    root,
+    migrationRel
+  );
+
+if (!fs.existsSync(file)) {
+  throw new Error(
+    "LOCK_ORDER_MIGRATION_NOT_FOUND"
+  );
+}
+
+const sql =
+  fs.readFileSync(
+    file,
+    "utf8"
+  );
+
+const accountLockIndex =
+  sql.search(
+    /pg_advisory_xact_lock[\s\S]{0,900}?AI_STOCK_LAB_COMMITTED_RISK_V3:/i
+  );
+
+const rowLockIndex =
+  sql.search(
+    /select\s+\*[\s\S]{0,800}?into\s+v_order[\s\S]{0,800}?from\s+public\.paper_order_requests[\s\S]{0,800}?for\s+update\s*;/i
+  );
+
+const positionMutationIndex =
+  sql.search(
+    /\b(?:insert\s+into|update)\s+public\.paper_positions\b/i
+  );
+
+const filledIndex =
+  sql.search(
+    /update\s+public\.paper_order_requests[\s\S]{0,1800}?status\s*=\s*['"]FILLED['"]/i
+  );
+
+const lockOccurrences =
+  (
+    sql.match(
+      /AI_STOCK_LAB_COMMITTED_RISK_V3:/g
+    ) || []
+  ).length;
+
+const checks = {
+  recreateExecuteRpc:
+    /create\s+(?:or\s+replace\s+)?function\s+public\.execute_paper_buy_order\s*\(/i.test(
+      sql
+    ),
+
+  sharedAccountLockPresent:
+    accountLockIndex >= 0,
+
+  exactOneSharedAccountLock:
+    lockOccurrences === 1,
+
+  accountLockBeforeOrderRowLock:
+    accountLockIndex >= 0 &&
+    rowLockIndex >= 0 &&
+    accountLockIndex < rowLockIndex,
+
+  orderRowStillForUpdate:
+    rowLockIndex >= 0,
+
+  accountLockBeforePositionMutation:
+    accountLockIndex >= 0 &&
+    positionMutationIndex >= 0 &&
+    accountLockIndex < positionMutationIndex,
+
+  accountLockBeforeFilledTransition:
+    accountLockIndex >= 0 &&
+    filledIndex >= 0 &&
+    accountLockIndex < filledIndex,
+
+  missingOrderKeyFallback:
+    /MISSING_ORDER:[\s\S]{0,120}?p_order_id::text/i.test(
+      sql
+    ),
+
+  productionPolicyChanged:
+    false,
+};
+
+const securityDefiner =
+  /\bsecurity\s+definer\b/i.test(
+    sql
+  );
+
+if (securityDefiner) {
+  checks.fixedSearchPath =
+    /\bset\s+search_path\s*(?:=|to)\s*public\s*,\s*pg_temp\b/i.test(
+      sql
+    );
+
+  checks.revokePublic =
+    /revoke\s+all\s+on\s+function\s+public\.execute_paper_buy_order\s*\(\s*uuid\s*\)\s+from\s+public/i.test(
+      sql
+    );
+
+  checks.revokeAnon =
+    /revoke\s+all\s+on\s+function\s+public\.execute_paper_buy_order\s*\(\s*uuid\s*\)\s+from\s+anon/i.test(
+      sql
+    );
+
+  checks.revokeAuthenticated =
+    /revoke\s+all\s+on\s+function\s+public\.execute_paper_buy_order\s*\(\s*uuid\s*\)\s+from\s+authenticated/i.test(
+      sql
+    );
+
+  checks.grantServiceRole =
+    /grant\s+execute\s+on\s+function\s+public\.execute_paper_buy_order\s*\(\s*uuid\s*\)\s+to\s+service_role/i.test(
+      sql
+    );
+}
+
+const failed =
+  Object.entries(checks)
+    .filter(
+      ([, value]) =>
+        value !== true
+    )
+    .map(
+      ([name]) =>
+        name
+    );
+
+const result = {
+  status:
+    failed.length === 0
+      ? "ALPHA_V3_FILL_LOCK_ORDER_HARDENING_VERIFIED"
+      : "ALPHA_V3_FILL_LOCK_ORDER_HARDENING_REVIEW",
+
+  checks,
+  failed,
+
+  contract: {
+    canonicalOrder:
+      "ACCOUNT_ADVISORY_LOCK_THEN_ORDER_ROW_FOR_UPDATE",
+
+    reservationRpcOrder:
+      "ACCOUNT_ADVISORY_LOCK_THEN_ORDER_ACCESS",
+
+    fillRpcOrder:
+      "ACCOUNT_ADVISORY_LOCK_THEN_ORDER_ROW_FOR_UPDATE",
+
+    deadlockInversionRemoved:
+      failed.length === 0,
+
+    databaseApplied:
+      false,
+  },
+
+  nextGate:
+    failed.length === 0
+      ? "APPLY_FILL_LOCK_ORDER_MIGRATION_AND_STRESS_TEST"
+      : "REVIEW_LOCK_ORDER_PATCH",
+};
+
+console.log(
+  JSON.stringify(
+    result,
+    null,
+    2
+  )
+);
+
+if (failed.length > 0) {
+  process.exitCode = 2;
+}

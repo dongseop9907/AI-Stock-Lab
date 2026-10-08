@@ -1,0 +1,699 @@
+import {
+  createSupabaseServerClient,
+} from "@/lib/supabase";
+
+import {
+  syncDailyBars,
+} from "@/lib/market/sync-daily-bars";
+
+const REFRESH_ACTION_TYPES = [
+  "STOCK_SPLIT",
+  "REVERSE_SPLIT",
+  "STOCK_DIVIDEND",
+] as const;
+
+type RefreshActionType =
+  (typeof REFRESH_ACTION_TYPES)[number];
+
+interface CorporateActionEventRow {
+  id: string;
+  stock_code: string;
+  action_type: string;
+  effective_date: string;
+  status: string;
+  is_validation: boolean;
+  production_applied: boolean;
+}
+
+export interface RefreshCorporateActionHistoryV9726Input {
+  /*
+   * Default false.
+   * Validation events may be inspected only in dry-run mode.
+   */
+  includeValidationEvents?: boolean;
+
+  /*
+   * Default true. Set false only from an explicit apply path.
+   */
+  dryRun?: boolean;
+
+  /*
+   * How far back to scan corporate-action effective dates.
+   * Default 45 days, max 366.
+   */
+  detectionLookbackCalendarDays?: number;
+
+  /*
+   * Optional YYYY-MM-DD clock override for deterministic tests.
+   */
+  throughDate?: string;
+}
+
+interface RefreshTargetResult {
+  eventId: string;
+  stockCode: string;
+  actionType: RefreshActionType;
+  effectiveDate: string;
+  staleEvidence: boolean;
+  earliestStoredDate: string | null;
+  refreshStartDate: string | null;
+  refreshEndDate: string | null;
+  status:
+    | "NO_STORED_PRE_ACTION_HISTORY"
+    | "ALREADY_REFRESHED_AFTER_ACTION"
+    | "WOULD_REFRESH"
+    | "REFRESHED"
+    | "REFRESH_FAILED";
+  syncResult?: unknown;
+  error?: string;
+}
+
+function parseSqlDate(
+  value: string,
+) {
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})$/
+      .exec(
+        value.trim(),
+      );
+
+  if (!match) {
+    throw new Error(
+      "INVALID_SQL_DATE",
+    );
+  }
+
+  const date =
+    new Date(
+      Date.UTC(
+        Number(match[1]),
+        Number(match[2]) - 1,
+        Number(match[3]),
+      ),
+    );
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    throw new Error(
+      "INVALID_SQL_DATE",
+    );
+  }
+
+  return date;
+}
+
+function formatSqlDate(
+  date: Date,
+) {
+  return date
+    .toISOString()
+    .slice(0, 10);
+}
+
+function compactDate(
+  sqlDate: string,
+) {
+  return sqlDate
+    .replaceAll(
+      "-",
+      "",
+    );
+}
+
+function addCalendarDays(
+  sqlDate: string,
+  days: number,
+) {
+  const date =
+    parseSqlDate(
+      sqlDate,
+    );
+
+  date.setUTCDate(
+    date.getUTCDate() +
+      days,
+  );
+
+  return formatSqlDate(
+    date,
+  );
+}
+
+function clampLookback(
+  value:
+    | number
+    | undefined,
+) {
+  if (
+    value ===
+    undefined
+  ) {
+    return 45;
+  }
+
+  if (
+    !Number.isFinite(
+      value,
+    )
+  ) {
+    return 45;
+  }
+
+  return Math.min(
+    366,
+    Math.max(
+      1,
+      Math.trunc(
+        value,
+      ),
+    ),
+  );
+}
+
+function normalizeThroughDate(
+  value:
+    | string
+    | undefined,
+) {
+  if (
+    value &&
+    value.trim()
+  ) {
+    return formatSqlDate(
+      parseSqlDate(
+        value,
+      ),
+    );
+  }
+
+  return new Date()
+    .toISOString()
+    .slice(0, 10);
+}
+
+function effectiveBoundaryTimestamp(
+  effectiveDate: string,
+) {
+  return (
+    effectiveDate +
+    "T00:00:00.000Z"
+  );
+}
+
+function isRefreshActionType(
+  value: string,
+): value is RefreshActionType {
+  return (
+    REFRESH_ACTION_TYPES as
+      readonly string[]
+  ).includes(
+    value,
+  );
+}
+
+export async function refreshCorporateActionHistoryV9726(
+  input:
+    RefreshCorporateActionHistoryV9726Input = {},
+) {
+  const supabase =
+    createSupabaseServerClient();
+
+  const dryRun =
+    input.dryRun !==
+    false;
+
+  const includeValidationEvents =
+    input.includeValidationEvents ===
+    true;
+
+  if (
+    !dryRun &&
+    includeValidationEvents
+  ) {
+    throw new Error(
+      "VALIDATION_EVENTS_CANNOT_DRIVE_PRODUCTION_REFRESH",
+    );
+  }
+
+  const throughDate =
+    normalizeThroughDate(
+      input.throughDate,
+    );
+
+  const detectionLookbackCalendarDays =
+    clampLookback(
+      input
+        .detectionLookbackCalendarDays,
+    );
+
+  const detectionStartDate =
+    addCalendarDays(
+      throughDate,
+      -detectionLookbackCalendarDays,
+    );
+
+
+  /*
+   * V9.7.27.1:
+   * wait two calendar days after the corporate-action
+   * effective date before treating KIS adjusted history
+   * as eligible for automatic refresh.
+   */
+  const refreshEligibleThroughDate =
+    addCalendarDays(
+      throughDate,
+      -2,
+    );
+
+  const {
+    data: eventData,
+    error: eventError,
+  } =
+    await supabase
+      .from(
+        "corporate_action_events",
+      )
+      .select(`
+        id,
+        stock_code,
+        action_type,
+        effective_date,
+        status,
+        is_validation,
+        production_applied
+      `)
+      .eq(
+        "is_validation",
+        includeValidationEvents,
+      )
+      .in(
+        "action_type",
+        [
+          ...REFRESH_ACTION_TYPES,
+        ],
+      )
+      .in(
+        "status",
+        [
+          "RECORDED",
+          "SUPPORTED",
+        ],
+      )
+      .gte(
+        "effective_date",
+        detectionStartDate,
+      )
+      .lte(
+        "effective_date",
+        refreshEligibleThroughDate,
+      )
+      .order(
+        "effective_date",
+        {
+          ascending: true,
+        },
+      )
+      .order(
+        "stock_code",
+        {
+          ascending: true,
+        },
+      );
+
+  if (
+    eventError
+  ) {
+    throw new Error(
+      `CORPORATE_ACTION_EVENT_READ_FAILED: ${eventError.message}`,
+    );
+  }
+
+  const rawEvents =
+    (
+      eventData ??
+      []
+    ) as CorporateActionEventRow[];
+
+  /*
+   * One refresh per stock/effective-date is enough even when duplicate
+   * supported event rows exist for the same stock/date.
+   */
+  const deduped =
+    new Map<
+      string,
+      CorporateActionEventRow
+    >();
+
+  for (
+    const event of
+    rawEvents
+  ) {
+    if (
+      !isRefreshActionType(
+        event.action_type,
+      )
+    ) {
+      continue;
+    }
+
+    const key =
+      `${event.stock_code}|${event.effective_date}`;
+
+    if (
+      !deduped.has(
+        key,
+      )
+    ) {
+      deduped.set(
+        key,
+        event,
+      );
+    }
+  }
+
+  const targets:
+    RefreshTargetResult[] =
+    [];
+
+  for (
+    const event of
+    deduped.values()
+  ) {
+    const effectiveDate =
+      event.effective_date;
+
+    const refreshEndDate =
+      addCalendarDays(
+        effectiveDate,
+        -1,
+      );
+
+    const {
+      data: earliestData,
+      error: earliestError,
+    } =
+      await supabase
+        .from(
+          "market_daily_bars",
+        )
+        .select(
+          "trading_date",
+        )
+        .eq(
+          "stock_code",
+          event.stock_code,
+        )
+        .lt(
+          "trading_date",
+          effectiveDate,
+        )
+        .order(
+          "trading_date",
+          {
+            ascending: true,
+          },
+        )
+        .limit(
+          1,
+        );
+
+    if (
+      earliestError
+    ) {
+      throw new Error(
+        `EARLIEST_MARKET_BAR_READ_FAILED_${event.stock_code}: ${earliestError.message}`,
+      );
+    }
+
+    const earliestStoredDate =
+      earliestData?.[0]
+        ?.trading_date ??
+      null;
+
+    if (
+      !earliestStoredDate
+    ) {
+      targets.push({
+        eventId:
+          event.id,
+        stockCode:
+          event.stock_code,
+        actionType:
+          event.action_type as RefreshActionType,
+        effectiveDate,
+        staleEvidence:
+          false,
+        earliestStoredDate:
+          null,
+        refreshStartDate:
+          null,
+        refreshEndDate:
+          null,
+        status:
+          "NO_STORED_PRE_ACTION_HISTORY",
+      });
+
+      continue;
+    }
+
+    /*
+     * Stale evidence:
+     * at least one pre-action row whose updated_at predates the event.
+     *
+     * V9.7.25 has already locked future writers to adjusted-price mode.
+     * Therefore, for future events, rows refreshed after the action are
+     * considered current while pre-action timestamps trigger a re-query.
+     */
+    const {
+      data: staleData,
+      error: staleError,
+    } =
+      await supabase
+        .from(
+          "market_daily_bars",
+        )
+        .select(
+          "trading_date,updated_at",
+        )
+        .eq(
+          "stock_code",
+          event.stock_code,
+        )
+        .lt(
+          "trading_date",
+          effectiveDate,
+        )
+        .lt(
+          "updated_at",
+          effectiveBoundaryTimestamp(
+            effectiveDate,
+          ),
+        )
+        .order(
+          "trading_date",
+          {
+            ascending: true,
+          },
+        )
+        .limit(
+          1,
+        );
+
+    if (
+      staleError
+    ) {
+      throw new Error(
+        `STALE_MARKET_BAR_READ_FAILED_${event.stock_code}: ${staleError.message}`,
+      );
+    }
+
+    const staleEvidence =
+      (
+        staleData ??
+        []
+      ).length >
+      0;
+
+    if (
+      !staleEvidence
+    ) {
+      targets.push({
+        eventId:
+          event.id,
+        stockCode:
+          event.stock_code,
+        actionType:
+          event.action_type as RefreshActionType,
+        effectiveDate,
+        staleEvidence:
+          false,
+        earliestStoredDate,
+        refreshStartDate:
+          earliestStoredDate,
+        refreshEndDate,
+        status:
+          "ALREADY_REFRESHED_AFTER_ACTION",
+      });
+
+      continue;
+    }
+
+    if (
+      dryRun
+    ) {
+      targets.push({
+        eventId:
+          event.id,
+        stockCode:
+          event.stock_code,
+        actionType:
+          event.action_type as RefreshActionType,
+        effectiveDate,
+        staleEvidence:
+          true,
+        earliestStoredDate,
+        refreshStartDate:
+          earliestStoredDate,
+        refreshEndDate,
+        status:
+          "WOULD_REFRESH",
+      });
+
+      continue;
+    }
+
+    try {
+      const syncResult =
+        await syncDailyBars({
+          stockCodes: [
+            event.stock_code,
+          ],
+          startDate:
+            compactDate(
+              earliestStoredDate,
+            ),
+          endDate:
+            compactDate(
+              refreshEndDate,
+            ),
+          adjustedPrice:
+            true,
+          chunkDays:
+            90,
+        });
+
+      targets.push({
+        eventId:
+          event.id,
+        stockCode:
+          event.stock_code,
+        actionType:
+          event.action_type as RefreshActionType,
+        effectiveDate,
+        staleEvidence:
+          true,
+        earliestStoredDate,
+        refreshStartDate:
+          earliestStoredDate,
+        refreshEndDate,
+        status:
+          "REFRESHED",
+        syncResult,
+      });
+    } catch (
+      error
+    ) {
+      targets.push({
+        eventId:
+          event.id,
+        stockCode:
+          event.stock_code,
+        actionType:
+          event.action_type as RefreshActionType,
+        effectiveDate,
+        staleEvidence:
+          true,
+        earliestStoredDate,
+        refreshStartDate:
+          earliestStoredDate,
+        refreshEndDate,
+        status:
+          "REFRESH_FAILED",
+        error:
+          error instanceof Error
+            ? error.message
+            : "UNKNOWN_REFRESH_ERROR",
+      });
+    }
+  }
+
+  const counts = {
+    eventsRead:
+      rawEvents.length,
+    dedupedTargets:
+      deduped.size,
+    noStoredHistory:
+      targets.filter(
+        (x) =>
+          x.status ===
+          "NO_STORED_PRE_ACTION_HISTORY",
+      ).length,
+    alreadyRefreshed:
+      targets.filter(
+        (x) =>
+          x.status ===
+          "ALREADY_REFRESHED_AFTER_ACTION",
+      ).length,
+    wouldRefresh:
+      targets.filter(
+        (x) =>
+          x.status ===
+          "WOULD_REFRESH",
+      ).length,
+    refreshed:
+      targets.filter(
+        (x) =>
+          x.status ===
+          "REFRESHED",
+      ).length,
+    failed:
+      targets.filter(
+        (x) =>
+          x.status ===
+          "REFRESH_FAILED",
+      ).length,
+  };
+
+  return {
+    version:
+      "V9_7_26",
+    dryRun,
+    includeValidationEvents,
+    throughDate,
+    detectionStartDate,
+    refreshEligibleThroughDate,
+    actionTypes:
+      [
+        ...REFRESH_ACTION_TYPES,
+      ],
+    counts,
+    targets,
+    policy: {
+      storageBasis:
+        "KIS_MODE_0_ADJUSTED_ONLY",
+      staleSignal:
+        "PRE_ACTION_ROW_UPDATED_AT_BEFORE_EFFECTIVE_DATE",
+      refreshRange:
+        "EARLIEST_STORED_PRE_ACTION_DATE_THROUGH_DAY_BEFORE_EFFECTIVE_DATE",
+      cashDividendAutoRefresh:
+        false,
+      minimumPostEffectiveGraceCalendarDays:
+        2,
+      genericFactorMutationOfAdjustedBars:
+        false,
+    },
+  };
+}

@@ -1,0 +1,501 @@
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+
+const root = process.cwd();
+const logsDir = path.join(root, 'logs');
+const runtimeDir = path.join(logsDir, 'corporate-action-runtime');
+
+fs.mkdirSync(runtimeDir, { recursive: true });
+
+const watermarkFile = path.join(
+  runtimeDir,
+  'idle-scan-watermark.json'
+);
+
+function parseArgs(argv) {
+  const out = { through: null };
+
+  for (const arg of argv) {
+    if (arg.startsWith('--through=')) {
+      out.through = arg.slice('--through='.length);
+    }
+  }
+
+  return out;
+}
+
+function kstToday() {
+  const parts = new Intl.DateTimeFormat(
+    'en-US',
+    {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }
+  ).formatToParts(new Date());
+
+  const get = type =>
+    parts.find(p => p.type === type)?.value;
+
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
+function validDate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function addDays(value, days) {
+  const d = new Date(`${value}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function readJson(file) {
+  return JSON.parse(
+    fs.readFileSync(file, 'utf8')
+      .replace(/^\uFEFF/, '')
+  );
+}
+
+function closureDate(json) {
+  if (validDate(json.evidenceSnapshotAsOf ?? '')) {
+    return json.evidenceSnapshotAsOf;
+  }
+
+  const match = String(json.status ?? '')
+    .match(/CLOSED_AT_(\d{4})_(\d{2})_(\d{2})/);
+
+  if (!match) return null;
+
+  return `${match[1]}-${match[2]}-${match[3]}`;
+}
+
+function findLatestClosure() {
+  const files = fs.readdirSync(logsDir)
+    .filter(name =>
+      name.startsWith(
+        'opendart-corporate-action-cycle-closure-'
+      ) &&
+      name.endsWith('.json')
+    );
+
+  const rows = [];
+
+  for (const name of files) {
+    const file = path.join(logsDir, name);
+
+    try {
+      const json = readJson(file);
+      const date = closureDate(json);
+
+      if (!date) continue;
+
+      rows.push({
+        file,
+        name,
+        date,
+        json,
+      });
+    } catch {
+      // Ignore invalid unrelated historical files.
+    }
+  }
+
+  rows.sort(
+    (a, b) =>
+      b.date.localeCompare(a.date)
+  );
+
+  if (rows.length === 0) {
+    throw new Error(
+      'NO_VALID_CORPORATE_ACTION_CLOSURE_FOUND'
+    );
+  }
+
+  return rows[0];
+}
+
+function runNode(args) {
+  console.log(
+    `\n> node ${args.join(' ')}`
+  );
+
+  const result = spawnSync(
+    process.execPath,
+    args,
+    {
+      cwd: root,
+      stdio: 'inherit',
+      shell: false,
+    }
+  );
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  if (result.status !== 0) {
+    throw new Error(
+      `CHILD_PROCESS_FAILED_${result.status}`
+    );
+  }
+}
+
+const args = parseArgs(
+  process.argv.slice(2)
+);
+
+const through =
+  args.through ?? kstToday();
+
+if (!validDate(through)) {
+  throw new Error(
+    `INVALID_THROUGH_DATE:${through}`
+  );
+}
+
+const today = kstToday();
+
+if (through > today) {
+  throw new Error(
+    `FUTURE_THROUGH_DATE_NOT_ALLOWED:${through}`
+  );
+}
+
+const latest = findLatestClosure();
+
+let lastIdleScannedDate = null;
+
+if (fs.existsSync(watermarkFile)) {
+  try {
+    const watermark = readJson(watermarkFile);
+
+    if (validDate(watermark.throughDate ?? '')) {
+      lastIdleScannedDate =
+        watermark.throughDate;
+    }
+  } catch {
+    lastIdleScannedDate = null;
+  }
+}
+
+const incrementalBaseDate =
+  [
+    latest.date,
+    lastIdleScannedDate,
+  ]
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+
+const start =
+  addDays(incrementalBaseDate, 1);
+
+console.log(
+  JSON.stringify(
+    {
+      phase: 'CORPORATE_ACTION_DAILY_BOOT',
+      latestClosedDate: latest.date,
+      lastIdleScannedDate,
+      incrementalBaseDate,
+      latestClosureFile: path.relative(
+        root,
+        latest.file
+      ),
+      startDate: start,
+      throughDate: through,
+    },
+    null,
+    2
+  )
+);
+
+if (start > through) {
+  console.log(
+    JSON.stringify(
+      {
+        status: 'CORPORATE_ACTION_UP_TO_DATE',
+        latestClosedDate: latest.date,
+        throughDate: through,
+        networkRequests: 0,
+        databaseWrites: 0,
+        actionRequired: false,
+      },
+      null,
+      2
+    )
+  );
+
+  process.exitCode = 0;
+  return;
+}
+
+const tag =
+  `${start}-to-${through}`;
+
+const inventoryFile =
+  path.join(
+    runtimeDir,
+    `inventory-${tag}.json`
+  );
+
+const worksetFile =
+  path.join(
+    runtimeDir,
+    `workset-${tag}.json`
+  );
+
+/*
+ * Existing v9.10 inventory/workset implementations are
+ * currently the validated engines.
+ *
+ * They are reused here as implementation modules.
+ * The daily runner owns the date/window lifecycle.
+ */
+runNode([
+  '--env-file=.env.local',
+  './scripts/v91001.cjs',
+  `--start=${start}`,
+  `--through=${through}`,
+  `--output=${inventoryFile}`,
+  '--refresh',
+]);
+
+runNode([
+  './scripts/v91002.cjs',
+  `--input=${inventoryFile}`,
+  `--output=${worksetFile}`,
+]);
+
+const inventory =
+  readJson(inventoryFile);
+
+const workset =
+  readJson(worksetFile);
+
+const disclosures =
+  Number(inventory.disclosures ?? 0);
+
+const candidates =
+  Number(inventory.candidates ?? 0);
+
+const inContract =
+  Number(
+    workset.counts
+      ?.inCurrentCanonicalContract ??
+    0
+  );
+
+const outOfScope =
+  Number(
+    workset.counts
+      ?.outOfCurrentCanonicalScope ??
+    0
+  );
+
+const result = {
+  version:
+    'CORPORATE_ACTION_DAILY_RUNNER_V1',
+
+  latestClosedDate:
+    latest.date,
+
+  window: {
+    startDate: start,
+    throughDate: through,
+  },
+
+  disclosures,
+  candidates,
+  inCurrentCanonicalContract:
+    inContract,
+  outOfCurrentCanonicalScope:
+    outOfScope,
+
+  inventoryFile:
+    path.relative(root, inventoryFile)
+      .replaceAll('\\', '/'),
+
+  worksetFile:
+    path.relative(root, worksetFile)
+      .replaceAll('\\', '/'),
+
+  databaseWrites: 0,
+  productionApplied: false,
+};
+
+if (
+  inContract === 0
+) {
+  /*
+   * IMPORTANT:
+   * Do not manufacture one closure per empty day.
+   *
+   * Next run simply scans again from the last
+   * meaningful closed cycle through the current date.
+   */
+  result.status =
+    'IDLE_NO_IN_CONTRACT_CORPORATE_ACTION_CANDIDATES';
+
+  result.actionRequired = false;
+
+  result.policy =
+    'NO_EMPTY_DAILY_CLOSURE_REQUIRED';
+
+  result.nextAction =
+    'RUN_AGAIN_ON_NEXT_SCHEDULE';
+
+  fs.writeFileSync(
+    watermarkFile,
+    JSON.stringify(
+      {
+        version:
+          'CORPORATE_ACTION_IDLE_SCAN_WATERMARK_V1',
+        throughDate: through,
+        disclosures,
+        candidates,
+        createdAt:
+          new Date().toISOString(),
+      },
+      null,
+      2
+    ) + '\n',
+    'utf8'
+  );
+} else {
+  result.status =
+    'IN_CONTRACT_CORPORATE_ACTION_CANDIDATES_FOUND';
+
+  result.actionRequired = true;
+
+  const processorTag = tag;
+
+  const processorStateFile =
+    path.join(
+      runtimeDir,
+      'processing',
+      processorTag,
+      'state.json'
+    );
+
+  console.log(
+    '\n> node --env-file=.env.local ' +
+    './scripts/corporate-action-process.cjs ' +
+    `--workset=${worksetFile} ` +
+    `--tag=${processorTag}`
+  );
+
+  const processorRun =
+    spawnSync(
+      process.execPath,
+      [
+        '--env-file=.env.local',
+        './scripts/corporate-action-process.cjs',
+        `--workset=${worksetFile}`,
+        `--tag=${processorTag}`,
+      ],
+      {
+        cwd: root,
+        stdio: 'inherit',
+        shell: false,
+      }
+    );
+
+  result.processor = {
+    tag: processorTag,
+
+    stateFile:
+      path.relative(
+        root,
+        processorStateFile
+      ).replaceAll('\\\\', '/'),
+
+    exitCode:
+      processorRun.status,
+  };
+
+  if (processorRun.error) {
+    result.status =
+      'CORPORATE_ACTION_PROCESSOR_FAILED';
+
+    result.processor.error =
+      processorRun.error.message;
+
+    result.nextAction =
+      'REVIEW_PROCESSOR_FAILURE';
+
+    result.processorFailure = true;
+  } else if (
+    processorRun.status !== 0
+  ) {
+    result.status =
+      'CORPORATE_ACTION_PROCESSOR_REVIEW_REQUIRED';
+
+    result.nextAction =
+      'REVIEW_PROCESSOR_STATE_DO_NOT_WRITE_PRODUCTION';
+
+    result.processorFailure = true;
+  } else if (
+    fs.existsSync(
+      processorStateFile
+    )
+  ) {
+    const processorState =
+      readJson(
+        processorStateFile
+      );
+
+    result.processor.status =
+      processorState.status ?? null;
+
+    result.processor.currentStage =
+      processorState.currentStage ?? null;
+
+    result.processor.failedStage =
+      processorState.failedStage ?? null;
+
+    result.status =
+      'CORPORATE_ACTION_PROCESSOR_COMPLETE';
+
+    result.nextAction =
+      processorState.nextAction ??
+      'REVIEW_PROCESSOR_RESULT';
+
+    result.processorFailure = false;
+  } else {
+    result.status =
+      'CORPORATE_ACTION_PROCESSOR_STATE_MISSING';
+
+    result.nextAction =
+      'REVIEW_PROCESSOR_STATE_MISSING';
+
+    result.processorFailure = true;
+  }
+}
+
+const stateFile =
+  path.join(
+    runtimeDir,
+    'latest-run.json'
+  );
+
+fs.writeFileSync(
+  stateFile,
+  JSON.stringify(result, null, 2) + '\n',
+  'utf8'
+);
+
+console.log(
+  '\n' +
+  JSON.stringify(
+    result,
+    null,
+    2
+  )
+);
+
+if (result.processorFailure === true) {
+  process.exitCode = 2;
+}

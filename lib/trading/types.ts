@@ -20,6 +20,12 @@ export interface BuyRiskInput {
   currentStockExposureAmount: number;
   currentSectorExposureAmount: number;
 
+  /** 현재 열린 포지션들의 stop 기준 총 잠재 손실액 */
+  currentAggregateOpenRiskAmount?: number;
+
+  /** 유효한 stop을 확인할 수 없는 열린 포지션 수 */
+  openPositionsMissingValidStopCount?: number;
+
   dailyRealizedPnl: number;
   openPositionCount: number;
   isNewPosition: boolean;
@@ -46,6 +52,8 @@ export type RiskIssueCode =
   | "SECTOR_LIMIT_EXCEEDED"
   | "INSUFFICIENT_CASH"
   | "MAX_POSITIONS_REACHED"
+  | "AGGREGATE_OPEN_RISK_LIMIT_EXCEEDED"
+  | "OPEN_POSITION_STOP_MISSING"
   | "DAILY_LOSS_LIMIT_REACHED"
   | "MODEL_NOT_APPROVED"
   | "QUANTITY_LIMIT_EXCEEDED"

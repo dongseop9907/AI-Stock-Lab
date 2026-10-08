@@ -22,8 +22,14 @@ interface IndexDateRow {
   market_code:
     | "KOSPI"
     | "KOSDAQ";
-
   trading_date: string;
+}
+
+interface ExchangeCalendarOverrideRow {
+  calendar_date: string;
+  is_open: boolean;
+  reason: string;
+  source: string;
 }
 
 interface KoreanClock {
@@ -32,8 +38,17 @@ interface KoreanClock {
   minute: number;
 }
 
+interface TradingDayOverride {
+  isOpen: boolean;
+  reason: string;
+  source: string;
+}
+
 const MARKET_DATA_READY_MINUTE_KST =
   16 * 60 + 30;
+
+const CALENDAR_LOOKBACK_DAYS =
+  45;
 
 function addCalendarDays(
   sqlDate: string,
@@ -66,7 +81,9 @@ function isWeekday(
   sqlDate: string,
 ) {
   const day =
-    weekday(sqlDate);
+    weekday(
+      sqlDate,
+    );
 
   return (
     day >= 1 &&
@@ -74,8 +91,38 @@ function isWeekday(
   );
 }
 
-function previousWeekday(
+function isTradingDay(
   sqlDate: string,
+  overrides:
+    Map<
+      string,
+      TradingDayOverride
+    >,
+) {
+  const override =
+    overrides.get(
+      sqlDate,
+    );
+
+  if (
+    override
+  ) {
+    return override
+      .isOpen;
+  }
+
+  return isWeekday(
+    sqlDate,
+  );
+}
+
+function previousTradingDay(
+  sqlDate: string,
+  overrides:
+    Map<
+      string,
+      TradingDayOverride
+    >,
 ): string {
   let value =
     addCalendarDays(
@@ -83,14 +130,34 @@ function previousWeekday(
       -1,
     );
 
+  let safety =
+    0;
+
   while (
-    !isWeekday(value)
+    !isTradingDay(
+      value,
+      overrides,
+    ) &&
+    safety <
+      370
   ) {
     value =
       addCalendarDays(
         value,
         -1,
       );
+
+    safety +=
+      1;
+  }
+
+  if (
+    safety >=
+    370
+  ) {
+    throw new Error(
+      "TRADING_CALENDAR_LOOKBACK_EXCEEDED",
+    );
   }
 
   return value;
@@ -105,22 +172,16 @@ function getKoreanClock(
       {
         timeZone:
           "Asia/Seoul",
-
         year:
           "numeric",
-
         month:
           "2-digit",
-
         day:
           "2-digit",
-
         hour:
           "2-digit",
-
         minute:
           "2-digit",
-
         hourCycle:
           "h23",
       },
@@ -141,12 +202,10 @@ function getKoreanClock(
   return {
     date:
       `${map.year}-${map.month}-${map.day}`,
-
     hour:
       Number(
         map.hour,
       ),
-
     minute:
       Number(
         map.minute,
@@ -154,44 +213,27 @@ function getKoreanClock(
   };
 }
 
-/*
- * Conservative expected-date heuristic:
- *
- * - Weekend => previous weekday.
- * - Weekday before 16:30 KST => previous weekday.
- * - Weekday at/after 16:30 KST => today.
- *
- * Exchange-holiday calendar is intentionally NOT guessed.
- * On an exchange holiday, this guard can temporarily report STALE.
- * That false-negative is safer than accepting stale data as fresh.
- */
 function resolveExpectedMarketDate(
   clock: KoreanClock,
+  overrides:
+    Map<
+      string,
+      TradingDayOverride
+    >,
 ): string {
   const today =
     clock.date;
 
   if (
-    !isWeekday(
+    !isTradingDay(
       today,
+      overrides,
     )
   ) {
-    let candidate =
-      today;
-
-    do {
-      candidate =
-        addCalendarDays(
-          candidate,
-          -1,
-        );
-    } while (
-      !isWeekday(
-        candidate,
-      )
+    return previousTradingDay(
+      today,
+      overrides,
     );
-
-    return candidate;
   }
 
   const minuteOfDay =
@@ -203,17 +245,23 @@ function resolveExpectedMarketDate(
     minuteOfDay <
     MARKET_DATA_READY_MINUTE_KST
   ) {
-    return previousWeekday(
+    return previousTradingDay(
       today,
+      overrides,
     );
   }
 
   return today;
 }
 
-function countWeekdaysAfter(
+function countTradingDaysAfter(
   fromDate: string,
   throughDate: string,
+  overrides:
+    Map<
+      string,
+      TradingDayOverride
+    >,
 ): number {
   if (
     fromDate >=
@@ -224,10 +272,8 @@ function countWeekdaysAfter(
 
   let cursor =
     fromDate;
-
   let count =
     0;
-
   let safety =
     0;
 
@@ -244,8 +290,9 @@ function countWeekdaysAfter(
       );
 
     if (
-      isWeekday(
+      isTradingDay(
         cursor,
+        overrides,
       )
     ) {
       count +=
@@ -254,6 +301,17 @@ function countWeekdaysAfter(
 
     safety +=
       1;
+  }
+
+  if (
+    safety >=
+      370 &&
+    cursor <
+      throughDate
+  ) {
+    throw new Error(
+      "TRADING_CALENDAR_LAG_SCAN_EXCEEDED",
+    );
   }
 
   return count;
@@ -271,7 +329,9 @@ function maxDate(
         (
           value,
         ): value is string =>
-          Boolean(value),
+          Boolean(
+            value,
+          ),
       )
       .sort();
 
@@ -296,7 +356,9 @@ function minDate(
         (
           value,
         ): value is string =>
-          Boolean(value),
+          Boolean(
+            value,
+          ),
       )
       .sort();
 
@@ -336,9 +398,99 @@ export async function getMarketDataFreshnessV77(
       now,
     );
 
+  const calendarStartDate =
+    addCalendarDays(
+      clock.date,
+      -CALENDAR_LOOKBACK_DAYS,
+    );
+
+  const {
+    data: overrideData,
+    error: overrideError,
+  } =
+    await supabase
+      .from(
+        "market_exchange_calendar_overrides",
+      )
+      .select(`
+        calendar_date,
+        is_open,
+        reason,
+        source
+      `)
+      .eq(
+        "exchange_code",
+        "KRX",
+      )
+      .eq(
+        "verified",
+        true,
+      )
+      .gte(
+        "calendar_date",
+        calendarStartDate,
+      )
+      .lte(
+        "calendar_date",
+        clock.date,
+      )
+      .order(
+        "calendar_date",
+        {
+          ascending:
+            true,
+        },
+      );
+
+  if (
+    overrideError
+  ) {
+    throw new Error(
+      `KRX calendar override load failed: ${overrideError.message}`,
+    );
+  }
+
+  const overrideRows =
+    (
+      overrideData ??
+      []
+    ) as ExchangeCalendarOverrideRow[];
+
+  const tradingDayOverrides =
+    new Map<
+      string,
+      TradingDayOverride
+    >();
+
+  for (
+    const row
+    of overrideRows
+  ) {
+    tradingDayOverrides.set(
+      String(
+        row.calendar_date,
+      ),
+      {
+        isOpen:
+          Boolean(
+            row.is_open,
+          ),
+        reason:
+          String(
+            row.reason,
+          ),
+        source:
+          String(
+            row.source,
+          ),
+      },
+    );
+  }
+
   const expectedMarketDate =
     resolveExpectedMarketDate(
       clock,
+      tradingDayOverrides,
     );
 
   const {
@@ -385,7 +537,9 @@ export async function getMarketDataFreshnessV77(
             row.stock_code,
           ).trim(),
       )
-      .filter(Boolean);
+      .filter(
+        Boolean,
+      );
 
   const indexPromise =
     supabase
@@ -410,13 +564,10 @@ export async function getMarketDataFreshnessV77(
             false,
         },
       )
-      .limit(100);
+      .limit(
+        100,
+      );
 
-
-  /*
-   * Build the stock query separately because an empty IN()
-   * should not be sent to Supabase.
-   */
   const loadStockDates =
     async () => {
       if (
@@ -426,7 +577,6 @@ export async function getMarketDataFreshnessV77(
         return {
           data:
             [] as StockDateRow[],
-
           error:
             null,
         };
@@ -614,13 +764,14 @@ export async function getMarketDataFreshnessV77(
       ? stockLatestDate
       : null;
 
-  const businessWeekdayLag =
+  const tradingDayLag =
     latestCommonDate ===
       null
       ? null
-      : countWeekdaysAfter(
+      : countTradingDaysAfter(
           latestCommonDate,
           expectedMarketDate,
+          tradingDayOverrides,
         );
 
   const observedDates =
@@ -694,21 +845,21 @@ export async function getMarketDataFreshnessV77(
       "KOSPI, KOSDAQ, and active-stock daily bars do not share one complete latest market date.",
     );
   } else if (
-    businessWeekdayLag !==
+    tradingDayLag !==
       0
   ) {
     status =
       "STALE";
 
     reasons.push(
-      `Latest aligned market data is ${businessWeekdayLag ?? "unknown"} weekday(s) behind the expected date.`,
+      `Latest aligned market data is ${tradingDayLag ?? "unknown"} trading day(s) behind the expected date.`,
     );
   } else {
     status =
       "FRESH";
 
     reasons.push(
-      "Required daily-bar sources are complete, aligned, and current under the v7.7 conservative freshness heuristic.",
+      "Required daily-bar sources are complete, aligned, and current under the v7.7.1 weekday-plus-verified-KRX-override calendar.",
     );
   }
 
@@ -716,74 +867,80 @@ export async function getMarketDataFreshnessV77(
     status ===
     "FRESH";
 
+  const appliedOverrides =
+    overrideRows.map(
+      (row) => ({
+        date:
+          String(
+            row.calendar_date,
+          ),
+        isOpen:
+          Boolean(
+            row.is_open,
+          ),
+        reason:
+          String(
+            row.reason,
+          ),
+        source:
+          String(
+            row.source,
+          ),
+      }),
+    );
+
   const evidenceFingerprint =
     JSON.stringify({
       status,
-
       usableForShadowComparison,
-
       expectedMarketDate,
-
       kospiLatestDate,
       kosdaqLatestDate,
-
       stockLatestDate,
       oldestActiveStockLatestDate,
-
       activeStockCount:
         activeStockCodes.length,
-
       activeStockCurrentCount,
-
-      businessWeekdayLag,
-
+      businessWeekdayLag:
+        tradingDayLag,
+      tradingDayLag,
       indexDateAligned,
       allSourceDatesAligned,
       stockCoverageComplete,
-
       missingActiveStocks,
+      calendarMode:
+        "WEEKDAY_PLUS_VERIFIED_KRX_OVERRIDES",
+      appliedOverrides,
     });
 
   return {
     version:
-      "MARKET_DATA_FRESHNESS_V7_7",
-
+      "MARKET_DATA_FRESHNESS_V7_7_1",
     mode:
       "SHADOW_DATA_GUARD",
-
     productionApplied:
       false,
-
     observedAt:
       now.toISOString(),
-
     koreanClock:
       clock,
-
     expectedMarketDate,
-
     status,
-
     usableForShadowComparison,
 
     dates: {
       kospiLatestDate,
       kosdaqLatestDate,
-
       stockLatestDate,
       oldestActiveStockLatestDate,
-
       latestCommonDate,
     },
 
     coverage: {
       activeStockCount:
         activeStockCodes.length,
-
       activeStockCurrentCount,
-
       stockCoverageComplete,
-
       missingActiveStocks,
     },
 
@@ -793,38 +950,53 @@ export async function getMarketDataFreshnessV77(
     },
 
     lag: {
-      businessWeekdayLag,
+      businessWeekdayLag:
+        tradingDayLag,
+      tradingDayLag,
     },
 
     reasons,
-
     evidenceFingerprint,
+
+    calendar: {
+      exchangeCode:
+        "KRX",
+      mode:
+        "WEEKDAY_PLUS_VERIFIED_KRX_OVERRIDES",
+      calendarLookbackDays:
+        CALENDAR_LOOKBACK_DAYS,
+      verifiedOverrideCount:
+        appliedOverrides.length,
+      appliedOverrides,
+    },
 
     heuristic: {
       timeZone:
         "Asia/Seoul",
-
       marketDataReadyAfter:
         "16:30",
-
       weekendsHandled:
         true,
-
       exchangeHolidayCalendarIntegrated:
-        false,
-
+        true,
+      calendarCoverage:
+        "WEEKDAY_PLUS_VERIFIED_OVERRIDES",
       holidayPolicy:
-        "FAIL_CLOSED_AS_STALE_UNTIL_FRESH_DATA_ARRIVES",
+        "VERIFIED_OVERRIDE_OR_FAIL_CLOSED_AS_STALE",
+      unknownSpecialClosurePolicy:
+        "FAIL_CLOSED_AS_STALE",
     },
 
     safety: {
       changesProductionOrders:
         false,
-
       changesRiskValidation:
         false,
-
       canInvalidateShadowComparison:
+        true,
+      unverifiedCalendarRowsIgnored:
+        true,
+      unknownClosuresCanStillFailClosed:
         true,
     },
   };

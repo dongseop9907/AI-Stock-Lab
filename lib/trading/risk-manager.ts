@@ -40,6 +40,20 @@ export function validateBuyRisk(
 ): BuyRiskResult {
   const issues: RiskIssue[] = [];
 
+  const currentAggregateOpenRiskAmount =
+    Math.max(
+      0,
+      input.currentAggregateOpenRiskAmount ?? 0,
+    );
+
+  const openPositionsMissingValidStopCount =
+    Math.max(
+      0,
+      Math.floor(
+        input.openPositionsMissingValidStopCount ?? 0,
+      ),
+    );
+
   const basicInputIsValid =
     input.stockCode.trim().length > 0 &&
     isPositiveNumber(input.entryPrice) &&
@@ -90,6 +104,19 @@ export function validateBuyRisk(
     input.accountEquity *
     policy.maxSectorExposureRate;
 
+  const maxAggregateOpenRiskRate =
+    policy.maxAggregateOpenRiskRate ??
+    DEFAULT_RISK_POLICY.maxAggregateOpenRiskRate ??
+    0.02;
+
+  const maxAggregateOpenRiskAmount =
+    input.accountEquity *
+    maxAggregateOpenRiskRate;
+
+  const aggregateOpenRiskAfterOrder =
+    currentAggregateOpenRiskAmount +
+    totalRiskAmount;
+
   if (input.proposedStopPrice >= input.entryPrice) {
     issues.push({
       code: "STOP_NOT_BELOW_ENTRY",
@@ -122,6 +149,23 @@ export function validateBuyRisk(
     issues.push({
       code: "RISK_LIMIT_EXCEEDED",
       message: "이번 거래의 예상 손실액이 거래별 위험 한도를 초과합니다.",
+    });
+  }
+
+  if (openPositionsMissingValidStopCount > 0) {
+    issues.push({
+      code: "OPEN_POSITION_STOP_MISSING",
+      message: "유효한 손절가를 확인할 수 없는 보유 포지션이 있어 신규 위험 승인을 중단합니다.",
+    });
+  }
+
+  if (
+    aggregateOpenRiskAfterOrder >
+    maxAggregateOpenRiskAmount
+  ) {
+    issues.push({
+      code: "AGGREGATE_OPEN_RISK_LIMIT_EXCEEDED",
+      message: "열린 포지션과 신규 거래의 합산 손절 위험이 Aggregate Open Risk 한도를 초과합니다.",
     });
   }
 
@@ -224,13 +268,35 @@ export function validateBuyRisk(
       input.entryPrice,
     );
 
+  const remainingAggregateOpenRiskAmount =
+    Math.max(
+      0,
+      maxAggregateOpenRiskAmount -
+        currentAggregateOpenRiskAmount,
+    );
+
+  const aggregateOpenRiskQuantityLimit =
+    riskPerShare > 0
+      ? floorNonNegative(
+          remainingAggregateOpenRiskAmount /
+            riskPerShare,
+        )
+      : 0;
+
   let maxAllowedQuantity = Math.min(
     riskQuantityLimit,
     positionQuantityLimit,
     portfolioQuantityLimit,
     sectorQuantityLimit,
     cashQuantityLimit,
+    aggregateOpenRiskQuantityLimit,
   );
+
+  if (
+    openPositionsMissingValidStopCount > 0
+  ) {
+    maxAllowedQuantity = 0;
+  }
 
   if (
     input.isNewPosition &&

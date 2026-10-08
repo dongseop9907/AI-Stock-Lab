@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase";
 
+import { assertKillSwitchAllows } from "@/lib/trading/kill-switch-guard";
 export interface PaperExecutionResult {
   alreadyFilled: boolean;
   orderId: string;
@@ -25,6 +26,8 @@ function isUuid(value: string): boolean {
 export async function executePaperOrder(
   orderId: string,
 ): Promise<PaperExecutionResult> {
+  await assertKillSwitchAllows("PAPER_BUY_EXECUTE");
+
   if (!isUuid(orderId)) {
     throw new Error("INVALID_ORDER_ID");
   }

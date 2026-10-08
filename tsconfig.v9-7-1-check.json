@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "lib/market/opendart-source-*-v9-7-1.ts",
+    "app/api/research/data/v9/corporate-action-source/**/*.ts",
+    "tests/opendart-source-v9-7-1.test.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

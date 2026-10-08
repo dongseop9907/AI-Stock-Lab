@@ -7,6 +7,10 @@ import {
 } from "@/lib/market/sync-daily-bars";
 
 import {
+  refreshCorporateActionHistoryV9726,
+} from "@/lib/market/refresh-corporate-action-history-v9-7-26";
+
+import {
   syncIndexDailyBars,
 } from "@/lib/market/sync-index-daily-bars";
 
@@ -403,6 +407,32 @@ export async function runMarketEodSyncV78(
         chunkDays:
           lookbackCalendarDays,
       });
+
+    /*
+     * V9.7.27.1 corporate-action history refresh.
+     *
+     * Normal EOD bars are collected first. Then supported
+     * production corporate actions are checked for stale
+     * pre-action adjusted history. The refresh module itself
+     * forces KIS mode 0 and is idempotent through the
+     * updated_at/effective-date freshness gate.
+     *
+     * Failure is intentionally propagated so an EOD run
+     * cannot silently report success with stale history.
+     */
+    await refreshCorporateActionHistoryV9726({
+      dryRun:
+        false,
+      includeValidationEvents:
+        false,
+      throughDate:
+        expectedMarketDate,
+      detectionLookbackCalendarDays:
+        Math.max(
+          45,
+          lookbackCalendarDays,
+        ),
+    });
 
     const freshnessAfter =
       await getMarketDataFreshnessV77({

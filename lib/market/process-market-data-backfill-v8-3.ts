@@ -543,6 +543,30 @@ export async function processMarketDataBackfillV83(
           task.end_date,
         );
 
+      /*
+
+       * V9.7.25.1 storage contract:
+
+       * market_daily_bars accepts adjusted-price backfills only.
+
+       */
+
+      if (
+
+        run.adjusted_price !==
+
+        true
+
+      ) {
+
+        throw new Error(
+
+          "BACKFILL_RUN_REQUIRES_ADJUSTED_PRICE",
+
+        );
+
+      }
+
       const response =
         await getDomesticDailyStockPrices(
           {

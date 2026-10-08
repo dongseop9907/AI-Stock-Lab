@@ -430,9 +430,10 @@ export async function syncDartDisclosures(
   input: SyncDartDisclosuresInput = {},
 ): Promise<SyncDartDisclosuresResult> {
   const apiKey =
-    process.env
-      .DART_API_KEY
-      ?.trim();
+  (
+    process.env.OPENDART_API_KEY ??
+    process.env.DART_API_KEY
+  )?.trim();
 
   if (!apiKey) {
     throw new Error(

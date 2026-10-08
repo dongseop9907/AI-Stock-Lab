@@ -20,6 +20,9 @@ export interface RiskPolicy {
   /** 최초 손절가의 최대 거리 */
   maxStopDistanceRate: number;
 
+  /** 열린 모든 포지션의 stop 기준 총 잠재 손실 한도 */
+  maxAggregateOpenRiskRate?: number;
+
   /** 하루 최대 허용 손실 */
   maxDailyLossRate: number;
 }
@@ -36,5 +39,6 @@ export const DEFAULT_RISK_POLICY: Readonly<RiskPolicy> = Object.freeze({
   maxOpenPositions: 8,
   minStopDistanceRate: 0.01,
   maxStopDistanceRate: 0.05,
+  maxAggregateOpenRiskRate: 0.02,
   maxDailyLossRate: 0.02,
 });

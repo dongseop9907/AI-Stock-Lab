@@ -1,0 +1,1278 @@
+
+============================================================
+FILE: .\lib\backtest\run-backtest.ts
+============================================================
+1: import { createSupabaseServerClient } from "@/lib/supabase";
+3: interface RunBacktestInput {
+14: feeRate?: number;
+16: slippageRate?: number;
+22: interface SnapshotRecord {
+56: interface SignalResult {
+58: signalAt: string;
+68: interface PendingEntry {
+69: signal: SignalResult;
+72: interface OpenPosition {
+75: signalAt: string;
+76: signalScore: number;
+87: buyFee: number;
+88: entryCost: number;
+91: interface BacktestTrade {
+94: signal_at: string;
+100: signal_score: number;
+117: buy_fee: number;
+118: sell_fee: number;
+121: slippage_cost: number;
+131: interface EquityPoint {
+139: drawdown: number;
+151: const DAY_MS =
+154: function clamp(
+168: function round(
+182: function toNumber(
+205: function normalizeStockCodes(
+223: function getSource(
+244: function isTestSnapshot(
+253: source.includes("TEST") ||
+263: function calculateSignal(
+267: ): SignalResult | null {
+268: const latest =
+273: if (!latest) {
+277: const latestClose =
+279: latest.close_price,
+283: latestClose === null ||
+284: latestClose <= 0
+289: const latestOpen =
+291: latest.open_price,
+294: const latestHigh =
+296: latest.high_price,
+299: const latestLow =
+301: latest.low_price,
+304: const latestVolume =
+306: latest.volume,
+318: latestOpen ??
+319: latestClose;
+324: latestClose -
+331: latestOpen !== null &&
+332: latestOpen > 0
+334: latestClose -
+335: latestOpen
+337: latestOpen
+341: latestHigh !== null &&
+342: latestLow !== null &&
+343: latestHigh >
+344: latestLow
+347: latestClose -
+348: latestLow
+351: latestHigh -
+352: latestLow
+387: : latestVolume;
+391: ? latestVolume /
+443: latest.stock_code,
+445: signalAt:
+446: latest.observed_at,
+452: latestClose,
+456: latestClose *
+472: async function loadSnapshots(
+580: !isTestSnapshot(
+588: function calculateMaxDrawdown(
+601: point.drawdown,
+608: function getKoreanDate(
+643: function calculateSharpe(
+750: function maxConsecutiveLosses(
+751: trades: BacktestTrade[],
+778: export async function runBacktest(
+779: input: RunBacktestInput = {},
+813: "INVALID_BACKTEST_DATE",
+822: "BACKTEST_END_TIME_CANNOT_BE_FUTURE",
+831: "INVALID_BACKTEST_DATE_RANGE",
+856: const feeRate =
+858: input.feeRate ??
+872: const slippageRate =
+874: input.slippageRate ??
+916: "BACKTEST_SNAPSHOTS_NOT_FOUND",
+926: "backtest_runs",
+929: strategy_name:
+932: strategy_version:
+953: fee_rate:
+954: feeRate,
+959: slippage_rate:
+960: slippageRate,
+970: "SIGNAL_AT_T_EXECUTE_AT_NEXT_SNAPSHOT",
+1042: const latestPrices =
+1061: BacktestTrade[] = [];
+1085: slippageRate
+1092: const sellFee =
+1094: feeRate;
+1102: sellFee -
+1117: position.entryCost;
+1120: position.entryCost > 0
+1122: position.entryCost
+1125: const entrySlippage =
+1132: const exitSlippage =
+1158: signal_at:
+1159: position.signalAt,
+1170: signal_score:
+1171: position.signalScore,
+1218: buy_fee:
+1220: position.buyFee,
+1224: sell_fee:
+1226: sellFee,
+1236: slippage_cost:
+1238: entrySlippage +
+1239: exitSlippage,
+1261: strategy:
+1295: latestPrices.set(
+1402: slippageRate
+1414: latestPrices.get(
+1439: feeRate
+1450: const grossCost =
+1454: const buyFee =
+1455: grossCost *
+1456: feeRate;
+1458: const entryCost =
+1459: grossCost +
+1460: buyFee;
+1463: entryCost >
+1470: entryCost;
+1482: signalAt:
+1483: pending.signal.signalAt,
+1485: signalScore:
+1486: pending.signal.score,
+1499: pending.signal.stopPrice,
+1501: buyFee,
+1503: entryCost,
+1555: const signal =
+1556: calculateSignal(
+1562: if (!signal) {
+1569: signal,
+1589: latestPrices.get(
+1629: const drawdown =
+1666: drawdown:
+1668: drawdown,
+1719: "END_OF_BACKTEST",
+1761: last.drawdown =
+1809: const winRate =
+1829: const profitFactor =
+1847: const maxDrawdown =
+1848: calculateMaxDrawdown(
+1852: const sharpeRatio =
+1853: calculateSharpe(
+1882: "backtest_trades",
+1916: "backtest_equity_curve",
+1942: winRate:
+1943: winRate === null
+1946: winRate,
+1954: maxDrawdown:
+1956: maxDrawdown,
+1959: profitFactor:
+1960: profitFactor ===
+1964: profitFactor,
+1967: sharpeRatio,
+1973: deflatedSharpeRatio:
+1992: "backtest_runs",
+2014: winRate,
+2035: profitFactor,
+2037: max_drawdown:
+2038: maxDrawdown,
+2040: sharpe_ratio:
+2041: sharpeRatio,
+2043: deflated_sharpe_ratio:
+2102: "backtest_runs",
+
+============================================================
+FILE: .\lib\backtest\run-daily-backtest.ts
+============================================================
+1: import { createSupabaseServerClient } from "@/lib/supabase";
+3: interface RunDailyBacktestInput {
+13: feeRate?: number;
+15: slippageRate?: number;
+23: interface DailyBarRecord {
+35: interface DailySignal {
+37: signalDate: string;
+49: interface PendingEntry {
+50: signal: DailySignal;
+53: interface PendingExit {
+57: interface OpenPosition {
+60: signalDate: string;
+61: signalScore: number;
+72: buyFee: number;
+73: entryCost: number;
+78: interface BacktestTradeInsert {
+81: signal_at: string;
+87: signal_score: number;
+104: buy_fee: number;
+105: sell_fee: number;
+108: slippage_cost: number;
+118: interface EquityPointInsert {
+126: drawdown: number;
+139: const ONE_DAY_MINUTES =
+142: function clamp(
+156: function round(
+170: function toNumber(
+193: function normalizeStockCodes(
+213: function normalizeDate(
+220: /^\d{8}$/.test(
+232: /^\d{4}-\d{2}-\d{2}$/.test(
+244: function dateToObservedAt(
+260: function calculateSignal(
+264: ): DailySignal | null {
+265: const latest =
+270: if (!latest) {
+274: const latestClose =
+276: latest.close_price,
+279: const latestOpen =
+281: latest.open_price,
+284: const latestHigh =
+286: latest.high_price,
+289: const latestLow =
+291: latest.low_price,
+294: const latestVolume =
+296: latest.volume,
+300: latestClose === null ||
+301: latestOpen === null ||
+302: latestHigh === null ||
+303: latestLow === null ||
+304: latestClose <= 0 ||
+305: latestOpen <= 0 ||
+306: latestHigh <= 0 ||
+307: latestLow <= 0
+321: latestOpen;
+326: latestClose -
+334: latestClose -
+335: latestOpen
+337: latestOpen;
+340: latestHigh >
+341: latestLow
+344: latestClose -
+345: latestLow
+348: latestHigh -
+349: latestLow
+384: : latestVolume;
+388: ? latestVolume /
+451: latest.stock_code,
+453: signalDate:
+454: latest.trading_date,
+483: latestClose *
+492: async function loadDailyBars(
+597: function calculateBenchmarkReturn(
+691: function calculateSharpe(
+785: function calculateMaxConsecutiveLosses(
+787: BacktestTradeInsert[],
+819: export async function runDailyBacktest(
+821: RunDailyBacktestInput = {},
+891: const feeRate =
+894: input.feeRate ??
+911: const slippageRate =
+914: input.slippageRate ??
+975: "BACKTEST_DAILY_BARS_NOT_FOUND",
+990: "backtest_runs",
+993: strategy_name:
+996: strategy_version:
+1021: fee_rate:
+1022: feeRate,
+1027: slippage_rate:
+1028: slippageRate,
+1042: signalRule:
+1055: "EQUAL_WEIGHT_BUY_AND_HOLD_OF_TESTED_STOCKS",
+1120: const latestClose =
+1145: BacktestTradeInsert[] =
+1178: slippageRate
+1185: const sellFee =
+1187: feeRate;
+1195: sellFee -
+1210: position.entryCost;
+1213: position.entryCost >
+1216: position.entryCost
+1219: const entrySlippage =
+1226: const exitSlippage =
+1241: signal_at:
+1243: position.signalDate,
+1259: signal_score:
+1260: position.signalScore,
+1307: buy_fee:
+1309: position.buyFee,
+1313: sell_fee:
+1315: sellFee,
+1325: slippage_cost:
+1327: entrySlippage +
+1328: exitSlippage,
+1348: strategy:
+1476: slippageRate
+1488: latestClose.get(
+1517: feeRate
+1528: const grossCost =
+1532: const buyFee =
+1533: grossCost *
+1534: feeRate;
+1536: const entryCost =
+1537: grossCost +
+1538: buyFee;
+1541: entryCost >
+1563: entryCost;
+1575: signalDate:
+1576: pending.signal.signalDate,
+1578: signalScore:
+1579: pending.signal.score,
+1593: buyFee,
+1594: entryCost,
+1688: latestClose.set(
+1769: const signal =
+1770: calculateSignal(
+1776: if (!signal) {
+1783: signal,
+1805: latestClose.get(
+1848: const drawdown =
+1887: drawdown:
+1889: drawdown,
+1940: latestClose.get(
+1958: "END_OF_BACKTEST",
+2004: last.drawdown =
+2052: const winRate =
+2072: const profitFactor =
+2094: const maxDrawdown =
+2102: point.drawdown,
+2107: const sharpeRatio =
+2108: calculateSharpe(
+2135: "backtest_trades",
+2164: "backtest_equity_curve",
+2203: winRate:
+2204: winRate === null
+2207: winRate,
+2249: profitFactor:
+2250: profitFactor ===
+2254: profitFactor,
+2257: maxDrawdown:
+2259: maxDrawdown,
+2262: sharpeRatio,
+2264: deflatedSharpeRatio:
+2282: "backtest_runs",
+2304: winRate,
+2331: profitFactor,
+2333: max_drawdown:
+2334: maxDrawdown,
+2336: sharpe_ratio:
+2337: sharpeRatio,
+2339: deflated_sharpe_ratio:
+2370: strategy:
+2395: * 전체 거래는 backtest_trades에 저장된다.
+2410: "backtest_runs",
+
+============================================================
+FILE: .\lib\backtest\run-daily-regime-backtest.ts
+============================================================
+1: import { createSupabaseServerClient } from "@/lib/supabase";
+3: interface RunDailyBacktestInput {
+13: feeRate?: number;
+15: slippageRate?: number;
+22: regimeFilter?: "NONE" | "BLOCK_BEAR";
+25: interface DailyBarRecord {
+37: interface DailySignal {
+39: signalDate: string;
+50: marketRegime?: MarketRegime;
+55: type MarketRegime =
+61: interface MarketRegimeSnapshot {
+62: regime: MarketRegime;
+67: interface PendingEntry {
+68: signal: DailySignal;
+71: interface PendingExit {
+75: interface OpenPosition {
+78: signalDate: string;
+79: signalScore: number;
+90: buyFee: number;
+91: entryCost: number;
+95: marketRegime?: MarketRegime;
+100: interface BacktestTradeInsert {
+103: signal_at: string;
+109: signal_score: number;
+126: buy_fee: number;
+127: sell_fee: number;
+130: slippage_cost: number;
+140: interface EquityPointInsert {
+148: drawdown: number;
+161: const ONE_DAY_MINUTES =
+164: function clamp(
+178: function round(
+192: function toNumber(
+215: function normalizeStockCodes(
+235: function normalizeDate(
+242: /^\d{8}$/.test(
+254: /^\d{4}-\d{2}-\d{2}$/.test(
+266: function subtractCalendarDays(
+288: function dateToObservedAt(
+304: function calculateSignal(
+308: ): DailySignal | null {
+309: const latest =
+314: if (!latest) {
+318: const latestClose =
+320: latest.close_price,
+323: const latestOpen =
+325: latest.open_price,
+328: const latestHigh =
+330: latest.high_price,
+333: const latestLow =
+335: latest.low_price,
+338: const latestVolume =
+340: latest.volume,
+344: latestClose === null ||
+345: latestOpen === null ||
+346: latestHigh === null ||
+347: latestLow === null ||
+348: latestClose <= 0 ||
+349: latestOpen <= 0 ||
+350: latestHigh <= 0 ||
+351: latestLow <= 0
+365: latestOpen;
+370: latestClose -
+378: latestClose -
+379: latestOpen
+381: latestOpen;
+384: latestHigh >
+385: latestLow
+388: latestClose -
+389: latestLow
+392: latestHigh -
+393: latestLow
+428: : latestVolume;
+432: ? latestVolume /
+495: latest.stock_code,
+497: signalDate:
+498: latest.trading_date,
+527: latestClose *
+536: async function loadDailyBars(
+641: function calculateMarketRegime(
+646: ): MarketRegimeSnapshot {
+657: const latest =
+662: const latestClose =
+664: latest?.close_price,
+668: latestClose === null ||
+669: latestClose <= 0
+707: latestClose >
+732: latestClose -
+764: regime:
+796: regime:
+816: regime:
+832: regime:
+847: function calculateBenchmarkReturn(
+941: function calculateSharpe(
+1035: function calculateMaxConsecutiveLosses(
+1037: BacktestTradeInsert[],
+1069: export async function runDailyRegimeBacktest(
+1071: RunDailyBacktestInput = {},
+1141: const feeRate =
+1144: input.feeRate ??
+1161: const slippageRate =
+1164: input.slippageRate ??
+1214: const regimeFilter =
+1215: input.regimeFilter ===
+1260: "BACKTEST_DAILY_BARS_NOT_FOUND",
+1275: "backtest_runs",
+1278: strategy_name:
+1279: regimeFilter ===
+1281: ? "DAILY_REGIME_FILTER"
+1282: : "DAILY_REGIME_CONTROL",
+1284: strategy_version:
+1309: fee_rate:
+1310: feeRate,
+1315: slippage_rate:
+1316: slippageRate,
+1335: regimeFilter,
+1337: regimeDefinition: {
+1350: blockedRegimes:
+1351: regimeFilter ===
+1357: signalRule:
+1370: "EQUAL_WEIGHT_BUY_AND_HOLD_OF_TESTED_STOCKS",
+1454: const latestClose =
+1479: BacktestTradeInsert[] =
+1495: const regimeDayCounts: Record<
+1496: MarketRegime,
+1525: slippageRate
+1532: const sellFee =
+1534: feeRate;
+1542: sellFee -
+1557: position.entryCost;
+1560: position.entryCost >
+1563: position.entryCost
+1566: const entrySlippage =
+1573: const exitSlippage =
+1588: signal_at:
+1590: position.signalDate,
+1606: signal_score:
+1607: position.signalScore,
+1654: buy_fee:
+1656: position.buyFee,
+1660: sell_fee:
+1662: sellFee,
+1672: slippage_cost:
+1674: entrySlippage +
+1675: exitSlippage,
+1695: strategy:
+1696: regimeFilter ===
+1698: ? "DAILY_REGIME_FILTER_V5"
+1699: : "DAILY_REGIME_CONTROL_V5",
+1704: marketRegimeAtSignal:
+1705: position.marketRegime ??
+1708: marketBreadth20AtSignal:
+1712: marketReturn20AtSignal:
+1838: slippageRate
+1850: latestClose.get(
+1879: feeRate
+1890: const grossCost =
+1894: const buyFee =
+1895: grossCost *
+1896: feeRate;
+1898: const entryCost =
+1899: grossCost +
+1900: buyFee;
+1903: entryCost >
+1925: entryCost;
+1937: signalDate:
+1938: pending.signal.signalDate,
+1940: signalScore:
+1941: pending.signal.score,
+1955: buyFee,
+1956: entryCost,
+1961: marketRegime:
+1962: pending.signal
+1963: .marketRegime,
+1966: pending.signal
+1970: pending.signal
+2062: latestClose.set(
+2121: * signalDate = 오늘
+2127: const marketRegime =
+2128: calculateMarketRegime(
+2132: regimeDayCounts[
+2133: marketRegime.regime
+2166: const signal =
+2167: calculateSignal(
+2173: if (!signal) {
+2178: regimeFilter ===
+2180: marketRegime.regime ===
+2192: signal: {
+2193: ...signal,
+2195: marketRegime:
+2196: marketRegime.regime,
+2199: marketRegime.breadth20,
+2202: marketRegime.avgReturn20,
+2225: latestClose.get(
+2268: const drawdown =
+2307: drawdown:
+2309: drawdown,
+2360: latestClose.get(
+2378: "END_OF_BACKTEST",
+2424: last.drawdown =
+2472: const winRate =
+2492: const profitFactor =
+2514: const maxDrawdown =
+2522: point.drawdown,
+2527: const sharpeRatio =
+2528: calculateSharpe(
+2555: "backtest_trades",
+2584: "backtest_equity_curve",
+2623: winRate:
+2624: winRate === null
+2627: winRate,
+2669: profitFactor:
+2670: profitFactor ===
+2674: profitFactor,
+2677: maxDrawdown:
+2679: maxDrawdown,
+2682: sharpeRatio,
+2684: deflatedSharpeRatio:
+2696: regimeFilter,
+2698: regimeDayCounts,
+2708: "backtest_runs",
+2730: winRate,
+2757: profitFactor,
+2759: max_drawdown:
+2760: maxDrawdown,
+2762: sharpe_ratio:
+2763: sharpeRatio,
+2765: deflated_sharpe_ratio:
+2796: strategy:
+2797: regimeFilter ===
+2799: ? "DAILY_REGIME_FILTER"
+2800: : "DAILY_REGIME_CONTROL",
+2824: * 전체 거래는 backtest_trades에 저장된다.
+2839: "backtest_runs",
+
+============================================================
+FILE: .\lib\backtest\run-walk-forward.ts
+============================================================
+1: import { runDailyBacktest } from "@/lib/backtest/run-daily-backtest";
+2: import { createSupabaseServerClient } from "@/lib/supabase";
+4: interface RunWalkForwardInput {
+13: feeRate?: number;
+15: slippageRate?: number;
+25: interface CandidateResult {
+28: backtestRunId: string;
+34: winRate: number | null;
+41: profitFactor: number | null;
+43: maxDrawdown: number;
+45: sharpeRatio: number | null;
+48: interface FoldSummary {
+51: validationStart: string;
+52: validationEnd: string;
+54: testStart: string;
+55: testEnd: string;
+59: validationScore: number;
+61: validationMetrics: CandidateResult;
+63: testMetrics: {
+64: backtestRunId: string;
+68: winRate: number | null;
+75: profitFactor: number | null;
+77: maxDrawdown: number;
+79: sharpeRatio: number | null;
+85: function clamp(
+99: function round(
+113: function toNullableNumber(
+132: function toNumber(
+142: function normalizeStockCodes(
+160: function normalizeThresholds(
+199: function endOfYear(
+205: function startOfYear(
+212: * validation에서만 파라미터를 고른다.
+216: * drawdown을 강하게 패널티한다.
+218: * test 결과는 이 점수 계산에 절대 사용하지 않는다.
+220: function calculateValidationScore(
+226: profitFactor: number | null;
+228: maxDrawdown: number;
+230: sharpeRatio: number | null;
+233: const sharpe =
+234: result.sharpeRatio ??
+237: const profitFactor =
+238: result.profitFactor ??
+241: const profitFactorTerm =
+244: profitFactor,
+251: result.maxDrawdown *
+253: sharpe *
+255: profitFactorTerm *
+275: async function getDatasetRange(
+297: let latestQuery =
+322: latestQuery =
+323: latestQuery.in(
+331: latestResult,
+335: latestQuery.maybeSingle(),
+347: latestResult.error
+350: `일봉 종료일 조회 실패: ${latestResult.error.message}`,
+358: const latest =
+359: latestResult.data
+364: !latest
+375: latest:
+376: String(latest),
+380: function buildCandidateResult(
+385: typeof runDailyBacktest
+399: const maxDrawdown =
+401: result.maxDrawdown,
+404: const profitFactor =
+406: result.profitFactor,
+409: const sharpeRatio =
+411: result.sharpeRatio,
+417: backtestRunId:
+423: calculateValidationScore({
+428: profitFactor,
+430: maxDrawdown,
+432: sharpeRatio,
+437: winRate:
+439: result.winRate,
+454: profitFactor,
+456: maxDrawdown,
+458: sharpeRatio,
+462: export async function runWalkForwardValidation(
+507: const feeRate =
+510: input.feeRate,
+527: const slippageRate =
+530: input.slippageRate,
+588: const latestYear =
+590: range.latest.slice(
+612: latestYear
+628: strategy_name:
+631: strategy_version:
+651: feeRate,
+653: slippageRate,
+661: "VALIDATION_ONLY",
+663: testUsedForSelection:
+666: validationScore:
+667: "netReturn - 1.25*maxDrawdown + 0.05*sharpe + 0.03*ln(profitFactor), tradeCount<20 penalty",
+700: let validationYear =
+702: validationYear <
+703: latestYear;
+704: validationYear += 1
+706: const testYear =
+707: validationYear + 1;
+709: const validationStart =
+711: validationYear,
+714: const validationEnd =
+716: validationYear,
+719: const testStart =
+721: testYear,
+724: const testEnd =
+725: testYear ===
+726: latestYear
+727: ? range.latest
+729: testYear,
+733: testStart >
+734: range.latest
+744: * VALIDATION
+757: const validationResult =
+758: await runDailyBacktest({
+760: validationStart,
+763: validationEnd,
+774: feeRate,
+776: slippageRate,
+787: validationResult,
+818: left.maxDrawdown -
+819: right.maxDrawdown
+835: * TEST / OOS
+839: * test 결과는 threshold 선택에 사용하지 않는다.
+842: const testResult =
+843: await runDailyBacktest({
+845: testStart,
+848: testEnd,
+859: feeRate,
+861: slippageRate,
+869: const testMetrics = {
+870: backtestRunId:
+872: testResult.runId,
+877: testResult.tradeCount,
+880: winRate:
+882: testResult.winRate,
+887: testResult.netReturn,
+892: testResult.benchmarkReturn,
+897: testResult.excessReturn,
+900: profitFactor:
+902: testResult.profitFactor,
+905: maxDrawdown:
+907: testResult.maxDrawdown,
+910: sharpeRatio:
+912: testResult.sharpeRatio,
+919: validationStart,
+920: validationEnd,
+922: testStart,
+923: testEnd,
+928: validationScore:
+931: validationMetrics:
+934: testMetrics,
+957: validation_start:
+958: validationStart,
+960: validation_end:
+961: validationEnd,
+963: test_start:
+964: testStart,
+966: test_end:
+967: testEnd,
+972: validation_score:
+975: validation_backtest_run_id:
+976: selected.backtestRunId,
+978: test_backtest_run_id:
+979: testMetrics.backtestRunId,
+981: validation_metrics:
+984: test_metrics:
+985: testMetrics,
+1012: fold.testMetrics.netReturn,
+1038: const oosWorstDrawdown =
+1042: fold.testMetrics.maxDrawdown,
+1046: const sharpeValues =
+1050: fold.testMetrics.sharpeRatio,
+1059: const oosAverageSharpe =
+1060: sharpeValues.length >
+1062: ? sharpeValues.reduce(
+1067: sharpeValues.length
+1077: fold.testMetrics.tradeCount,
+1087: const winRate =
+1088: fold.testMetrics
+1089: .winRate;
+1092: winRate ===
+1100: winRate *
+1101: fold.testMetrics
+1108: const oosWeightedWinRate =
+1121: validation:
+1122: `${fold.validationStart}~${fold.validationEnd}`,
+1124: test:
+1125: `${fold.testStart}~${fold.testEnd}`,
+1160: oos_worst_drawdown:
+1162: oosWorstDrawdown,
+1165: oos_average_sharpe:
+1166: oosAverageSharpe ===
+1170: oosAverageSharpe,
+1177: oosWeightedWinRate ===
+1181: oosWeightedWinRate,
+1206: strategy:
+1234: worstDrawdown:
+1236: oosWorstDrawdown,
+1239: averageSharpe:
+1240: oosAverageSharpe ===
+1244: oosAverageSharpe,
+1250: weightedWinRate:
+1251: oosWeightedWinRate ===
+1255: oosWeightedWinRate,
+
+============================================================
+FILE: .\lib\backtest\run-robust-walk-forward.ts
+============================================================
+1: import { runDailyBacktest } from "@/lib/backtest/run-daily-backtest";
+2: import { createSupabaseServerClient } from "@/lib/supabase";
+4: interface RunRobustWalkForwardInput {
+13: feeRate?: number;
+15: slippageRate?: number;
+23: validationYears?: number;
+26: interface YearMetric {
+29: backtestRunId: string;
+32: winRate: number | null;
+39: profitFactor: number | null;
+41: maxDrawdown: number;
+43: sharpeRatio: number | null;
+48: interface RobustCandidate {
+60: function clamp(
+74: function round(
+88: function toNullableNumber(
+107: function toNumber(
+117: function normalizeStockCodes(
+135: function normalizeThresholds(
+174: function startOfYear(
+180: function endOfYear(
+186: function calculateYearScore(
+192: profitFactor: number | null;
+194: maxDrawdown: number;
+196: sharpeRatio: number | null;
+199: const sharpe =
+200: input.sharpeRatio ??
+203: const profitFactor =
+204: input.profitFactor ??
+207: const profitFactorTerm =
+210: profitFactor,
+217: input.maxDrawdown *
+219: sharpe *
+221: profitFactorTerm *
+237: function calculateRobustScore(
+322: async function getDatasetRange(
+344: let latestQuery =
+369: latestQuery =
+370: latestQuery.in(
+378: latestResult,
+382: latestQuery.maybeSingle(),
+394: latestResult.error
+397: `일봉 종료일 조회 실패: ${latestResult.error.message}`,
+405: const latest =
+406: latestResult.data
+411: !latest
+422: latest:
+423: String(latest),
+427: export async function runRobustWalkForwardValidation(
+472: const feeRate =
+475: input.feeRate,
+492: const slippageRate =
+495: input.slippageRate,
+540: const validationYears =
+547: input.validationYears,
+567: const latestYear =
+569: range.latest.slice(
+589: const firstTestYear =
+591: validationYears;
+594: firstTestYear >
+595: latestYear
+611: strategy_name:
+614: strategy_version:
+628: validationYears,
+636: feeRate,
+638: slippageRate,
+646: "ROLLING_MULTI_YEAR_ROBUST_VALIDATION",
+651: testUsedForSelection:
+690: validationStart: string;
+691: validationEnd: string;
+693: testStart: string;
+694: testEnd: string;
+700: validationMetrics:
+703: testMetrics: {
+704: backtestRunId: string;
+707: winRate: number | null;
+714: profitFactor: number | null;
+716: maxDrawdown: number;
+718: sharpeRatio: number | null;
+731: let testYear =
+732: firstTestYear;
+733: testYear <=
+734: latestYear;
+735: testYear += 1
+737: const validationStartYear =
+738: testYear -
+739: validationYears;
+741: const validationEndYear =
+742: testYear - 1;
+744: const validationStart =
+746: validationStartYear,
+749: const validationEnd =
+751: validationEndYear,
+754: const testStart =
+756: testYear,
+759: const testEnd =
+760: testYear ===
+761: latestYear
+762: ? range.latest
+764: testYear,
+768: testStart >
+769: range.latest
+790: let validationYear =
+791: validationStartYear;
+792: validationYear <=
+793: validationEndYear;
+794: validationYear += 1
+797: await runDailyBacktest({
+800: validationYear,
+805: validationYear,
+817: feeRate,
+819: slippageRate,
+829: validationYear,
+831: backtestRunId:
+841: winRate:
+843: result.winRate,
+861: profitFactor:
+863: result.profitFactor,
+866: maxDrawdown:
+868: result.maxDrawdown,
+871: sharpeRatio:
+873: result.sharpeRatio,
+955: const testResult =
+956: await runDailyBacktest({
+958: testStart,
+961: testEnd,
+972: feeRate,
+974: slippageRate,
+982: const testMetrics = {
+983: backtestRunId:
+985: testResult.runId,
+990: testResult.tradeCount,
+993: winRate:
+995: testResult.winRate,
+1000: testResult.netReturn,
+1005: testResult.benchmarkReturn,
+1010: testResult.excessReturn,
+1013: profitFactor:
+1015: testResult.profitFactor,
+1018: maxDrawdown:
+1020: testResult.maxDrawdown,
+1023: sharpeRatio:
+1025: testResult.sharpeRatio,
+1032: validationStart,
+1033: validationEnd,
+1035: testStart,
+1036: testEnd,
+1044: validationMetrics:
+1047: testMetrics,
+1066: validation_start:
+1067: validationStart,
+1069: validation_end:
+1070: validationEnd,
+1072: test_start:
+1073: testStart,
+1075: test_end:
+1076: testEnd,
+1081: validation_score:
+1084: validation_backtest_run_id:
+1087: test_backtest_run_id:
+1088: testMetrics.backtestRunId,
+1090: validation_metrics:
+1093: test_metrics:
+1094: testMetrics,
+1121: fold.testMetrics.netReturn,
+1147: const oosWorstDrawdown =
+1151: fold.testMetrics.maxDrawdown,
+1155: const sharpeValues =
+1159: fold.testMetrics.sharpeRatio,
+1168: const oosAverageSharpe =
+1169: sharpeValues.length >
+1171: ? sharpeValues.reduce(
+1176: sharpeValues.length
+1186: fold.testMetrics.tradeCount,
+1196: const winRate =
+1197: fold.testMetrics.winRate;
+1200: winRate ===
+1208: winRate *
+1209: fold.testMetrics.tradeCount
+1215: const oosWeightedWinRate =
+1228: validation:
+1229: `${fold.validationStart}~${fold.validationEnd}`,
+1231: test:
+1232: `${fold.testStart}~${fold.testEnd}`,
+1270: oos_worst_drawdown:
+1272: oosWorstDrawdown,
+1275: oos_average_sharpe:
+1276: oosAverageSharpe ===
+1280: oosAverageSharpe,
+1287: oosWeightedWinRate ===
+1291: oosWeightedWinRate,
+1316: strategy:
+1328: validationYears,
+1346: worstDrawdown:
+1348: oosWorstDrawdown,
+1351: averageSharpe:
+1352: oosAverageSharpe ===
+1356: oosAverageSharpe,
+1362: weightedWinRate:
+1363: oosWeightedWinRate ===
+1367: oosWeightedWinRate,
+
+============================================================
+FILE: .\lib\research\run-baseline-momentum-alpha-v9-0.ts
+============================================================
+1: import { createSupabaseServerClient } from "@/lib/supabase";
+3: type ScreenRow = {
+16: type FeatureRow = {
+20: latest_bar_date: string | null;
+21: latest_close: number | string | null;
+29: const num = (v: unknown): number | null => {
+35: const pct = (items: {key:string; value:number}[]) => {
+43: export async function runBaselineMomentumAlphaV90(input:{
+65: "Within the point-in-time tradable/liquid universe, stronger recent cross-sectional momentum plus non-collapsing volume may have positive forward relative expectancy. This is a baseline hypothesis, not a production claim.";
+67: const validationPlan = {
+68: historicalBacktestAllowedNow: false,
+73: "purged/embargoed validation",
+75: "fees/slippage",
+102: validation_plan:validationPlan,
+130: await supabase.from("alpha_research_experiments").update({
+143: validationPlan,
+145: safety:{productionApplied:false,ordersCreated:false,riskChanged:false,llmLiveSignalUsed:false}
+168: latestBarDate:r.latest_bar_date,
+169: latestClose:num(r.latest_close),
+176: r.latestBarDate === screen.market_date &&
+177: r.latestClose !== null &&
+184: stockCode:string; stockName:string; market:string|null; latestBarDate:string;
+185: latestClose:number; barCount:number; return5d:number; return20d:number;
+212: signal_date:screen.market_date,
+217: latestClose:r.latestClose,
+229: const {error} = await supabase.from("alpha_research_signals").insert(chunk);
+230: if (error) throw new Error(`v9.0 signal insert failed: ${error.message}`);
+233: await supabase.from("alpha_research_experiments").update({
+237: signal_count:ranked.length,
+248: validationPlan,
+255: topSignals:ranked.filter(x=>x.selected).slice(0,50),
+260: llmLiveSignalUsed:false,
+262: historicalBacktestClaimed:false
+267: await supabase.from("alpha_research_experiments").update({
+
+============================================================
+FILE: .\lib\research\evaluate-alpha-forward-outcomes-v9-1.ts
+============================================================
+1: import { createSupabaseServerClient } from "@/lib/supabase";
+3: type Experiment = { id:string; alpha_name:string; alpha_version:string; status:string; market_date:string|null; signal_count:number };
+4: type Outcome = {
+5: signal_id:string; experiment_id:string; stock_code:string; signal_date:string; signal_rank:number; selected:boolean;
+10: const n=(v:unknown):number|null=>{ if(v===null||v===undefined||v==="") return null; const x=Number(v); return Number.isFinite(x)?x:null; };
+11: const mean=(a:number[])=>a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
+12: const median=(a:number[])=>{ if(!a.length)return null; const s=[...a].sort((x,y)=>x-y),m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; };
+13: const summary=(rows:{rawReturn:number}[])=>({
+20: async function resolveExperiment(experimentId?:string){
+22: let q=supabase.from("alpha_research_experiments").select("id,alpha_name,alpha_version,status,market_date,signal_count");
+29: export async function evaluateAlphaForwardOutcomesV91(input:{experimentId?:string}={}){
+35: const {data:run,error:runError}=await supabase.from("alpha_forward_evaluation_runs").insert({
+36: experiment_id:experiment.id,status:"RUNNING",signal_count:experiment.signal_count,
+37: expected_outcome_count:experiment.signal_count*5,production_applied:false
+48: experiment_id:r.experiment_id,signal_id:r.signal_id,stock_code:r.stock_code,signal_date:r.signal_date,
+49: signal_rank:r.signal_rank,selected:r.selected,horizon_trading_days:r.horizon_trading_days,
+56: const {error:e}=await supabase.from("alpha_forward_outcomes").upsert(upserts.slice(i,i+500),{onConflict:"signal_id,horizon_trading_days"});
+60: const completed=rows.filter(r=>r.outcome_status==="COMPLETED"&&n(r.raw_return)!==null).map(r=>({rank:r.signal_rank,selected:r.selected,horizon:r.horizon_trading_days,rawReturn:Number(r.raw_return)}));
+80: experiment:{id:experiment.id,alphaName:experiment.alpha_name,alphaVersion:experiment.alpha_version,signalDate:experiment.market_date},
+81: counts:{signals:experiment.signal_count,expectedOutcomes:rows.length,completedOutcomes:completed.length,pendingOutcomes:pending,invalidOutcomes:invalid,completionRate},
+84: safety:{signalDateEntryUsed:false,nextTradingDayOpenEntry:true,futureBarsFabricated:false,productionApplied:false}
+86: const {error:finishError}=await supabase.from("alpha_forward_evaluation_runs").update({
+91: return {version:"ALPHA_FORWARD_EVALUATOR_V9_1",evaluationRunId,experimentId:experiment.id,status,summary:resultSummary,safety:{productionApplied:false,ordersCreated:false,riskChanged:false,usesOnlyBarsAfterSignalDate:true,entryAtNextTradingDayOpen:true}};
+94: await supabase.from("alpha_forward_evaluation_runs").update({status:"FAILED",error_message:message,finished_at:new Date().toISOString()}).eq("id",evaluationRunId);
+
+============================================================
+FILE: .\lib\research\build-purged-walk-forward-plan-v9-2.ts
+============================================================
+1: import {
+5: type CalendarRow = {
+10: type PitCheckRow = {
+30: type BuildInput = {
+43: trainingWindowDays?:
+46: purgeDays?:
+49: testWindowDays?:
+52: embargoDays?:
+62: function requireSqlDate(
+70: !/^\d{4}-\d{2}-\d{2}$/.test(
+82: async function getCalendarBoundary(
+137: async function loadTradingCalendar(
+238: async function checkPitCoverage(
+318: export async function buildPurgedWalkForwardPlanV92(
+343: const latestCalendarDate =
+363: : latestCalendarDate;
+374: const trainingWindowDays =
+379: .trainingWindowDays ??
+394: const purgeDays =
+399: .purgeDays ??
+404: const testWindowDays =
+409: .testWindowDays ??
+414: const embargoDays =
+419: .embargoDays ??
+442: trainingWindowDays +
+443: purgeDays +
+444: testWindowDays;
+452: "alpha_validation_plans",
+456: "PURGED_EMBARGOED_ROLLING_WALK_FORWARD",
+473: training_window_days:
+474: trainingWindowDays,
+476: purge_days:
+477: purgeDays,
+479: test_window_days:
+480: testWindowDays,
+482: embargo_days:
+483: embargoDays,
+501: testWindowDays +
+502: embargoDays,
+504: rollingTrainingWindow:
+510: futureTestDataUsedInTraining:
+515: purgeAtLeastLabelHorizon:
+516: purgeDays >=
+542: `v9.2 validation-plan create failed: ${
+561: "alpha_validation_plans",
+578: "PURGED_EMBARGO_VALIDATION_FOUNDATION_V9_2",
+600: trainStartDate:
+603: trainEndDate:
+606: purgeStartDate:
+609: purgeEndDate:
+612: testStartDate:
+615: testEndDate:
+618: embargoStartDate:
+621: embargoEndDate:
+632: let testStartIndex =
+633: trainingWindowDays +
+634: purgeDays;
+640: testStartIndex +
+641: testWindowDays -
+645: const trainEndIndex =
+646: testStartIndex -
+647: purgeDays -
+650: const trainStartIndex =
+651: trainEndIndex -
+652: trainingWindowDays +
+656: trainStartIndex <
+662: const testEndIndex =
+663: testStartIndex +
+664: testWindowDays -
+667: const purgeStartIndex =
+668: trainEndIndex +
+671: const purgeEndIndex =
+672: testStartIndex -
+675: const embargoStartIndex =
+676: testEndIndex +
+679: const embargoEndIndex =
+683: testEndIndex +
+684: embargoDays,
+691: testStartIndex
+699: trainStartDate:
+701: trainStartIndex
+704: trainEndDate:
+706: trainEndIndex
+709: purgeStartDate:
+710: purgeDays >
+713: purgeStartIndex
+717: purgeEndDate:
+718: purgeDays >
+721: purgeEndIndex
+725: testStartDate:
+727: testStartIndex
+730: testEndDate:
+732: testEndIndex
+735: embargoStartDate:
+736: embargoDays >
+738: embargoStartIndex <
+741: embargoStartIndex
+745: embargoEndDate:
+746: embargoDays >
+748: embargoStartIndex <
+751: embargoEndIndex
+761: testStartIndex +=
+762: testWindowDays +
+763: embargoDays;
+777: train_start_date:
+778: fold.trainStartDate,
+780: train_end_date:
+781: fold.trainEndDate,
+783: purge_start_date:
+784: fold.purgeStartDate,
+786: purge_end_date:
+787: fold.purgeEndDate,
+789: test_start_date:
+790: fold.testStartDate,
+792: test_end_date:
+793: fold.testEndDate,
+795: embargo_start_date:
+796: fold.embargoStartDate,
+798: embargo_end_date:
+799: fold.embargoEndDate,
+801: training_trading_days:
+802: trainingWindowDays,
+804: purge_trading_days:
+805: purgeDays,
+807: test_trading_days:
+808: testWindowDays,
+810: embargo_trading_days:
+811: embargoDays,
+830: purgeAtLeastLabelHorizon:
+831: purgeDays >=
+856: "alpha_validation_folds",
+900: "alpha_validation_plans",
+927: `v9.2 validation-plan finish failed: ${finishError.message}`,
+933: "PURGED_EMBARGO_VALIDATION_FOUNDATION_V9_2",
+953: trainingWindowDays,
+954: purgeDays,
+955: testWindowDays,
+956: embargoDays,
+960: testWindowDays +
+961: embargoDays,
+983: train: [
+984: fold.trainStartDate,
+985: fold.trainEndDate,
+988: purge: [
+989: fold.purgeStartDate,
+990: fold.purgeEndDate,
+993: test: [
+994: fold.testStartDate,
+995: fold.testEndDate,
+998: embargo: [
+999: fold.embargoStartDate,
+1000: fold.embargoEndDate,
+1011: ? "The time-series validation protocol and historical point-in-time universe coverage are both ready for research execution."
+1012: : "The validation folds are defined, but historical point-in-time universe coverage is not sufficient. Do not execute historical Alpha validation yet.",
+1015: purgeAtLeastLabelHorizon:
+1016: purgeDays >=
+1025: validationExecuted:
+1038: : "UNKNOWN_V9_2_VALIDATION_PLAN_ERROR";
+1042: "alpha_validation_plans",
+
+============================================================
+FILE: .\lib\research\evaluate-alpha-backtest-research-gate-v9-5.ts
+============================================================
+1: import {
+5: type GateInput = {
+16: function requireDate(
+23: !/^\d{4}-\d{2}-\d{2}$/.test(
+35: export async function evaluateAlphaBacktestResearchGateV95(
+72: validationPlanResult,
+76: corporateValidationResult,
+81: "alpha_validation_plans",
+137: "is_validation",
+179: "is_validation",
+219: "is_validation",
+242: "corporate_action_validation_runs",
+262: validationPlanResult.error,
+266: corporateValidationResult.error,
+291: const validationPlan =
+292: validationPlanResult.data;
+303: const corporateValidation =
+304: corporateValidationResult.data;
+307: purgedValidationPlanReady: {
+309: validationPlan
+314: validationPlan ??
+375: corporateValidation
+378: corporateValidation
+383: corporateValidation ??
+387: automaticBacktestDisabled: {
+403: .purgedValidationPlanReady
+407: "PURGED_VALIDATION_PLAN_NOT_READY",
+463: "alpha_backtest_research_gate_runs",
+467: "ALPHA_BACKTEST_RESEARCH_GATE_V9_5",
+484: automatic_backtest_started:
+509: "ALPHA_BACKTEST_RESEARCH_GATE_V9_5",
+530: ? "All required historical-research evidence is present. A later research backtest may be started explicitly."
+531: : "Historical Alpha backtesting remains blocked. Missing evidence must be resolved instead of bypassing the gate.",
+534: automaticBacktestStarted:

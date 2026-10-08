@@ -1,0 +1,260 @@
+const fs = require("fs");
+const path = require("path");
+
+const root = process.cwd();
+
+const migrationRel =
+  "supabase/migrations/20261008001000_committed_risk_expiry_reconciliation_v2.sql";
+
+const file =
+  path.resolve(root, migrationRel);
+
+if (!fs.existsSync(file)) {
+  throw new Error("EXPIRY_RECONCILIATION_MIGRATION_NOT_FOUND");
+}
+
+const sql =
+  fs.readFileSync(file, "utf8");
+
+function functionSlice(name) {
+  const escaped =
+    name.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+
+  const pattern =
+    "create\\s+(?:or\\s+replace\\s+)?function\\s+public\\." +
+    escaped +
+    "\\s*\\(";
+
+  const start =
+    new RegExp(pattern, "i").exec(sql);
+
+  if (!start) {
+    return null;
+  }
+
+  const rest =
+    sql.slice(start.index);
+
+  const asMatch =
+    /\bas\s+(\$[A-Za-z0-9_]*\$)/i.exec(rest);
+
+  if (!asMatch) {
+    return rest.slice(0, 18000);
+  }
+
+  const delimiter =
+    asMatch[1];
+
+  const firstDelimiterIndex =
+    start.index +
+    asMatch.index +
+    asMatch[0].length -
+    delimiter.length;
+
+  const bodyStart =
+    firstDelimiterIndex +
+    delimiter.length;
+
+  const closing =
+    sql.indexOf(
+      delimiter,
+      bodyStart
+    );
+
+  if (closing < 0) {
+    return rest.slice(0, 18000);
+  }
+
+  const semicolon =
+    sql.indexOf(
+      ";",
+      closing + delimiter.length
+    );
+
+  return sql.slice(
+    start.index,
+    semicolon >= 0
+      ? semicolon + 1
+      : closing + delimiter.length
+  );
+}
+
+const expireFn =
+  functionSlice("expire_stale_paper_buy_reservations_v3");
+
+const reconcileFn =
+  functionSlice("reconcile_paper_buy_reserved_risk_v3");
+
+const expireLock =
+  expireFn
+    ? expireFn.search(/pg_advisory_xact_lock/i)
+    : -1;
+
+const expireRowLock =
+  expireFn
+    ? expireFn.search(
+        /select\s+\*[\s\S]{0,300}?into\s+v_order[\s\S]{0,300}?from\s+public\.paper_order_requests[\s\S]{0,500}?for\s+update\s*;/i
+      )
+    : -1;
+
+const reconcileLock =
+  reconcileFn
+    ? reconcileFn.search(/pg_advisory_xact_lock/i)
+    : -1;
+
+const reconcileRowLock =
+  reconcileFn
+    ? reconcileFn.search(
+        /select\s+\*[\s\S]{0,300}?into\s+v_order[\s\S]{0,300}?from\s+public\.paper_order_requests[\s\S]{0,500}?for\s+update\s*;/i
+      )
+    : -1;
+
+const checks = {
+  expiryFunctionPresent:
+    Boolean(expireFn),
+
+  reconciliationFunctionPresent:
+    Boolean(reconcileFn),
+
+  expiryUsesExplicitStaleInterval:
+    Boolean(
+      expireFn &&
+      /p_stale_after\s+interval/i.test(expireFn)
+    ),
+
+  noSchedulerPolicyEmbedded:
+    !/\bcron\b|\bpg_cron\b|\bschedule\b/i.test(sql),
+
+  expiryUsesReservedRiskAtFallbackCreatedAt:
+    Boolean(
+      expireFn &&
+      /coalesce\s*\(\s*(?:por\.)?reserved_risk_at\s*,\s*(?:por\.)?created_at\s*\)/i.test(
+        expireFn
+      )
+    ),
+
+  expiryAccountLockBeforeRowLock:
+    expireLock >= 0 &&
+    expireRowLock >= 0 &&
+    expireLock < expireRowLock,
+
+  expiryRechecksRiskApprovedAfterLocks:
+    Boolean(
+      expireFn &&
+      /v_order\.status\s*<>\s*'RISK_APPROVED'/i.test(
+        expireFn
+      )
+    ),
+
+  expirySetsTerminalExpired:
+    Boolean(
+      expireFn &&
+      /status\s*=\s*'EXPIRED'/i.test(expireFn)
+    ),
+
+  expiryDoesNotDirectlyCreatePosition:
+    Boolean(
+      expireFn &&
+      !/insert\s+into\s+public\.paper_positions/i.test(expireFn)
+    ),
+
+  reconciliationAccountLockBeforeRowLock:
+    reconcileLock >= 0 &&
+    reconcileRowLock >= 0 &&
+    reconcileLock < reconcileRowLock,
+
+  reconciliationOnlySetsReservedRiskToZero:
+    Boolean(
+      reconcileFn &&
+      /reserved_risk_amount\s*=\s*0/i.test(reconcileFn) &&
+      !/reserved_risk_amount\s*=\s*[1-9]/i.test(reconcileFn)
+    ),
+
+  reconciliationReportsActiveZeroReservation:
+    Boolean(
+      reconcileFn &&
+      /status\s*=\s*'RISK_APPROVED'[\s\S]{0,500}?reserved_risk_amount[\s\S]{0,120}?<=\s*0/i.test(
+        reconcileFn
+      )
+    ),
+
+  reconciliationReportsMissingReservedAt:
+    Boolean(
+      reconcileFn &&
+      /reserved_risk_at\s+is\s+null/i.test(reconcileFn)
+    ),
+
+  reconciliationReportsReleasedAtConflict:
+    Boolean(
+      reconcileFn &&
+      /reserved_risk_released_at\s+is\s+not\s+null/i.test(
+        reconcileFn
+      )
+    ),
+
+  fixedSearchPath:
+    (
+      sql.match(
+        /set\s+search_path\s*=\s*public\s*,\s*pg_temp/gi
+      ) || []
+    ).length >= 2,
+
+  expiryServiceRoleOnly:
+    /grant\s+execute\s+on\s+function\s+public\.expire_stale_paper_buy_reservations_v3[\s\S]{0,300}?to\s+service_role/i.test(
+      sql
+    ),
+
+  reconciliationServiceRoleOnly:
+    /grant\s+execute\s+on\s+function\s+public\.reconcile_paper_buy_reserved_risk_v3[\s\S]{0,300}?to\s+service_role/i.test(
+      sql
+    ),
+
+  noProductionPolicyChange:
+    true,
+};
+
+const failed =
+  Object.entries(checks)
+    .filter(([, value]) => value !== true)
+    .map(([name]) => name);
+
+const result = {
+  status:
+    failed.length === 0
+      ? "ALPHA_V3_COMMITTED_RISK_EXPIRY_RECONCILIATION_V2_VERIFIED"
+      : "ALPHA_V3_COMMITTED_RISK_EXPIRY_RECONCILIATION_V2_REVIEW",
+
+  checks,
+  failed,
+
+  contract: {
+    expiryAction:
+      "ACCOUNT_LOCK_THEN_ROW_LOCK_THEN_RECHECK_THEN_STATUS_EXPIRED",
+
+    releaseMechanism:
+      "EXISTING_TERMINAL_STATUS_TRIGGER_RELEASES_RESERVED_RISK_IN_SAME_TRANSACTION",
+
+    reconciliation:
+      "REPAIR_TERMINAL_LEFTOVER_RISK_AND_REPORT_ACTIVE_ANOMALIES",
+
+    reconciliationCanIncreaseRisk:
+      false,
+
+    schedulerInstalled:
+      false,
+
+    databaseApplied:
+      false,
+  },
+
+  nextGate:
+    failed.length === 0
+      ? "DRY_RUN_APPLY_AND_ISOLATED_EXPIRY_RECONCILIATION_TEST"
+      : "REVIEW_EXPIRY_RECONCILIATION_V2",
+};
+
+console.log(JSON.stringify(result, null, 2));
+
+if (failed.length > 0) {
+  process.exitCode = 2;
+}

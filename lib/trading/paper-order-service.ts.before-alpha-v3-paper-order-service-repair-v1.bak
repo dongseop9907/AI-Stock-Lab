@@ -1,0 +1,155 @@
+import { resolveOrderModel } from "@/lib/models/resolve-order-model";
+import { createSupabaseServerClient } from "@/lib/supabase";
+import { validateBuyRisk } from "@/lib/trading/risk-manager";
+import { createPaperBuyOrderWithCommittedRisk } from "@/lib/trading/committed-risk-reservation";
+
+interface CreatePaperBuyOrderInput {
+  stockCode: string;
+  proposedStopPrice: number;
+  requestedQuantity: number;
+  modelId: string;
+}
+
+interface PaperAccountRecord {
+  id: string;
+  cash_balance: number | string;
+  daily_realized_pnl: number | string;
+  trading_mode: "PAPER" | "LIVE";
+}
+
+interface PositionRecord {
+  stock_code: string;
+  sector: string | null;
+  quantity: number;
+  average_price: number | string;
+  current_stop_price: number | string;
+}
+
+interface StockRecord {
+  stock_code: string;
+  stock_name: string;
+  sector: string | null;
+}
+
+interface SnapshotRecord {
+  stock_code: string;
+  close_price: number | string | null;
+  observed_at: string;
+}
+
+function toNumber(value: number | string | null): number {
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function validateRequest(
+  input: CreatePaperBuyOrderInput,
+): void {
+  if (!input.stockCode?.trim()) {
+    throw new Error("종목코드가 없습니다.");
+  }
+
+  if (!input.modelId?.trim()){
+    throw new Error("모델 ID가 없습니다.");
+  }
+
+  if (
+    !Number.isInteger(input.requestedQuantity) ||
+    input.requestedQuantity <= 0
+  ) {
+    throw new Error("주문 수량은 1주 이상의 정수여야 합니다.");
+  }
+
+  if (
+    !Number.isFinite(input.proposedStopPrice) ||
+    input.proposedStopPrice <= 0
+  ) {
+    throw new Error("손절가가 올바르지 않습니다.");
+  }
+}
+
+export async function createPaperBuyOrder(
+  input: CreatePaperBuyOrderInput,
+) {
+  validateRequest(input);
+
+  const supabase = createSupabaseServerClient();
+
+  /*
+   * Risk V3 committed-risk boundary.
+   * PostgreSQL serializes committed BUY risk and creates the order +
+   * reservation atomically. This closes the TOCTOU window that existed
+   * between TypeScript validation and order creation.
+   */
+  const committedOrderResult =
+    await createPaperBuyOrderWithCommittedRisk({
+      accountId:
+        account.id,
+
+      stockCode:
+        input.stockCode,
+
+      requestedQuantity:
+        input.requestedQuantity,
+
+      entryPrice,
+
+      stopPrice:
+        input.proposedStopPrice,
+
+      riskDecisionId:
+        decisionData.id,
+
+      preflightApproved:
+        riskResult.approved,
+
+      equity:
+        accountEquity,
+
+      maxAggregateOpenRiskRate:
+        0.02,
+    });
+
+  const orderData =
+    committedOrderResult.order;
+
+  const committedRisk =
+    committedOrderResult.committedRisk;
+
+  const orderError:
+    { message?: string } |
+    null =
+    null;
+
+  if (orderError || !orderData) {
+    throw new Error(
+      `모의주문 저장 실패: ${
+        orderError?.message ?? "주문 결과가 없습니다."
+      }`,
+    );
+  }
+
+  return {
+    account: {
+      id: account.id,
+      accountEquity,
+      cashBalance,
+      tradingMode: account.trading_mode,
+    },
+    stock: {
+      stockCode: stock.stock_code,
+      stockName: stock.stock_name,
+      entryPrice,
+      sector: stock.sector,
+    },
+    risk: {
+      ...riskResult,
+      approved:
+        orderData.status ===
+        "RISK_APPROVED",
+      committedRisk,
+    },
+    order: orderData,
+  };
+}

@@ -19,6 +19,15 @@ interface SyncDailyBarsInput {
 
   adjustedPrice?: boolean;
 
+
+  /*
+   * V9.7.29.1:
+   * only for explicitly requested stockCodes.
+   * Corporate-action history may need suspended/inactive
+   * securities that still have stored historical bars.
+   */
+  includeInactiveExplicitStocks?: boolean;
+
   /*
    * 한 KIS 요청에 너무 긴 기간을 넣지 않기 위해
    * 날짜 범위를 잘라서 조회한다.
@@ -389,9 +398,22 @@ export async function syncDailyBars(
   const supabase =
     createSupabaseServerClient();
 
+  /*
+   * V9.7.25.1 storage contract:
+   * market_daily_bars stores KIS mode 0 adjusted prices only.
+   * lib/kis/client.ts remains flexible for diagnostics.
+   */
+  if (
+    input.adjustedPrice ===
+    false
+  ) {
+    throw new Error(
+      "MARKET_DAILY_BARS_REQUIRES_ADJUSTED_PRICE",
+    );
+  }
+
   const adjustedPrice =
-    input.adjustedPrice !==
-    false;
+    true;
 
   const chunkDays =
     Math.min(
@@ -410,6 +432,13 @@ export async function syncDailyBars(
       input.stockCodes,
     );
 
+
+  const includeInactiveExplicitStocks =
+    requestedCodes.length >
+      0 &&
+    input.includeInactiveExplicitStocks ===
+      true;
+
   let stockQuery =
     supabase
       .from("stocks")
@@ -417,9 +446,16 @@ export async function syncDailyBars(
         stock_code,
         stock_name
       `)
-      .eq(
+      .in(
         "is_active",
-        true,
+        includeInactiveExplicitStocks
+          ? [
+              true,
+              false,
+            ]
+          : [
+              true,
+            ],
       )
       .order(
         "stock_code",
@@ -450,9 +486,55 @@ export async function syncDailyBars(
     );
   }
 
-  const stocks =
+  const queriedStocks =
     (stockData ??
       []) as ActiveStock[];
+
+  /*
+   * V9.7.29.2:
+   * An explicit corporate-action refresh must not depend on
+   * the security still being present in the active stock universe.
+   *
+   * When the internal opt-in flag is enabled, preserve any rows
+   * found in stocks and synthesize minimal rows for missing explicit
+   * codes. KIS then becomes the authoritative existence/data check.
+   */
+  const queriedCodeSet =
+    new Set(
+      queriedStocks.map(
+        (stock) =>
+          stock.stock_code,
+      ),
+    );
+
+  const missingExplicitCodes =
+    includeInactiveExplicitStocks
+      ? requestedCodes.filter(
+          (stockCode) =>
+            !queriedCodeSet.has(
+              stockCode,
+            ),
+        )
+      : [];
+
+  const explicitFallbackStocks:
+    ActiveStock[] =
+    missingExplicitCodes.map(
+      (stockCode) => ({
+        stock_code:
+          stockCode,
+        stock_name:
+          stockCode,
+      }),
+    );
+
+  const stocks =
+    includeInactiveExplicitStocks
+      ? [
+          ...queriedStocks,
+          ...explicitFallbackStocks,
+        ]
+      : queriedStocks;
 
   if (
     stocks.length === 0

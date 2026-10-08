@@ -1,0 +1,217 @@
+{
+  "version": "V9_7_2_DETAIL_PROBE",
+  "inventoryRunId": "5c2b20cb-a468-4575-b9b6-cedb4841b043",
+  "sourceCoverageWindowId": "00e02e27-801d-49c2-825d-7cc054ff5d02",
+  "samples": [
+    {
+      "corpCode": "01516933",
+      "receiptNo": "20260731901237",
+      "stockCode": "0001A0",
+      "reportName": "현금ㆍ현물배당결정              (중간배당)",
+      "receiptDate": "20260731",
+      "needsDetailReview": true,
+      "candidateActionType": "CASH_DIVIDEND",
+      "correctionOrWithdrawalHint": false
+    },
+    {
+      "corpCode": "00226866",
+      "receiptNo": "20260731900674",
+      "stockCode": "049070",
+      "reportName": "현금ㆍ현물배당결정              (중간배당)",
+      "receiptDate": "20260731",
+      "needsDetailReview": true,
+      "candidateActionType": "CASH_DIVIDEND",
+      "correctionOrWithdrawalHint": false
+    },
+    {
+      "corpCode": "00609661",
+      "receiptNo": "20260731900541",
+      "stockCode": "204610",
+      "reportName": "현금ㆍ현물배당결정              (분기배당)",
+      "receiptDate": "20260731",
+      "needsDetailReview": true,
+      "candidateActionType": "CASH_DIVIDEND",
+      "correctionOrWithdrawalHint": false
+    },
+    {
+      "corpCode": "00219440",
+      "receiptNo": "20260731000680",
+      "stockCode": "028080",
+      "reportName": "[기재정정]주요사항보고서(회사합병결정)",
+      "receiptDate": "20260731",
+      "needsDetailReview": true,
+      "candidateActionType": "MERGER",
+      "correctionOrWithdrawalHint": true
+    },
+    {
+      "corpCode": "00580667",
+      "receiptNo": "20260731000668",
+      "stockCode": "091340",
+      "reportName": "[기재정정]주요사항보고서(회사합병결정)",
+      "receiptDate": "20260731",
+      "needsDetailReview": true,
+      "candidateActionType": "MERGER",
+      "correctionOrWithdrawalHint": true
+    },
+    {
+      "corpCode": "01046391",
+      "receiptNo": "20260730000381",
+      "stockCode": "217330",
+      "reportName": "[첨부정정]주요사항보고서(회사합병결정)",
+      "receiptDate": "20260730",
+      "needsDetailReview": true,
+      "candidateActionType": "MERGER",
+      "correctionOrWithdrawalHint": true
+    },
+    {
+      "corpCode": "01065679",
+      "receiptNo": "20260731900814",
+      "stockCode": "215790",
+      "reportName": "주식병합결정              ",
+      "receiptDate": "20260731",
+      "needsDetailReview": true,
+      "candidateActionType": "REVERSE_SPLIT",
+      "correctionOrWithdrawalHint": false
+    },
+    {
+      "corpCode": "00406329",
+      "receiptNo": "20260731900377",
+      "stockCode": "038060",
+      "reportName": "[기재정정]주식병합결정              ",
+      "receiptDate": "20260731",
+      "needsDetailReview": true,
+      "candidateActionType": "REVERSE_SPLIT",
+      "correctionOrWithdrawalHint": true
+    },
+    {
+      "corpCode": "01031502",
+      "receiptNo": "20260730900564",
+      "stockCode": "196450",
+      "reportName": "[기재정정]주식병합결정              ",
+      "receiptDate": "20260730",
+      "needsDetailReview": true,
+      "candidateActionType": "REVERSE_SPLIT",
+      "correctionOrWithdrawalHint": true
+    },
+    {
+      "corpCode": "01089378",
+      "receiptNo": "20260731901318",
+      "stockCode": "219550",
+      "reportName": "증권발행결과(자율공시)              (제3자배정 유상증자)",
+      "receiptDate": "20260731",
+      "needsDetailReview": true,
+      "candidateActionType": "RIGHTS_ISSUE",
+      "correctionOrWithdrawalHint": false
+    },
+    {
+      "corpCode": "01444380",
+      "receiptNo": "20260731901297",
+      "stockCode": "355690",
+      "reportName": "[기재정정]유상증자결정(종속회사의주요경영사항)              ",
+      "receiptDate": "20260731",
+      "needsDetailReview": true,
+      "candidateActionType": "RIGHTS_ISSUE",
+      "correctionOrWithdrawalHint": true
+    },
+    {
+      "corpCode": "00146427",
+      "receiptNo": "20260731901046",
+      "stockCode": "058450",
+      "reportName": "유상증자최종발행가액확정              (일반공모증자-소액공모)",
+      "receiptDate": "20260731",
+      "needsDetailReview": true,
+      "candidateActionType": "RIGHTS_ISSUE",
+      "correctionOrWithdrawalHint": false
+    },
+    {
+      "corpCode": "00216434",
+      "receiptNo": "20260715900487",
+      "stockCode": "066360",
+      "reportName": "회사분할결정(종속회사의주요경영사항)              ",
+      "receiptDate": "20260715",
+      "needsDetailReview": true,
+      "candidateActionType": "SPIN_OFF",
+      "correctionOrWithdrawalHint": false
+    },
+    {
+      "corpCode": "00390365",
+      "receiptNo": "20260710000095",
+      "stockCode": "051360",
+      "reportName": "[기재정정]주요사항보고서(회사분할결정)",
+      "receiptDate": "20260710",
+      "needsDetailReview": true,
+      "candidateActionType": "SPIN_OFF",
+      "correctionOrWithdrawalHint": true
+    },
+    {
+      "corpCode": "00132202",
+      "receiptNo": "20260630901481",
+      "stockCode": "086710",
+      "reportName": "기타주요경영사항              (회사분할결정 철회)",
+      "receiptDate": "20260630",
+      "needsDetailReview": true,
+      "candidateActionType": "SPIN_OFF",
+      "correctionOrWithdrawalHint": true
+    },
+    {
+      "corpCode": "00223434",
+      "receiptNo": "20260406900605",
+      "stockCode": "036810",
+      "reportName": "[기재정정]주식배당결정              ",
+      "receiptDate": "20260406",
+      "needsDetailReview": true,
+      "candidateActionType": "STOCK_DIVIDEND",
+      "correctionOrWithdrawalHint": true
+    },
+    {
+      "corpCode": "00111722",
+      "receiptNo": "20260313800897",
+      "stockCode": "006800",
+      "reportName": "[기재정정]주식배당결정              ",
+      "receiptDate": "20260313",
+      "needsDetailReview": true,
+      "candidateActionType": "STOCK_DIVIDEND",
+      "correctionOrWithdrawalHint": true
+    },
+    {
+      "corpCode": "00116824",
+      "receiptNo": "20260225800942",
+      "stockCode": "000640",
+      "reportName": "주식배당결정              ",
+      "receiptDate": "20260225",
+      "needsDetailReview": true,
+      "candidateActionType": "STOCK_DIVIDEND",
+      "correctionOrWithdrawalHint": false
+    },
+    {
+      "corpCode": "01230255",
+      "receiptNo": "20260729900648",
+      "stockCode": "276730",
+      "reportName": "[기재정정]주식분할결정              ",
+      "receiptDate": "20260729",
+      "needsDetailReview": true,
+      "candidateActionType": "STOCK_SPLIT",
+      "correctionOrWithdrawalHint": true
+    },
+    {
+      "corpCode": "00264945",
+      "receiptNo": "20260724900679",
+      "stockCode": "036800",
+      "reportName": "주권매매거래정지              (주식분할)",
+      "receiptDate": "20260724",
+      "needsDetailReview": true,
+      "candidateActionType": "STOCK_SPLIT",
+      "correctionOrWithdrawalHint": false
+    },
+    {
+      "corpCode": "00997812",
+      "receiptNo": "20260716900397",
+      "stockCode": "183300",
+      "reportName": "[기재정정]주식분할결정              ",
+      "receiptDate": "20260716",
+      "needsDetailReview": true,
+      "candidateActionType": "STOCK_SPLIT",
+      "correctionOrWithdrawalHint": true
+    }
+  ]
+}

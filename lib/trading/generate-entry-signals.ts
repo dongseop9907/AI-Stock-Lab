@@ -10,6 +10,7 @@ import {
 import { createSupabaseServerClient } from "@/lib/supabase";
 import { createPaperBuyOrder } from "@/lib/trading/paper-order-service";
 
+import { assertKillSwitchAllows } from "@/lib/trading/kill-switch-guard";
 interface GenerateEntrySignalsInput {
   modelId?: string;
   autoOrder?: boolean;
@@ -18,7 +19,7 @@ interface GenerateEntrySignalsInput {
   maximumPredictionAgeMinutes?: number;
 }
 
-interface SnapshotRecord {
+export interface SnapshotRecord {
   stock_code: string;
   observed_at: string;
 
@@ -29,7 +30,7 @@ interface SnapshotRecord {
   volume: number | string | null;
 }
 
-interface EntryModelRecord {
+export interface EntryModelRecord {
   id: string;
   model_name: string;
   model_version: string;
@@ -43,7 +44,7 @@ interface ExistingSignalRecord {
   order_id: string | null;
 }
 
-interface SignalCandidate {
+export interface SignalCandidate {
   stockCode: string;
   observedAt: string;
 
@@ -135,7 +136,7 @@ function normalizeStockCodes(
   ];
 }
 
-async function resolveEntryModel(
+export async function resolveEntryModel(
   modelId?: string,
 ): Promise<EntryModelRecord> {
   const supabase =
@@ -258,7 +259,7 @@ async function resolveEntryModel(
   return approved as EntryModelRecord;
 }
 
-function calculateEntrySignal(
+export function calculateEntrySignal(
   snapshots: SnapshotRecord[],
   prediction: PredictionCandidate,
   entryScoreThreshold: number,
@@ -529,8 +530,13 @@ function calculateEntrySignal(
 }
 
 export async function generateEntrySignals(
-  input: GenerateEntrySignalsInput = {},
+  input: GenerateEntrySignalsInput = {
+},
 ) {
+  if (input.autoOrder === true) {
+    await assertKillSwitchAllows("PAPER_BUY_CREATE");
+  }
+
   const supabase =
     createSupabaseServerClient();
 
