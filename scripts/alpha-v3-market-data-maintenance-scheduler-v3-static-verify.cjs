@@ -133,6 +133,48 @@ const checks = {
       "tsx scripts/alpha-v3-market-data-maintenance-scheduler-contract-test.ts"
 };
 
+
+/* KRX_CANONICAL_V1_SUPERVISOR_ROUTING_COMPAT */
+{
+  const routingPackageJson =
+    JSON.parse(
+      require("node:fs")
+        .readFileSync(
+          require("node:path")
+            .resolve(
+              process.cwd(),
+              "package.json"
+            ),
+          "utf8"
+        )
+    );
+
+  const schedulerCommand =
+    String(
+      routingPackageJson?.scripts?.[
+        "market-data:maintenance:scheduler"
+      ] ?? ""
+    );
+
+  const schedulerDirectV3 =
+    schedulerCommand.includes(
+      "alpha-v3-market-data-maintenance-scheduler.ts"
+    );
+
+  const schedulerViaSupervisorV4 =
+    schedulerCommand.includes(
+      "alpha-v3-market-data-maintenance-supervisor-v4"
+    );
+
+  /*
+   * Supervisor V4 is the hardened recurring entry point.
+   * Manual --once remains on Scheduler V3 core.
+   */
+  checks.packageSchedulerPreserved =
+    schedulerDirectV3 ||
+    schedulerViaSupervisorV4;
+}
+
 const failed =
   Object.entries(
     checks

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { evaluateShadowSignals } from "@/lib/trading/evaluate-shadow-signals";
 
+import { syncCanonicalShadowOutcomeFromEntrySignalsV1 } from "@/lib/models/model-shadow-outcome-pipeline-binding";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,9 @@ export async function POST(
               300,
           ),
       });
+
+    // MODEL_SHADOW_OUTCOME_PIPELINE_BINDING_V1_ROUTE_BIND
+    await syncCanonicalShadowOutcomeFromEntrySignalsV1();
 
     return NextResponse.json({
       ok: true,

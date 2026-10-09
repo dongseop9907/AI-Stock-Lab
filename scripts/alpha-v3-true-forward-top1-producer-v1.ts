@@ -1,4 +1,9 @@
 import fs from "node:fs";
+
+
+import {
+  nextKrxTradingDate,
+} from "../lib/trading/krx-trading-calendar";
 import path from "node:path";
 
 import {
@@ -121,68 +126,11 @@ function addSqlDays(
 
 export function nextExpectedKrxOpenDate(
   sourceTradingDate: string,
-  overrides:
-    CalendarOverrideRow[],
-): string {
-  const overrideByDate =
-    new Map(
-      overrides
-        .filter(
-          (row) =>
-            row.verified === true,
-        )
-        .map(
-          (row) => [
-            String(
-              row.calendar_date,
-            ),
-            row,
-          ],
-        ),
-    );
-
-  for (
-    let offset = 1;
-    offset <= 14;
-    offset += 1
-  ) {
-    const candidate =
-      addSqlDays(
-        sourceTradingDate,
-        offset,
-      );
-
-    const override =
-      overrideByDate.get(
-        candidate,
-      );
-
-    if (override) {
-      if (
-        override.is_open ===
-        true
-      ) {
-        return candidate;
-      }
-
-      continue;
-    }
-
-    const weekday =
-      new Date(
-        `${candidate}T00:00:00.000Z`,
-      ).getUTCDay();
-
-    if (
-      weekday !== 0 &&
-      weekday !== 6
-    ) {
-      return candidate;
-    }
-  }
-
-  throw new Error(
-    `NEXT_KRX_OPEN_DATE_NOT_FOUND:${sourceTradingDate}`,
+  overrides: CalendarOverrideRow[],
+) {
+  return nextKrxTradingDate(
+    sourceTradingDate,
+    overrides,
   );
 }
 

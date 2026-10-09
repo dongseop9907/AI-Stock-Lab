@@ -1,3 +1,4 @@
+import { isKrxTradingDate } from "../lib/trading/krx-trading-calendar";
 type FetchLike = (
   input: string | URL,
   init?: RequestInit,
@@ -291,8 +292,7 @@ export function shouldRunScheduledMaintenance(
     );
 
   if (
-    clock.weekday === 0 ||
-    clock.weekday === 6
+    !isKrxTradingDate(clock.date)
   ) {
     return {
       shouldRun:

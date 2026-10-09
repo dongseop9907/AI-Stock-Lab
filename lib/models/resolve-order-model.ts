@@ -46,6 +46,45 @@ export async function resolveOrderModel(
   modelId: string,
   tradingMode: OrderTradingMode,
 ): Promise<OrderModel> {
+
+  /*
+   * MODEL_ORDER_PURPOSE_GATE_V1
+   * Only ENTRY_TIMING models may cross the order-model boundary.
+   */
+  const purposeGateSupabase =
+    createSupabaseServerClient();
+
+  const {
+    data: purposeGateModel,
+    error: purposeGateError,
+  } =
+    await purposeGateSupabase
+      .from("ai_model_versions")
+      .select("purpose")
+      .eq("id", modelId)
+      .maybeSingle();
+
+  if (
+    purposeGateError ||
+    !purposeGateModel
+  ) {
+    throw new Error(
+      `ORDER_MODEL_PURPOSE_LOOKUP_FAILED:${
+        purposeGateError?.message ??
+        "MODEL_NOT_FOUND"
+      }`,
+    );
+  }
+
+  if (
+    purposeGateModel.purpose !==
+    "ENTRY_TIMING"
+  ) {
+    throw new Error(
+      "ORDER_MODEL_PURPOSE_NOT_ENTRY_TIMING",
+    );
+  }
+
   if (!modelId || !isUuid(modelId)) {
     throw new Error("INVALID_MODEL_ID");
   }

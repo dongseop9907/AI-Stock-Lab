@@ -1,3 +1,7 @@
+import {
+  resolveProtectiveSellExecutionRealismV2,
+} from "@/lib/trading/resolve-protective-sell-execution-realism-v2";
+
 import { createSupabaseServerClient } from "@/lib/supabase";
 
 interface PositionRecord {
@@ -176,12 +180,36 @@ export async function checkAndExecuteStopLosses() {
 
     triggered += 1;
 
+    const protectiveExecution =
+      await resolveProtectiveSellExecutionRealismV2({
+        supabase,
+        stockCode:
+          position.stock_code,
+        requestedQuantity:
+          position.quantity,
+        referencePrice:
+          currentPrice,
+        observedAt:
+          snapshot.observed_at,
+      });
+
     const { data, error } = await supabase.rpc(
-      "execute_paper_stop_loss",
+      "execute_paper_protective_sell_v2",
       {
         p_position_id: position.id,
-        p_exit_price: currentPrice,
+        p_exit_price: protectiveExecution.executionPrice,
         p_observed_at: snapshot.observed_at,
+        p_fill_quantity:
+          protectiveExecution.filledQuantity,
+        p_broker_fee:
+          protectiveExecution.brokerFee,
+        p_sell_tax:
+          protectiveExecution.sellTax,
+        p_execution_source:
+          protectiveExecution.priceSource ??
+          "PAPER_EXECUTION_REALISM_V2",
+        p_exit_reason:
+          "STOP_LOSS",
       },
     );
 

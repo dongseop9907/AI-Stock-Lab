@@ -2,6 +2,13 @@ import {
   createSupabaseServerClient,
 } from "@/lib/supabase";
 
+
+import {
+  isKrxTradingDate,
+  previousKrxTradingDate,
+  type KrxCalendarOverrideInput,
+} from "../trading/krx-trading-calendar";
+
 export type MarketDataFreshnessStatusV77 =
   | "FRESH"
   | "STALE"
@@ -43,6 +50,30 @@ interface TradingDayOverride {
   reason: string;
   source: string;
 }
+
+function canonicalKrxOverridesFromFreshnessMap(
+  overrides: Map<string, TradingDayOverride>,
+): KrxCalendarOverrideInput[] {
+  return [
+    ...overrides.entries(),
+  ].map(
+    ([
+      date,
+      override,
+    ]) => ({
+      date,
+      isOpen:
+        override.isOpen,
+      verified:
+        true,
+      reason:
+        override.reason,
+      source:
+        override.source,
+    }),
+  );
+}
+
 
 const MARKET_DATA_READY_MINUTE_KST =
   16 * 60 + 30;
@@ -99,20 +130,11 @@ function isTradingDay(
       TradingDayOverride
     >,
 ) {
-  const override =
-    overrides.get(
-      sqlDate,
-    );
-
-  if (
-    override
-  ) {
-    return override
-      .isOpen;
-  }
-
-  return isWeekday(
+  return isKrxTradingDate(
     sqlDate,
+    canonicalKrxOverridesFromFreshnessMap(
+      overrides,
+    ),
   );
 }
 
@@ -124,43 +146,12 @@ function previousTradingDay(
       TradingDayOverride
     >,
 ): string {
-  let value =
-    addCalendarDays(
-      sqlDate,
-      -1,
-    );
-
-  let safety =
-    0;
-
-  while (
-    !isTradingDay(
-      value,
+  return previousKrxTradingDate(
+    sqlDate,
+    canonicalKrxOverridesFromFreshnessMap(
       overrides,
-    ) &&
-    safety <
-      370
-  ) {
-    value =
-      addCalendarDays(
-        value,
-        -1,
-      );
-
-    safety +=
-      1;
-  }
-
-  if (
-    safety >=
-    370
-  ) {
-    throw new Error(
-      "TRADING_CALENDAR_LOOKBACK_EXCEEDED",
-    );
-  }
-
-  return value;
+    ),
+  );
 }
 
 function getKoreanClock(

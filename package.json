@@ -23,7 +23,17 @@
     "risk:gap-slippage:probe": "node scripts/alpha-v3-gap-slippage-risk-v1-execution-surface-probe.cjs",
     "risk:gap-slippage:binding-probe": "node scripts/alpha-v3-gap-slippage-risk-v1-binding-facts-probe.cjs",
     "paper-execution-price:test": "tsx scripts/alpha-v3-paper-execution-price-model-v1-contract-test.ts",
-    "risk:gap-slippage:binding:test": "tsx scripts/alpha-v3-gap-slippage-execution-binding-v1-contract-test.ts"
+    "risk:gap-slippage:binding:test": "tsx scripts/alpha-v3-gap-slippage-execution-binding-v1-contract-test.ts",
+    "test:governance": "node ./scripts/governance-regression-suite-v1.cjs",
+    "test:paper-readiness": "node ./scripts/paper-readiness-gate-v1.cjs",
+    "test:true-forward-oos-readiness": "node ./scripts/true-forward-oos-readiness-audit-v1.cjs",
+    "test:true-forward-oos-runtime": "node ./scripts/true-forward-oos-runtime-data-flow-audit-v1.cjs",
+    "test:true-forward-oos-runtime-deps": "node ./scripts/true-forward-oos-runtime-dependency-audit-v2.cjs",
+    "test:true-forward-oos-contract": "node ./scripts/true-forward-oos-existing-contract-verify-v1.cjs",
+    "test:true-forward-oos-automation-binding": "node ./scripts/true-forward-oos-automation-binding-audit-v1.cjs",
+    "test:true-forward-oos-binding-design": "node ./scripts/true-forward-oos-automation-binding-design-probe-v1.cjs",
+    "test:true-forward-oos-automation-binding-v1": "tsx scripts/true-forward-oos-automation-binding-v1-contract-test.ts",
+    "test:true-forward-oos-automation-binding-v1:static": "node scripts/true-forward-oos-automation-binding-v1-static-verify.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "latest",

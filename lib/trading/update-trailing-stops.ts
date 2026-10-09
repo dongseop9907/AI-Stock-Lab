@@ -1,3 +1,7 @@
+import {
+  resolveProtectiveSellExecutionRealismV2,
+} from "@/lib/trading/resolve-protective-sell-execution-realism-v2";
+
 import { createSupabaseServerClient } from "@/lib/supabase";
 
 import { DEFAULT_TRAILING_STOP_POLICY } from "@/lib/trading/trailing-stop-policy";
@@ -5,6 +9,7 @@ import { DEFAULT_TRAILING_STOP_POLICY } from "@/lib/trading/trailing-stop-policy
 interface PositionRecord {
   id: string;
   stock_code: string;
+  quantity: number;
 }
 
 interface SnapshotRecord {
@@ -68,8 +73,9 @@ export async function updateTrailingStops() {
       .from("paper_positions")
       .select(`
         id,
-        stock_code
-      `)
+        stock_code,
+              quantity
+`)
       .order("opened_at", {
         ascending: true,
       });
@@ -243,15 +249,39 @@ export async function updateTrailingStops() {
      * 현재가가 새 손절가 이하라면
      * 기존 모의 손절 매도 함수를 실행한다.
      */
+    const protectiveExecution =
+      await resolveProtectiveSellExecutionRealismV2({
+        supabase,
+        stockCode:
+          position.stock_code,
+        requestedQuantity:
+          position.quantity,
+        referencePrice:
+          currentPrice,
+        observedAt:
+          snapshot.observed_at,
+      });
+
     const {
       data: executionData,
       error: executionError,
     } = await supabase.rpc(
-      "execute_paper_stop_loss",
+      "execute_paper_protective_sell_v2",
       {
         p_position_id: position.id,
-        p_exit_price: currentPrice,
+        p_exit_price: protectiveExecution.executionPrice,
         p_observed_at: snapshot.observed_at,
+        p_fill_quantity:
+          protectiveExecution.filledQuantity,
+        p_broker_fee:
+          protectiveExecution.brokerFee,
+        p_sell_tax:
+          protectiveExecution.sellTax,
+        p_execution_source:
+          protectiveExecution.priceSource ??
+          "PAPER_EXECUTION_REALISM_V2",
+        p_exit_reason:
+          "TRAILING_STOP",
       },
     );
 

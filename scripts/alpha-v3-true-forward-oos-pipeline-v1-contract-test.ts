@@ -19,12 +19,12 @@ async function main() {
   const checks:
     Record<string, boolean> = {};
 
-  checks.nextWeekday =
+  checks.hangeulDaySkippedByBuiltInCalendar =
     nextExpectedKrxOpenDate(
       "2026-10-08",
       [],
     ) ===
-      "2026-10-09";
+      "2026-10-12";
 
   checks.weekendSkipped =
     nextExpectedKrxOpenDate(
@@ -58,7 +58,7 @@ async function main() {
       decisionAt:
         "2026-10-08T15:05:00.000Z",
       targetSessionDate:
-        "2026-10-09",
+        "2026-10-12",
     }) ===
       "BEFORE_DECISION_TIME";
 
@@ -71,7 +71,7 @@ async function main() {
       decisionAt:
         "2026-10-08T15:05:00.000Z",
       targetSessionDate:
-        "2026-10-09",
+        "2026-10-12",
     }) ===
       "CAPTURE_WINDOW_OPEN";
 
@@ -79,27 +79,27 @@ async function main() {
     classifyCaptureWindow({
       now:
         new Date(
-          "2026-10-09T00:00:00.000Z",
+          "2026-10-12T00:00:00.000Z",
         ),
       decisionAt:
         "2026-10-08T15:05:00.000Z",
       targetSessionDate:
-        "2026-10-09",
+        "2026-10-12",
     }) ===
       "MISSED_CAPTURE_WINDOW";
 
   checks.collectorWaitsUntil1540 =
     targetSessionReadyForEntryCollection(
-      "2026-10-09",
+      "2026-10-12",
       new Date(
-        "2026-10-09T06:39:00.000Z",
+        "2026-10-12T06:39:00.000Z",
       ),
     ) ===
       false &&
     targetSessionReadyForEntryCollection(
-      "2026-10-09",
+      "2026-10-12",
       new Date(
-        "2026-10-09T06:40:00.000Z",
+        "2026-10-12T06:40:00.000Z",
       ),
     ) ===
       true;
@@ -117,7 +117,7 @@ async function main() {
         targetSessionDate:
           index <
           40
-            ? "2026-10-09"
+            ? "2026-10-12"
             : "2026-12-10",
 
         correctedEntry: {

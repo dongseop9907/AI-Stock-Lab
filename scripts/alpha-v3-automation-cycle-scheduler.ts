@@ -1,3 +1,4 @@
+import { runTrueForwardOosAutomationBindingV1 } from "../lib/research/run-true-forward-oos-automation-binding-v1";
 export const AUTOMATION_SCHEDULER_CADENCE_MS =
   60_000;
 
@@ -124,6 +125,53 @@ export async function runAutomationSchedulerTick(
     RunTickOptions =
     {},
 ) {
+
+  /* ALPHA_V3_TRUE_FORWARD_OOS_AUTOMATION_BINDING_V1_CALL */
+  const __forwardOosAutomation =
+    await runTrueForwardOosAutomationBindingV1(
+      {
+        now:
+          options.now?.() ??
+          new Date(),
+      },
+    ).catch(
+      (error) => ({
+        status:
+          "FAILED_CLOSED",
+        kstDate:
+          "",
+        nowKst:
+          new Date().toISOString(),
+        executed:
+          [],
+        completed:
+          [],
+        blockedReason:
+          "FORWARD_OOS_BINDING_UNHANDLED:" +
+          String(
+            error instanceof Error
+              ? error.message
+              : error,
+          ),
+      }),
+    );
+
+  if (
+    __forwardOosAutomation.status ===
+      "FAILED_CLOSED"
+  ) {
+    console.error(
+      JSON.stringify(
+        {
+          status:
+            "FORWARD_OOS_AUTOMATION_FAILED_CLOSED",
+          blockedReason:
+            __forwardOosAutomation.blockedReason,
+        },
+      ),
+    );
+  }
+
   const fetchImpl =
     options.fetchImpl ??
     globalThis.fetch;

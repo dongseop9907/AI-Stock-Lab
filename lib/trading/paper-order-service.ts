@@ -1,4 +1,5 @@
 import { resolveOrderModel } from "@/lib/models/resolve-order-model";
+import { assertModelPromotionAllowsPaperRisk } from "@/lib/models/model-promotion-gate";
 import { createSupabaseServerClient } from "@/lib/supabase";
 import { createPaperBuyOrderWithCommittedRisk } from "@/lib/trading/committed-risk-reservation";
 import { validateBuyRisk } from "@/lib/trading/risk-manager";
@@ -96,6 +97,11 @@ export async function createPaperBuyOrder(
   await assertKillSwitchAllows("PAPER_BUY_CREATE");
 
   validateRequest(input);
+
+  await assertModelPromotionAllowsPaperRisk(
+    input.modelId,
+    "PAPER_ORDER_SERVICE",
+  );
 
   const supabase =
     createSupabaseServerClient();

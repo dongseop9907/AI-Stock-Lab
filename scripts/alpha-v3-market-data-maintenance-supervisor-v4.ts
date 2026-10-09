@@ -1,3 +1,4 @@
+import { isKrxTradingDate } from "../lib/trading/krx-trading-calendar";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -9,6 +10,11 @@ import {
   runMarketDataMaintenanceOnce,
   type MarketDataMaintenanceRunResult,
 } from "./alpha-v3-market-data-maintenance-scheduler";
+
+import {
+  isKrxTradingDate,
+} from "../lib/trading/krx-trading-calendar";
+
 
 export const MARKET_DATA_MAINTENANCE_SUPERVISOR_VERSION =
   "ALPHA_V3_MARKET_DATA_MAINTENANCE_SUPERVISOR_V4_OPERATIONAL_HARDENING" as const;
@@ -304,7 +310,7 @@ export async function readPersistentHealthyGate(
 function isWeekend(now: Date): boolean {
   const clock = getKoreanClock(now);
 
-  return clock.weekday === 0 || clock.weekday === 6;
+  return !isKrxTradingDate(clock.date);
 }
 
 function afterDailyWindow(now: Date): boolean {

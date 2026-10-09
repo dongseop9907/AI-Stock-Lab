@@ -6,6 +6,13 @@ import {
   resolveSafePaperBuyExecution,
 } from "@/lib/trading/resolve-safe-paper-buy-execution";
 
+
+import {
+  evaluatePaperExecutionRealismV2,
+} from "@/lib/trading/paper-execution-realism-v2";
+import {
+  resolvePaperExecutionRealismV2MarketInput,
+} from "@/lib/trading/resolve-paper-execution-realism-v2-market-input";
 interface PaperOrderExecutionRecord {
   id: string;
   account_id: string;
@@ -13,6 +20,7 @@ interface PaperOrderExecutionRecord {
   side: string;
   status: string;
   approved_quantity: number | string | null;
+  filled_quantity: number | string | null;
   entry_price: number | string | null;
   stop_price: number | string | null;
   reserved_risk_amount: number | string | null;
@@ -374,6 +382,7 @@ export async function executePaperOrder(
           "side",
           "status",
           "approved_quantity",
+          "filled_quantity",
           "entry_price",
           "stop_price",
           "reserved_risk_amount",
@@ -490,6 +499,50 @@ export async function executePaperOrder(
       reservedRiskAmount,
     });
 
+  const realismRemainingQuantity =
+    Math.max(
+      0,
+      Number(order.approved_quantity ?? 0) -
+        Number((order as any).filled_quantity ?? 0),
+    );
+
+  if (realismRemainingQuantity <= 0) {
+    throw new Error(
+      "PAPER_EXECUTION_REALISM_V2_NO_REMAINING_QUANTITY",
+    );
+  }
+
+  const realismMarketInput =
+    await resolvePaperExecutionRealismV2MarketInput({
+      supabase,
+      stockCode: order.stock_code,
+      observedAt: safeExecution.executionPriceObservedAt,
+    });
+
+  const realismDecision =
+    evaluatePaperExecutionRealismV2({
+      side: "BUY",
+      requestedQuantity:
+        realismRemainingQuantity,
+      referencePrice:
+        safeExecution.executionPrice,
+      now:
+        safeExecution.executionPriceObservedAt,
+      intervalVolume:
+        realismMarketInput.intervalVolume,
+    });
+
+  if (
+    !realismDecision.approved ||
+    realismDecision.executionPrice === null ||
+    realismDecision.filledQuantity <= 0
+  ) {
+    throw new Error(
+      `PAPER_EXECUTION_REALISM_V2_BLOCKED:${realismDecision.blocker ?? "UNKNOWN"}`,
+    );
+  }
+
+
   if (
     !safeExecution.allowed ||
     safeExecution.executionPrice ===
@@ -537,16 +590,19 @@ export async function executePaperOrder(
     error,
   } =
     await supabase.rpc(
-      "execute_paper_buy_order_with_execution_price_v1",
+      "execute_paper_buy_order_with_execution_price_v2",
       {
         p_order_id:
           order.id,
 
-        p_execution_price:
-          safeExecution.executionPrice,
+        p_execution_price: realismDecision.executionPrice,
 
         p_execution_observed_at:
           safeExecution.executionPriceObservedAt,
+        p_fill_quantity:
+          realismDecision.filledQuantity,
+        p_broker_fee:
+          realismDecision.brokerFee,
       },
     );
 

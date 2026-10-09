@@ -9,6 +9,7 @@ import {
 } from "@/lib/trading/market-regime-shadow";
 import { createSupabaseServerClient } from "@/lib/supabase";
 import { createPaperBuyOrder } from "@/lib/trading/paper-order-service";
+import { assertModelPromotionAllowsPaperRisk } from "@/lib/models/model-promotion-gate";
 
 import { assertKillSwitchAllows } from "@/lib/trading/kill-switch-guard";
 import {
@@ -572,6 +573,13 @@ export async function generateEntrySignals(
 
   const autoOrder =
     input.autoOrder === true;
+
+  if (autoOrder) {
+    await assertModelPromotionAllowsPaperRisk(
+      model.id,
+      "ENTRY_SIGNAL_AUTO_ORDER",
+    );
+  }
 
   const maxOrders = Math.min(
     10,
