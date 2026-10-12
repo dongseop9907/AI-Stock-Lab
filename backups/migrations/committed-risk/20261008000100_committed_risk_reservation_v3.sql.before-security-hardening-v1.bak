@@ -1,0 +1,483 @@
+-- Alpha V3 / Risk V3
+-- Committed Risk V2
+--
+-- Atomic boundary:
+--   1) serialize BUY risk commitment
+--   2) calculate OPEN_POSITION_STOP_RISK inside PostgreSQL
+--   3) sum all ACTIVE_BUY_RESERVED_RISK
+--   4) validate against equity * 2%
+--   5) create paper order + reservation in the SAME transaction
+--
+-- Historical/backtest policy is unchanged.
+
+begin;
+
+alter table public.paper_order_requests
+  add column if not exists reserved_risk_amount numeric not null default 0,
+  add column if not exists reserved_risk_at timestamptz null,
+  add column if not exists reserved_risk_released_at timestamptz null,
+  add column if not exists reserved_risk_release_reason text null,
+  add column if not exists committed_risk_reason text null,
+  add column if not exists committed_risk_snapshot jsonb null;
+
+alter table public.paper_order_requests
+  drop constraint if exists paper_order_requests_reserved_risk_nonnegative;
+
+alter table public.paper_order_requests
+  add constraint paper_order_requests_reserved_risk_nonnegative
+  check (reserved_risk_amount >= 0);
+
+create index if not exists idx_paper_order_requests_active_reserved_risk
+  on public.paper_order_requests (account_id, reserved_risk_amount)
+  where reserved_risk_amount > 0;
+
+create or replace function public.create_paper_buy_order_with_committed_risk_v3(
+  p_account_id uuid,
+  p_stock_code text,
+  p_requested_quantity integer,
+  p_entry_price numeric,
+  p_stop_price numeric,
+  p_risk_decision_id uuid,
+  p_preflight_approved boolean,
+  p_equity numeric,
+  p_max_aggregate_open_risk_rate numeric default 0.02
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_existing_order public.paper_order_requests%rowtype;
+  v_order public.paper_order_requests%rowtype;
+
+  v_invalid_open_stops integer := 0;
+  v_open_position_risk numeric := 0;
+  v_reserved_risk numeric := 0;
+  v_proposed_risk numeric := 0;
+  v_budget numeric := 0;
+  v_committed_before numeric := 0;
+  v_committed_after numeric := 0;
+
+  v_final_approved boolean := false;
+  v_status text := 'RISK_REJECTED';
+  v_reason text := null;
+  v_snapshot jsonb;
+begin
+  if p_account_id is null then
+    raise exception 'ACCOUNT_ID_REQUIRED';
+  end if;
+
+  if coalesce(trim(p_stock_code), '') = '' then
+    raise exception 'STOCK_CODE_REQUIRED';
+  end if;
+
+  if p_requested_quantity is null or p_requested_quantity <= 0 then
+    raise exception 'REQUESTED_QUANTITY_INVALID';
+  end if;
+
+  if p_entry_price is null or p_entry_price <= 0 then
+    raise exception 'ENTRY_PRICE_INVALID';
+  end if;
+
+  if p_stop_price is null or p_stop_price <= 0 then
+    raise exception 'STOP_PRICE_INVALID';
+  end if;
+
+  if p_risk_decision_id is null then
+    raise exception 'RISK_DECISION_ID_REQUIRED';
+  end if;
+
+  if p_equity is null or p_equity <= 0 then
+    raise exception 'EQUITY_INVALID';
+  end if;
+
+  if (
+    p_max_aggregate_open_risk_rate is null or
+    p_max_aggregate_open_risk_rate <= 0 or
+    p_max_aggregate_open_risk_rate > 1
+  ) then
+    raise exception 'MAX_AGGREGATE_OPEN_RISK_RATE_INVALID';
+  end if;
+
+  /*
+   * One account-wide transaction lock serializes all committed BUY risk.
+   * Two simultaneous approvals cannot consume the same remaining budget.
+   */
+  perform pg_advisory_xact_lock(
+    hashtext('AI_STOCK_LAB_COMMITTED_RISK_V3:' || p_account_id::text)
+  );
+
+  /*
+   * RPC-level idempotency:
+   * if a network retry repeats the same risk_decision_id, return the already
+   * created order instead of reserving risk again.
+   */
+  select *
+  into v_existing_order
+  from public.paper_order_requests
+  where risk_decision_id = p_risk_decision_id
+  order by created_at asc
+  limit 1
+  for update;
+
+  if found then
+    return jsonb_build_object(
+      'idempotent', true,
+      'order', jsonb_build_object(
+        'id', v_existing_order.id,
+        'stock_code', v_existing_order.stock_code,
+        'side', v_existing_order.side,
+        'requested_quantity', v_existing_order.requested_quantity,
+        'approved_quantity', v_existing_order.approved_quantity,
+        'entry_price', v_existing_order.entry_price,
+        'stop_price', v_existing_order.stop_price,
+        'status', v_existing_order.status,
+        'created_at', v_existing_order.created_at
+      ),
+      'committedRisk',
+        coalesce(
+          v_existing_order.committed_risk_snapshot,
+          '{}'::jsonb
+        )
+    );
+  end if;
+
+  v_budget :=
+    p_equity *
+    p_max_aggregate_open_risk_rate;
+
+  /*
+   * Fail closed if an open position does not have a valid stop.
+   */
+  select
+    count(*) filter (
+      where current_stop_price is null
+         or current_stop_price <= 0
+         or average_price is null
+         or average_price <= 0
+         or quantity is null
+         or quantity <= 0
+    ),
+    coalesce(
+      sum(
+        greatest(
+          0,
+          (
+            average_price -
+            current_stop_price
+          ) *
+          quantity
+        )
+      ) filter (
+        where current_stop_price is not null
+          and current_stop_price > 0
+          and average_price is not null
+          and average_price > 0
+          and quantity is not null
+          and quantity > 0
+      ),
+      0
+    )
+  into
+    v_invalid_open_stops,
+    v_open_position_risk
+  from public.paper_positions
+  where account_id = p_account_id;
+
+  /*
+   * Any positive reservation counts until it is explicitly/automatically
+   * released. This intentionally fails safe even if an unusual intermediate
+   * status appears.
+   */
+  select
+    coalesce(
+      sum(
+        greatest(
+          0,
+          reserved_risk_amount
+        )
+      ),
+      0
+    )
+  into v_reserved_risk
+  from public.paper_order_requests
+  where account_id = p_account_id
+    and reserved_risk_amount > 0;
+
+  v_proposed_risk :=
+    greatest(
+      0,
+      (
+        p_entry_price -
+        p_stop_price
+      ) *
+      p_requested_quantity
+    );
+
+  v_committed_before :=
+    v_open_position_risk +
+    v_reserved_risk;
+
+  v_committed_after :=
+    v_committed_before +
+    v_proposed_risk;
+
+  if p_preflight_approved is not true then
+    v_final_approved := false;
+    v_reason := 'PREEXISTING_RISK_VALIDATION_REJECTED';
+
+  elsif v_invalid_open_stops > 0 then
+    v_final_approved := false;
+    v_reason := 'OPEN_POSITION_STOP_MISSING';
+
+  elsif p_stop_price >= p_entry_price then
+    v_final_approved := false;
+    v_reason := 'STOP_NOT_BELOW_ENTRY';
+
+  elsif v_proposed_risk <= 0 then
+    v_final_approved := false;
+    v_reason := 'PROPOSED_RISK_NOT_POSITIVE';
+
+  elsif v_committed_after > v_budget + 0.000001 then
+    v_final_approved := false;
+    v_reason := 'AGGREGATE_COMMITTED_RISK_LIMIT_EXCEEDED';
+
+  else
+    v_final_approved := true;
+    v_reason := 'COMMITTED_RISK_RESERVED';
+  end if;
+
+  if v_final_approved then
+    v_status := 'RISK_APPROVED';
+  else
+    v_status := 'RISK_REJECTED';
+  end if;
+
+  v_snapshot :=
+    jsonb_build_object(
+      'maxAggregateOpenRiskRate',
+        p_max_aggregate_open_risk_rate,
+      'riskBudgetAmount',
+        v_budget,
+      'equity',
+        p_equity,
+      'openPositionRiskAmount',
+        v_open_position_risk,
+      'activeBuyReservedRiskAmount',
+        v_reserved_risk,
+      'committedRiskBefore',
+        v_committed_before,
+      'proposedTradeRiskAmount',
+        v_proposed_risk,
+      'committedRiskAfter',
+        v_committed_after,
+      'invalidOpenPositionStopCount',
+        v_invalid_open_stops,
+      'approved',
+        v_final_approved,
+      'reason',
+        v_reason
+    );
+
+  insert into public.paper_order_requests (
+    account_id,
+    stock_code,
+    side,
+    requested_quantity,
+    approved_quantity,
+    entry_price,
+    stop_price,
+    status,
+    risk_decision_id,
+    reserved_risk_amount,
+    reserved_risk_at,
+    committed_risk_reason,
+    committed_risk_snapshot
+  )
+  values (
+    p_account_id,
+    p_stock_code,
+    'BUY',
+    p_requested_quantity,
+    case
+      when v_final_approved
+      then p_requested_quantity
+      else 0
+    end,
+    p_entry_price,
+    p_stop_price,
+    v_status,
+    p_risk_decision_id,
+    case
+      when v_final_approved
+      then v_proposed_risk
+      else 0
+    end,
+    case
+      when v_final_approved
+      then now()
+      else null
+    end,
+    v_reason,
+    v_snapshot
+  )
+  returning *
+  into v_order;
+
+  /*
+   * The original risk decision is the pre-commit decision. If committed risk
+   * rejects the order, final approval must also be false in the audit row.
+   */
+  if not v_final_approved then
+    update public.risk_decisions
+    set approved = false
+    where id = p_risk_decision_id;
+  end if;
+
+  return jsonb_build_object(
+    'idempotent', false,
+    'order', jsonb_build_object(
+      'id', v_order.id,
+      'stock_code', v_order.stock_code,
+      'side', v_order.side,
+      'requested_quantity', v_order.requested_quantity,
+      'approved_quantity', v_order.approved_quantity,
+      'entry_price', v_order.entry_price,
+      'stop_price', v_order.stop_price,
+      'status', v_order.status,
+      'created_at', v_order.created_at
+    ),
+    'committedRisk',
+      v_snapshot
+  );
+end;
+$$;
+
+create or replace function public.release_paper_buy_risk_v3(
+  p_order_id uuid,
+  p_reason text default 'RELEASED'
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_order public.paper_order_requests%rowtype;
+  v_existing_reserved numeric := 0;
+begin
+  if p_order_id is null then
+    raise exception 'ORDER_ID_REQUIRED';
+  end if;
+
+  perform pg_advisory_xact_lock(
+    hashtext('AI_STOCK_LAB_COMMITTED_RISK_V3:' || (
+      select account_id::text
+      from public.paper_order_requests
+      where id = p_order_id
+    ))
+  );
+
+  select *
+  into v_order
+  from public.paper_order_requests
+  where id = p_order_id
+  for update;
+
+  if not found then
+    raise exception 'PAPER_ORDER_NOT_FOUND:%', p_order_id;
+  end if;
+
+  v_existing_reserved :=
+    greatest(
+      0,
+      coalesce(
+        v_order.reserved_risk_amount,
+        0
+      )
+    );
+
+  if v_existing_reserved <= 0 then
+    return jsonb_build_object(
+      'released', true,
+      'idempotent', true,
+      'reason', 'NO_ACTIVE_RESERVATION',
+      'orderId', p_order_id,
+      'releasedRiskAmount', 0
+    );
+  end if;
+
+  update public.paper_order_requests
+  set
+    reserved_risk_amount = 0,
+    reserved_risk_released_at = now(),
+    reserved_risk_release_reason =
+      coalesce(
+        nullif(trim(p_reason), ''),
+        'RELEASED'
+      )
+  where id = p_order_id;
+
+  return jsonb_build_object(
+    'released', true,
+    'idempotent', false,
+    'reason',
+      coalesce(
+        nullif(trim(p_reason), ''),
+        'RELEASED'
+      ),
+    'orderId', p_order_id,
+    'releasedRiskAmount', v_existing_reserved
+  );
+end;
+$$;
+
+create or replace function public.release_terminal_paper_order_reserved_risk_v3()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if
+    new.status::text in (
+      'FILLED',
+      'RISK_REJECTED',
+      'REJECTED',
+      'CANCELLED',
+      'CANCELED',
+      'EXPIRED',
+      'FAILED',
+      'CLOSED'
+    )
+    and coalesce(new.reserved_risk_amount, 0) > 0
+  then
+    new.reserved_risk_amount := 0;
+    new.reserved_risk_released_at :=
+      coalesce(
+        new.reserved_risk_released_at,
+        now()
+      );
+    new.reserved_risk_release_reason :=
+      coalesce(
+        new.reserved_risk_release_reason,
+        'TERMINAL_STATUS:' ||
+          new.status::text
+      );
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_release_terminal_paper_order_reserved_risk_v3
+  on public.paper_order_requests;
+
+create trigger trg_release_terminal_paper_order_reserved_risk_v3
+before update of status
+on public.paper_order_requests
+for each row
+execute function public.release_terminal_paper_order_reserved_risk_v3();
+
+commit;

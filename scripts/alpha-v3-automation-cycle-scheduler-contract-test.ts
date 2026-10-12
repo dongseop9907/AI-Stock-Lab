@@ -1,0 +1,471 @@
+import {
+  createAutomationSchedulerState,
+  resolveAutomationSchedulerConfig,
+  runAutomationSchedulerTick,
+  type AutomationSchedulerEvent,
+} from "./alpha-v3-automation-cycle-scheduler";
+
+type Scenario = {
+  name: string;
+  passed: boolean;
+  expected: unknown;
+  observed: unknown;
+};
+
+const scenarios:
+  Scenario[] =
+  [];
+
+async function main() {
+
+const baseConfig = {
+  baseUrl:
+    "http://scheduler-test.local",
+
+  secret:
+    "test-secret",
+
+  triggerType:
+    "SCHEDULED",
+
+  cadenceMs:
+    60_000,
+};
+
+{
+  const calls:
+    Array<{
+      url: string;
+      init?: RequestInit;
+    }> =
+    [];
+
+  const events:
+    AutomationSchedulerEvent[] =
+    [];
+
+  const state =
+    createAutomationSchedulerState();
+
+  const result =
+    await runAutomationSchedulerTick(
+      baseConfig,
+      state,
+      {
+        fetchImpl:
+          (async (
+            input,
+            init,
+          ) => {
+            calls.push({
+              url:
+                String(
+                  input,
+                ),
+              init,
+            });
+
+            return new Response(
+              JSON.stringify({
+                ok: true,
+              }),
+              {
+                status: 200,
+              },
+            );
+          }) as typeof fetch,
+
+        onEvent:
+          (event) =>
+            events.push(
+              event,
+            ),
+      },
+    );
+
+  const headers =
+    new Headers(
+      calls[0]
+        ?.init
+        ?.headers,
+    );
+
+  const body =
+    JSON.parse(
+      String(
+        calls[0]
+          ?.init
+          ?.body ??
+        "{}",
+      ),
+    );
+
+  scenarios.push({
+    name:
+      "SUCCESS_CALL_CONTRACT",
+
+    passed:
+      result.ok ===
+        true &&
+      calls.length ===
+        1 &&
+      calls[0]?.url ===
+        "http://scheduler-test.local/api/trading/automation/cycle" &&
+      headers.get(
+        "x-automation-secret",
+      ) ===
+        "test-secret" &&
+      body.triggerType ===
+        "SCHEDULED" &&
+      body.scheduler
+        ?.cadenceSeconds ===
+        60 &&
+      state.successCount ===
+        1 &&
+      state.failureCount ===
+        0 &&
+      events.map(
+        (event) =>
+          event.type,
+      ).join(",") ===
+        "START,SUCCESS",
+
+    expected: {
+      url:
+        "http://scheduler-test.local/api/trading/automation/cycle",
+
+      secret:
+        "test-secret",
+
+      cadenceSeconds:
+        60,
+
+      events: [
+        "START",
+        "SUCCESS",
+      ],
+    },
+
+    observed: {
+      result,
+      calls,
+      state,
+      events,
+    },
+  });
+}
+
+{
+  const state =
+    createAutomationSchedulerState();
+
+  state.running =
+    true;
+
+  let fetchCount =
+    0;
+
+  const result =
+    await runAutomationSchedulerTick(
+      baseConfig,
+      state,
+      {
+        fetchImpl:
+          (async () => {
+            fetchCount +=
+              1;
+
+            return new Response(
+              "{}",
+              {
+                status: 200,
+              },
+            );
+          }) as typeof fetch,
+      },
+    );
+
+  scenarios.push({
+    name:
+      "OVERLAP_IS_SKIPPED",
+
+    passed:
+      result.skipped ===
+        true &&
+      result.reason ===
+        "OVERLAP" &&
+      fetchCount ===
+        0 &&
+      state
+        .skippedOverlapCount ===
+        1,
+
+    expected: {
+      skipped:
+        true,
+      fetchCount:
+        0,
+      skippedOverlapCount:
+        1,
+    },
+
+    observed: {
+      result,
+      fetchCount,
+      state,
+    },
+  });
+}
+
+{
+  const state =
+    createAutomationSchedulerState();
+
+  const result =
+    await runAutomationSchedulerTick(
+      baseConfig,
+      state,
+      {
+        fetchImpl:
+          (async () =>
+            new Response(
+              JSON.stringify({
+                ok: false,
+              }),
+              {
+                status: 503,
+              },
+            )) as typeof fetch,
+      },
+    );
+
+  scenarios.push({
+    name:
+      "NON_2XX_COUNTS_FAILURE",
+
+    passed:
+      result.ok ===
+        false &&
+      result.skipped ===
+        false &&
+      result.status ===
+        503 &&
+      state.failureCount ===
+        1 &&
+      state.successCount ===
+        0,
+
+    expected: {
+      status:
+        503,
+      failureCount:
+        1,
+    },
+
+    observed: {
+      result,
+      state,
+    },
+  });
+}
+
+{
+  let threw =
+    false;
+
+  let errorMessage =
+    "";
+
+  try {
+    resolveAutomationSchedulerConfig(
+      {
+        AI_STOCK_LAB_BASE_URL:
+          "http://localhost:3000",
+
+        TRADING_AUTOMATION_SECRET:
+          "",
+      } as NodeJS.ProcessEnv,
+    );
+  } catch (error) {
+    threw =
+      true;
+
+    errorMessage =
+      error instanceof Error
+        ? error.message
+        : String(
+            error,
+          );
+  }
+
+  scenarios.push({
+    name:
+      "SECRET_IS_REQUIRED",
+
+    passed:
+      threw &&
+      errorMessage ===
+        "TRADING_AUTOMATION_SECRET_REQUIRED_FOR_SCHEDULER",
+
+    expected: {
+      throws:
+        true,
+      error:
+        "TRADING_AUTOMATION_SECRET_REQUIRED_FOR_SCHEDULER",
+    },
+
+    observed: {
+      threw,
+      errorMessage,
+    },
+  });
+}
+
+{
+  let threw =
+    false;
+
+  let errorMessage =
+    "";
+
+  try {
+    resolveAutomationSchedulerConfig(
+      {
+        TRADING_AUTOMATION_SECRET:
+          "x",
+
+        AUTOMATION_CYCLE_CADENCE_MS:
+          "59000",
+      } as NodeJS.ProcessEnv,
+    );
+  } catch (error) {
+    threw =
+      true;
+
+    errorMessage =
+      error instanceof Error
+        ? error.message
+        : String(
+            error,
+          );
+  }
+
+  scenarios.push({
+    name:
+      "CADENCE_CANNOT_BE_BELOW_60S",
+
+    passed:
+      threw &&
+      errorMessage ===
+        "AUTOMATION_CYCLE_CADENCE_MS_MUST_BE_AT_LEAST_60000",
+
+    expected: {
+      throws:
+        true,
+      minimumMs:
+        60000,
+    },
+
+    observed: {
+      threw,
+      errorMessage,
+    },
+  });
+}
+
+const failed =
+  scenarios.filter(
+    (scenario) =>
+      !scenario.passed,
+  );
+
+console.log(
+  JSON.stringify(
+    {
+      status:
+        failed.length === 0
+          ? "ALPHA_V3_60S_SERVER_SIDE_SCHEDULER_CONTRACT_TEST_VERIFIED"
+          : "ALPHA_V3_60S_SERVER_SIDE_SCHEDULER_CONTRACT_TEST_REVIEW",
+
+      scenarios,
+
+      summary: {
+        scenarioCount:
+          scenarios.length,
+
+        passedCount:
+          scenarios.length -
+          failed.length,
+
+        failedCount:
+          failed.length,
+
+        realNetworkCalls:
+          0,
+
+        databaseWrites:
+          0,
+
+        productionOrdersCreated:
+          0,
+
+        productionPositionsChanged:
+          0,
+      },
+
+      nextGate:
+        failed.length === 0
+          ? "RUN_ONE_SHOT_LIVE_ROUTE_SMOKE_TEST_WHEN_SERVER_IS_READY"
+          : "REVIEW_60S_SERVER_SIDE_SCHEDULER",
+
+    },
+    null,
+    2,
+  ),
+);
+
+if (
+  failed.length > 0
+) {
+  process.exitCode =
+    2;
+}
+}
+
+void main()
+  .catch(
+    (error) => {
+      console.error(
+        JSON.stringify(
+          {
+            status:
+              "ALPHA_V3_60S_SERVER_SIDE_SCHEDULER_CONTRACT_TEST_FATAL",
+
+            error:
+              error instanceof Error
+                ? error.message
+                : String(
+                    error,
+                  ),
+
+            realNetworkCalls:
+              0,
+
+            databaseWrites:
+              0,
+
+            productionOrdersCreated:
+              0,
+
+            productionPositionsChanged:
+              0,
+          },
+          null,
+          2,
+        ),
+      );
+
+      process.exitCode =
+        2;
+    },
+  );

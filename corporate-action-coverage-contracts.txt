@@ -1,0 +1,1728 @@
+
+============================================================
+FILE: .\lib\research\evaluate-corporate-action-dataset-coverage-v9-7.ts
+============================================================
+
+--- MATCH @ 15 ---
+  "MERGER",
+] as const;
+
+type CompilationRow = {
+  id:
+    string;
+
+  universe_code:
+    string;
+
+  provider:
+    string;
+
+--- MATCH @ 34 ---
+  status:
+    string;
+
+  is_validation:
+    boolean;
+};
+
+type SourceCoverageRow = {
+  id:
+    string;
+
+  universe_code:
+
+--- MATCH @ 38 ---
+    boolean;
+};
+
+type SourceCoverageRow = {
+  id:
+    string;
+
+  universe_code:
+    string;
+
+  provider:
+    string;
+
+--- MATCH @ 57 ---
+  end_date:
+    string;
+
+  coverage_status:
+    string;
+
+  markets:
+    unknown;
+
+  action_types:
+    unknown;
+
+
+--- MATCH @ 72 ---
+  evidence:
+    unknown;
+
+  is_validation:
+    boolean;
+};
+
+function requireDate(
+  value:
+    string,
+  name:
+    string,
+
+--- MATCH @ 121 ---
+    : [];
+}
+
+async function resolveCompilation(
+  input: {
+    compilationRunId?:
+      string;
+
+    universeCode:
+      string;
+
+    startDate:
+
+--- MATCH @ 126 ---
+    compilationRunId?:
+      string;
+
+    universeCode:
+      string;
+
+    startDate:
+      string;
+
+    endDate:
+      string;
+
+
+--- MATCH @ 129 ---
+    universeCode:
+      string;
+
+    startDate:
+      string;
+
+    endDate:
+      string;
+
+    isValidation:
+      boolean;
+  },
+
+--- MATCH @ 132 ---
+    startDate:
+      string;
+
+    endDate:
+      string;
+
+    isValidation:
+      boolean;
+  },
+) {
+  const supabase =
+    createSupabaseServerClient();
+
+--- MATCH @ 154 ---
+        start_date,
+        end_date,
+        status,
+        is_validation
+      `)
+      .eq(
+        "is_validation",
+        input.isValidation,
+      );
+
+  if (
+    input.compilationRunId
+
+--- MATCH @ 157 ---
+        is_validation
+      `)
+      .eq(
+        "is_validation",
+        input.isValidation,
+      );
+
+  if (
+    input.compilationRunId
+  ) {
+    query =
+      query.eq(
+
+--- MATCH @ 174 ---
+      query
+        .eq(
+          "universe_code",
+          input.universeCode,
+        )
+        .lte(
+          "start_date",
+          input.startDate,
+        )
+        .gte(
+          "end_date",
+          input.endDate,
+
+--- MATCH @ 178 ---
+        )
+        .lte(
+          "start_date",
+          input.startDate,
+        )
+        .gte(
+          "end_date",
+          input.endDate,
+        );
+  }
+
+  const {
+
+--- MATCH @ 182 ---
+        )
+        .gte(
+          "end_date",
+          input.endDate,
+        );
+  }
+
+  const {
+    data,
+    error,
+  } =
+    await query
+
+--- MATCH @ 215 ---
+  ) as CompilationRow | null;
+}
+
+async function loadPitIdentity(
+  compilationRunId:
+    string,
+  startDate:
+    string,
+  endDate:
+    string,
+) {
+  const supabase =
+
+--- MATCH @ 218 ---
+async function loadPitIdentity(
+  compilationRunId:
+    string,
+  startDate:
+    string,
+  endDate:
+    string,
+) {
+  const supabase =
+    createSupabaseServerClient();
+
+  const members =
+
+--- MATCH @ 220 ---
+    string,
+  startDate:
+    string,
+  endDate:
+    string,
+) {
+  const supabase =
+    createSupabaseServerClient();
+
+  const members =
+    new Set<string>();
+
+
+--- MATCH @ 263 ---
+        )
+        .lte(
+          "valid_from",
+          endDate,
+        )
+        .gt(
+          "valid_to",
+          startDate,
+        )
+        .order(
+          "stock_code",
+          {
+
+--- MATCH @ 267 ---
+        )
+        .gt(
+          "valid_to",
+          startDate,
+        )
+        .order(
+          "stock_code",
+          {
+            ascending:
+              true,
+          },
+        )
+
+--- MATCH @ 331 ---
+  };
+}
+
+async function resolveSourceCoverage(
+  input: {
+    sourceCoverageWindowId?:
+      string;
+
+    provider?:
+      string;
+
+    universeCode:
+
+--- MATCH @ 339 ---
+    provider?:
+      string;
+
+    universeCode:
+      string;
+
+    startDate:
+      string;
+
+    endDate:
+      string;
+
+
+--- MATCH @ 342 ---
+    universeCode:
+      string;
+
+    startDate:
+      string;
+
+    endDate:
+      string;
+
+    isValidation:
+      boolean;
+  },
+
+--- MATCH @ 345 ---
+    startDate:
+      string;
+
+    endDate:
+      string;
+
+    isValidation:
+      boolean;
+  },
+) {
+  const supabase =
+    createSupabaseServerClient();
+
+--- MATCH @ 358 ---
+  let query =
+    supabase
+      .from(
+        "corporate_action_source_coverage_windows",
+      )
+      .select(`
+        id,
+        universe_code,
+        provider,
+        provider_version,
+        start_date,
+        end_date,
+
+--- MATCH @ 367 ---
+        provider_version,
+        start_date,
+        end_date,
+        coverage_status,
+        markets,
+        action_types,
+        source_fingerprint,
+        evidence,
+        is_validation
+      `)
+      .eq(
+        "universe_code",
+
+--- MATCH @ 372 ---
+        action_types,
+        source_fingerprint,
+        evidence,
+        is_validation
+      `)
+      .eq(
+        "universe_code",
+        input.universeCode,
+      )
+      .eq(
+        "is_validation",
+        input.isValidation,
+
+--- MATCH @ 376 ---
+      `)
+      .eq(
+        "universe_code",
+        input.universeCode,
+      )
+      .eq(
+        "is_validation",
+        input.isValidation,
+      );
+
+  if (
+    input.sourceCoverageWindowId
+
+--- MATCH @ 379 ---
+        input.universeCode,
+      )
+      .eq(
+        "is_validation",
+        input.isValidation,
+      );
+
+  if (
+    input.sourceCoverageWindowId
+  ) {
+    query =
+      query.eq(
+
+--- MATCH @ 396 ---
+      query
+        .lte(
+          "start_date",
+          input.startDate,
+        )
+        .gte(
+          "end_date",
+          input.endDate,
+        );
+
+    if (
+      input.provider
+
+--- MATCH @ 400 ---
+        )
+        .gte(
+          "end_date",
+          input.endDate,
+        );
+
+    if (
+      input.provider
+    ) {
+      query =
+        query.eq(
+          "provider",
+
+--- MATCH @ 443 ---
+  ) as SourceCoverageRow | null;
+}
+
+export async function evaluateCorporateActionDatasetCoverageV97(
+  input: {
+    universeCode?:
+      string;
+
+    startDate?:
+      string;
+
+    endDate?:
+
+--- MATCH @ 445 ---
+
+export async function evaluateCorporateActionDatasetCoverageV97(
+  input: {
+    universeCode?:
+      string;
+
+    startDate?:
+      string;
+
+    endDate?:
+      string;
+
+
+--- MATCH @ 448 ---
+    universeCode?:
+      string;
+
+    startDate?:
+      string;
+
+    endDate?:
+      string;
+
+    compilationRunId?:
+      string;
+
+
+--- MATCH @ 451 ---
+    startDate?:
+      string;
+
+    endDate?:
+      string;
+
+    compilationRunId?:
+      string;
+
+    sourceCoverageWindowId?:
+      string;
+
+
+--- MATCH @ 473 ---
+  const supabase =
+    createSupabaseServerClient();
+
+  const universeCode =
+    input
+      .universeCode
+      ?.trim() ||
+    "KRX_ALL_LISTED";
+
+  const startDate =
+    requireDate(
+      input.startDate ??
+
+--- MATCH @ 475 ---
+
+  const universeCode =
+    input
+      .universeCode
+      ?.trim() ||
+    "KRX_ALL_LISTED";
+
+  const startDate =
+    requireDate(
+      input.startDate ??
+        "2023-01-02",
+      "START_DATE",
+
+--- MATCH @ 479 ---
+      ?.trim() ||
+    "KRX_ALL_LISTED";
+
+  const startDate =
+    requireDate(
+      input.startDate ??
+        "2023-01-02",
+      "START_DATE",
+    );
+
+  const endDate =
+    requireDate(
+
+--- MATCH @ 481 ---
+
+  const startDate =
+    requireDate(
+      input.startDate ??
+        "2023-01-02",
+      "START_DATE",
+    );
+
+  const endDate =
+    requireDate(
+      input.endDate ??
+        "2026-07-31",
+
+--- MATCH @ 486 ---
+      "START_DATE",
+    );
+
+  const endDate =
+    requireDate(
+      input.endDate ??
+        "2026-07-31",
+      "END_DATE",
+    );
+
+  if (
+    startDate >
+
+--- MATCH @ 488 ---
+
+  const endDate =
+    requireDate(
+      input.endDate ??
+        "2026-07-31",
+      "END_DATE",
+    );
+
+  if (
+    startDate >
+    endDate
+  ) {
+
+--- MATCH @ 494 ---
+    );
+
+  if (
+    startDate >
+    endDate
+  ) {
+    throw new Error(
+      "V9_7_START_DATE_AFTER_END_DATE",
+    );
+  }
+
+  const requiredActionTypes =
+
+--- MATCH @ 495 ---
+
+  if (
+    startDate >
+    endDate
+  ) {
+    throw new Error(
+      "V9_7_START_DATE_AFTER_END_DATE",
+    );
+  }
+
+  const requiredActionTypes =
+    input
+
+--- MATCH @ 531 ---
+          .compilationRunId
+          ?.trim(),
+
+      universeCode,
+      startDate,
+      endDate,
+      isValidation,
+    });
+
+  const sourceCoverage =
+    compilation?.status ===
+      "READY"
+
+--- MATCH @ 532 ---
+          ?.trim(),
+
+      universeCode,
+      startDate,
+      endDate,
+      isValidation,
+    });
+
+  const sourceCoverage =
+    compilation?.status ===
+      "READY"
+      ? await resolveSourceCoverage({
+
+--- MATCH @ 533 ---
+
+      universeCode,
+      startDate,
+      endDate,
+      isValidation,
+    });
+
+  const sourceCoverage =
+    compilation?.status ===
+      "READY"
+      ? await resolveSourceCoverage({
+          sourceCoverageWindowId:
+
+--- MATCH @ 551 ---
+              .provider
+              ?.trim(),
+
+          universeCode,
+          startDate,
+          endDate,
+          isValidation,
+        })
+      : null;
+
+  const {
+    data: run,
+
+--- MATCH @ 552 ---
+              ?.trim(),
+
+          universeCode,
+          startDate,
+          endDate,
+          isValidation,
+        })
+      : null;
+
+  const {
+    data: run,
+    error: runError,
+
+--- MATCH @ 553 ---
+
+          universeCode,
+          startDate,
+          endDate,
+          isValidation,
+        })
+      : null;
+
+  const {
+    data: run,
+    error: runError,
+  } =
+
+--- MATCH @ 571 ---
+          "CORPORATE_ACTION_DATASET_COVERAGE_V9_7",
+
+        universe_code:
+          universeCode,
+
+        compilation_run_id:
+          compilation
+            ?.id ??
+          null,
+
+        source_coverage_window_id:
+          sourceCoverage
+
+--- MATCH @ 584 ---
+          null,
+
+        start_date:
+          startDate,
+
+        end_date:
+          endDate,
+
+        status:
+          "RUNNING",
+
+        required_action_types:
+
+--- MATCH @ 587 ---
+          startDate,
+
+        end_date:
+          endDate,
+
+        status:
+          "RUNNING",
+
+        required_action_types:
+          requiredActionTypes,
+
+        is_validation:
+
+--- MATCH @ 595 ---
+        required_action_types:
+          requiredActionTypes,
+
+        is_validation:
+          isValidation,
+
+        production_applied:
+          false,
+      })
+      .select(
+        "id",
+      )
+
+--- MATCH @ 598 ---
+        is_validation:
+          isValidation,
+
+        production_applied:
+          false,
+      })
+      .select(
+        "id",
+      )
+      .single();
+
+  if (
+
+--- MATCH @ 721 ---
+    const pit =
+      await loadPitIdentity(
+        compilation.id,
+        startDate,
+        endDate,
+      );
+
+    if (
+      !sourceCoverage ||
+      sourceCoverage.coverage_status !==
+        "COMPLETE"
+    ) {
+
+--- MATCH @ 722 ---
+      await loadPitIdentity(
+        compilation.id,
+        startDate,
+        endDate,
+      );
+
+    if (
+      !sourceCoverage ||
+      sourceCoverage.coverage_status !==
+        "COMPLETE"
+    ) {
+      const summary = {
+
+--- MATCH @ 727 ---
+
+    if (
+      !sourceCoverage ||
+      sourceCoverage.coverage_status !==
+        "COMPLETE"
+    ) {
+      const summary = {
+        pitCompilation: {
+          id:
+            compilation.id,
+
+          provider:
+
+--- MATCH @ 728 ---
+    if (
+      !sourceCoverage ||
+      sourceCoverage.coverage_status !==
+        "COMPLETE"
+    ) {
+      const summary = {
+        pitCompilation: {
+          id:
+            compilation.id,
+
+          provider:
+            compilation.provider,
+
+--- MATCH @ 746 ---
+          null,
+
+        reason:
+          "Explicit COMPLETE provider/source coverage evidence is missing.",
+
+        eventAbsenceInterpretedAsNoAction:
+          false,
+
+        productionApplied:
+          false,
+      };
+
+
+--- MATCH @ 854 ---
+          ),
+      );
+
+    const complete =
+      pit.memberCount >
+        0 &&
+      missingMarkets.length ===
+        0 &&
+      missingActionTypes.length ===
+        0;
+
+    const status =
+
+--- MATCH @ 863 ---
+        0;
+
+    const status =
+      complete
+        ? "COMPLETE"
+        : "PARTIAL";
+
+    const summary = {
+      pitCompilation: {
+        id:
+          compilation.id,
+
+
+--- MATCH @ 864 ---
+
+    const status =
+      complete
+        ? "COMPLETE"
+        : "PARTIAL";
+
+    const summary = {
+      pitCompilation: {
+        id:
+          compilation.id,
+
+        provider:
+
+--- MATCH @ 865 ---
+    const status =
+      complete
+        ? "COMPLETE"
+        : "PARTIAL";
+
+    const summary = {
+      pitCompilation: {
+        id:
+          compilation.id,
+
+        provider:
+          compilation.provider,
+
+--- MATCH @ 875 ---
+        provider:
+          compilation.provider,
+
+        startDate:
+          compilation.start_date,
+
+        endDate:
+          compilation.end_date,
+      },
+
+      pit,
+
+
+--- MATCH @ 878 ---
+        startDate:
+          compilation.start_date,
+
+        endDate:
+          compilation.end_date,
+      },
+
+      pit,
+
+      sourceCoverage: {
+        id:
+          sourceCoverage.id,
+
+--- MATCH @ 894 ---
+        providerVersion:
+          sourceCoverage.provider_version,
+
+        startDate:
+          sourceCoverage.start_date,
+
+        endDate:
+          sourceCoverage.end_date,
+
+        coverageStatus:
+          sourceCoverage.coverage_status,
+
+
+--- MATCH @ 897 ---
+        startDate:
+          sourceCoverage.start_date,
+
+        endDate:
+          sourceCoverage.end_date,
+
+        coverageStatus:
+          sourceCoverage.coverage_status,
+
+        sourceFingerprint:
+          sourceCoverage.source_fingerprint,
+      },
+
+--- MATCH @ 901 ---
+          sourceCoverage.end_date,
+
+        coverageStatus:
+          sourceCoverage.coverage_status,
+
+        sourceFingerprint:
+          sourceCoverage.source_fingerprint,
+      },
+
+      requiredActionTypes,
+
+      coveredMarkets,
+
+--- MATCH @ 975 ---
+    } =
+      await supabase
+        .from(
+          "corporate_action_coverage_assertions",
+        )
+        .insert({
+          universe_code:
+            universeCode,
+
+          start_date:
+            startDate,
+
+
+--- MATCH @ 979 ---
+        )
+        .insert({
+          universe_code:
+            universeCode,
+
+          start_date:
+            startDate,
+
+          end_date:
+            endDate,
+
+          provider:
+
+--- MATCH @ 982 ---
+            universeCode,
+
+          start_date:
+            startDate,
+
+          end_date:
+            endDate,
+
+          provider:
+            sourceCoverage.provider,
+
+          coverage_status:
+
+--- MATCH @ 985 ---
+            startDate,
+
+          end_date:
+            endDate,
+
+          provider:
+            sourceCoverage.provider,
+
+          coverage_status:
+            complete
+              ? "COMPLETE"
+              : "PARTIAL",
+
+--- MATCH @ 990 ---
+          provider:
+            sourceCoverage.provider,
+
+          coverage_status:
+            complete
+              ? "COMPLETE"
+              : "PARTIAL",
+
+          supported_action_types:
+            coveredActionTypes,
+
+          unsupported_action_types:
+
+--- MATCH @ 991 ---
+            sourceCoverage.provider,
+
+          coverage_status:
+            complete
+              ? "COMPLETE"
+              : "PARTIAL",
+
+          supported_action_types:
+            coveredActionTypes,
+
+          unsupported_action_types:
+            missingActionTypes,
+
+--- MATCH @ 992 ---
+
+          coverage_status:
+            complete
+              ? "COMPLETE"
+              : "PARTIAL",
+
+          supported_action_types:
+            coveredActionTypes,
+
+          unsupported_action_types:
+            missingActionTypes,
+
+
+--- MATCH @ 993 ---
+          coverage_status:
+            complete
+              ? "COMPLETE"
+              : "PARTIAL",
+
+          supported_action_types:
+            coveredActionTypes,
+
+          unsupported_action_types:
+            missingActionTypes,
+
+          evidence: {
+
+--- MATCH @ 995 ---
+              ? "COMPLETE"
+              : "PARTIAL",
+
+          supported_action_types:
+            coveredActionTypes,
+
+          unsupported_action_types:
+            missingActionTypes,
+
+          evidence: {
+            coverageRunId,
+
+
+--- MATCH @ 998 ---
+          supported_action_types:
+            coveredActionTypes,
+
+          unsupported_action_types:
+            missingActionTypes,
+
+          evidence: {
+            coverageRunId,
+
+            compilationRunId:
+              compilation.id,
+
+
+--- MATCH @ 1024 ---
+              false,
+          },
+
+          is_validation:
+            isValidation,
+
+          production_applied:
+            false,
+        })
+        .select(
+          "id",
+        )
+
+--- MATCH @ 1027 ---
+          is_validation:
+            isValidation,
+
+          production_applied:
+            false,
+        })
+        .select(
+          "id",
+        )
+        .single();
+
+    if (
+
+============================================================
+FILE: .\lib\research\validate-corporate-action-dataset-coverage-v9-7.ts
+============================================================
+
+--- MATCH @ 23 ---
+  "MERGER",
+];
+
+export async function validateCorporateActionDatasetCoverageV97() {
+  const supabase =
+    createSupabaseServerClient();
+
+  let compilationRunId:
+    string | null =
+    null;
+
+  let sourceCoverageWindowId:
+
+--- MATCH @ 103 ---
+      );
+    }
+
+    const startDate =
+      dates[0];
+
+    const endDate =
+      dates[
+        dates.length -
+        1
+      ];
+
+
+--- MATCH @ 106 ---
+    const startDate =
+      dates[0];
+
+    const endDate =
+      dates[
+        dates.length -
+        1
+      ];
+
+    const {
+      data: security,
+      error: securityError,
+
+--- MATCH @ 168 ---
+            "0001",
+
+          start_date:
+            startDate,
+
+          end_date:
+            endDate,
+
+          status:
+            "READY",
+
+          expected_trading_dates:
+
+--- MATCH @ 171 ---
+            startDate,
+
+          end_date:
+            endDate,
+
+          status:
+            "READY",
+
+          expected_trading_dates:
+            dates.length,
+
+          imported_complete_dates:
+
+--- MATCH @ 179 ---
+          expected_trading_dates:
+            dates.length,
+
+          imported_complete_dates:
+            dates.length,
+
+          missing_trading_dates:
+            0,
+
+          duplicate_complete_dates:
+            0,
+
+
+--- MATCH @ 185 ---
+          missing_trading_dates:
+            0,
+
+          duplicate_complete_dates:
+            0,
+
+          compiled_interval_count:
+            1,
+
+          metadata: {
+            synthetic:
+              true,
+
+--- MATCH @ 196 ---
+              true,
+          },
+
+          is_validation:
+            true,
+
+          production_applied:
+            false,
+
+          finished_at:
+            new Date()
+              .toISOString(),
+
+--- MATCH @ 199 ---
+          is_validation:
+            true,
+
+          production_applied:
+            false,
+
+          finished_at:
+            new Date()
+              .toISOString(),
+        })
+        .select(
+          "id",
+
+--- MATCH @ 242 ---
+        )
+        .gt(
+          "trading_date",
+          endDate,
+        )
+        .order(
+          "trading_date",
+          {
+            ascending:
+              true,
+          },
+        )
+
+--- MATCH @ 273 ---
+        : (() => {
+            const date =
+              new Date(
+                `${endDate}T00:00:00.000Z`,
+              );
+
+            date.setUTCDate(
+              date.getUTCDate() +
+                1,
+            );
+
+            return date
+
+--- MATCH @ 325 ---
+            true,
+
+          valid_from:
+            startDate,
+
+          valid_to:
+            validTo,
+
+          evidence_type:
+            "SYNTHETIC_VALIDATION",
+
+          source_provider:
+
+--- MATCH @ 344 ---
+              true,
+          },
+
+          is_validation:
+            true,
+
+          production_applied:
+            false,
+        });
+
+    if (
+      membershipError
+
+--- MATCH @ 347 ---
+          is_validation:
+            true,
+
+          production_applied:
+            false,
+        });
+
+    if (
+      membershipError
+    ) {
+      throw new Error(
+        `v9.7 validation membership insert failed: ${membershipError.message}`,
+
+--- MATCH @ 368 ---
+            provider:
+              "SYNTHETIC_CORPORATE_ACTION_COVERAGE_V9_7",
+
+            startDate,
+            endDate,
+
+            markets: [
+              security.market,
+            ],
+
+            actionTypes:
+              REQUIRED_ACTION_TYPES,
+
+--- MATCH @ 369 ---
+              "SYNTHETIC_CORPORATE_ACTION_COVERAGE_V9_7",
+
+            startDate,
+            endDate,
+
+            markets: [
+              security.market,
+            ],
+
+            actionTypes:
+              REQUIRED_ACTION_TYPES,
+          }),
+
+--- MATCH @ 389 ---
+    } =
+      await supabase
+        .from(
+          "corporate_action_source_coverage_windows",
+        )
+        .insert({
+          universe_code:
+            "KRX_ALL_LISTED",
+
+          provider:
+            "SYNTHETIC_CORPORATE_ACTION_COVERAGE_V9_7",
+
+
+--- MATCH @ 402 ---
+            "SYNTHETIC_V1",
+
+          start_date:
+            startDate,
+
+          end_date:
+            endDate,
+
+          coverage_status:
+            "COMPLETE",
+
+          markets: [
+
+--- MATCH @ 405 ---
+            startDate,
+
+          end_date:
+            endDate,
+
+          coverage_status:
+            "COMPLETE",
+
+          markets: [
+            security.market,
+          ],
+
+
+--- MATCH @ 407 ---
+          end_date:
+            endDate,
+
+          coverage_status:
+            "COMPLETE",
+
+          markets: [
+            security.market,
+          ],
+
+          action_types:
+            REQUIRED_ACTION_TYPES,
+
+--- MATCH @ 408 ---
+            endDate,
+
+          coverage_status:
+            "COMPLETE",
+
+          markets: [
+            security.market,
+          ],
+
+          action_types:
+            REQUIRED_ACTION_TYPES,
+
+
+--- MATCH @ 428 ---
+              "V9_7_COVERAGE_VALIDATION",
+          },
+
+          is_validation:
+            true,
+
+          production_applied:
+            false,
+        })
+        .select(
+          "id",
+        )
+
+--- MATCH @ 431 ---
+          is_validation:
+            true,
+
+          production_applied:
+            false,
+        })
+        .select(
+          "id",
+        )
+        .single();
+
+    if (
+
+--- MATCH @ 458 ---
+
+    const result =
+      await evaluateCorporateActionDatasetCoverageV97({
+        universeCode:
+          "KRX_ALL_LISTED",
+
+        startDate,
+        endDate,
+
+        compilationRunId,
+
+        sourceCoverageWindowId,
+
+--- MATCH @ 461 ---
+        universeCode:
+          "KRX_ALL_LISTED",
+
+        startDate,
+        endDate,
+
+        compilationRunId,
+
+        sourceCoverageWindowId,
+
+        requiredActionTypes:
+          REQUIRED_ACTION_TYPES,
+
+--- MATCH @ 462 ---
+          "KRX_ALL_LISTED",
+
+        startDate,
+        endDate,
+
+        compilationRunId,
+
+        sourceCoverageWindowId,
+
+        requiredActionTypes:
+          REQUIRED_ACTION_TYPES,
+
+
+--- MATCH @ 505 ---
+      );
+    }
+
+    const completeSummary =
+      result.summary;
+
+    const assertions = {
+      coverageComplete:
+        result.status ===
+        "COMPLETE",
+
+      onePitMember:
+
+--- MATCH @ 509 ---
+      result.summary;
+
+    const assertions = {
+      coverageComplete:
+        result.status ===
+        "COMPLETE",
+
+      onePitMember:
+        completeSummary
+          .pit
+          .memberCount ===
+        1,
+
+--- MATCH @ 511 ---
+    const assertions = {
+      coverageComplete:
+        result.status ===
+        "COMPLETE",
+
+      onePitMember:
+        completeSummary
+          .pit
+          .memberCount ===
+        1,
+
+      pitMarketDetected:
+
+--- MATCH @ 514 ---
+        "COMPLETE",
+
+      onePitMember:
+        completeSummary
+          .pit
+          .memberCount ===
+        1,
+
+      pitMarketDetected:
+        completeSummary
+          .pit
+          .markets
+
+--- MATCH @ 520 ---
+        1,
+
+      pitMarketDetected:
+        completeSummary
+          .pit
+          .markets
+          .includes(
+            String(
+              security.market,
+            ),
+          ),
+
+
+--- MATCH @ 530 ---
+          ),
+
+      sourceCoverageWindowAccepted:
+        completeSummary
+          .sourceCoverage
+          .coverageStatus ===
+        "COMPLETE",
+
+      noMissingMarkets:
+        completeSummary
+          .missingMarkets
+          .length ===
+
+--- MATCH @ 533 ---
+        completeSummary
+          .sourceCoverage
+          .coverageStatus ===
+        "COMPLETE",
+
+      noMissingMarkets:
+        completeSummary
+          .missingMarkets
+          .length ===
+        0,
+
+      noMissingActionTypes:
+
+--- MATCH @ 536 ---
+        "COMPLETE",
+
+      noMissingMarkets:
+        completeSummary
+          .missingMarkets
+          .length ===
+        0,
+
+      noMissingActionTypes:
+        completeSummary
+          .missingActionTypes
+          .length ===
+
+--- MATCH @ 542 ---
+        0,
+
+      noMissingActionTypes:
+        completeSummary
+          .missingActionTypes
+          .length ===
+        0,
+
+      allRequiredActionTypesCovered:
+        REQUIRED_ACTION_TYPES.every(
+          (
+            actionType,
+
+--- MATCH @ 552 ---
+          (
+            actionType,
+          ) =>
+            completeSummary
+              .coveredActionTypes
+              .includes(
+                actionType,
+              ),
+        ),
+
+      eventAbsenceNotUsedAsCoverageEvidence:
+        result
+
+--- MATCH @ 600 ---
+    ) {
+      await supabase
+        .from(
+          "corporate_action_coverage_assertions",
+        )
+        .delete()
+        .eq(
+          "id",
+          assertionId,
+        );
+    }
+
+
+--- MATCH @ 628 ---
+    ) {
+      await supabase
+        .from(
+          "corporate_action_source_coverage_windows",
+        )
+        .delete()
+        .eq(
+          "id",
+          sourceCoverageWindowId,
+        );
+    }
+
+
+--- MATCH @ 676 ---
+          cleanup_succeeded:
+            cleanupSucceeded,
+
+          production_applied:
+            false,
+        })
+        .select(
+          "id",
+        )
+        .single();
+
+    if (
+
+--- MATCH @ 715 ---
+        security.market,
+
+      dates: {
+        startDate,
+        endDate,
+      },
+
+      assertions,
+
+      cleanup: {
+        succeeded:
+          cleanupSucceeded,
+
+--- MATCH @ 716 ---
+
+      dates: {
+        startDate,
+        endDate,
+      },
+
+      assertions,
+
+      cleanup: {
+        succeeded:
+          cleanupSucceeded,
+      },
+
+--- MATCH @ 750 ---
+    ) {
+      await supabase
+        .from(
+          "corporate_action_coverage_assertions",
+        )
+        .delete()
+        .eq(
+          "id",
+          assertionId,
+        );
+    }
+
+
+--- MATCH @ 778 ---
+    ) {
+      await supabase
+        .from(
+          "corporate_action_source_coverage_windows",
+        )
+        .delete()
+        .eq(
+          "id",
+          sourceCoverageWindowId,
+        );
+    }
+
+
+--- MATCH @ 829 ---
+        error_message:
+          message,
+
+        production_applied:
+          false,
+      });
+
+    throw error;
+  }
+}

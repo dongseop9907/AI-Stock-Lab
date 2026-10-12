@@ -1,0 +1,49 @@
+{
+  "name": "ai-stock-lab",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "automation:scheduler": "tsx --env-file=.env.local scripts/alpha-v3-automation-cycle-scheduler.ts",
+    "automation:scheduler:once": "tsx --env-file=.env.local scripts/alpha-v3-automation-cycle-scheduler.ts --once",
+    "automation:scheduler:test": "tsx scripts/alpha-v3-automation-cycle-scheduler-contract-test.ts",
+    "market-data:maintenance:scheduler": "tsx --env-file=.env.local scripts/alpha-v3-market-data-maintenance-supervisor-v4.ts",
+    "market-data:maintenance:once": "tsx --env-file=.env.local scripts/alpha-v3-market-data-maintenance-scheduler.ts --once",
+    "market-data:maintenance:test": "tsx scripts/alpha-v3-market-data-maintenance-scheduler-contract-test.ts",
+    "market-data:maintenance:supervisor:once": "tsx --env-file=.env.local scripts/alpha-v3-market-data-maintenance-supervisor-v4.ts --once-supervisor",
+    "market-data:maintenance:supervisor:test": "tsx scripts/alpha-v3-market-data-maintenance-supervisor-v4-contract-test.ts",
+    "forward-oos:produce": "tsx --env-file=.env.local scripts/alpha-v3-true-forward-top1-producer-v1.ts",
+    "forward-oos:collect": "tsx --env-file=.env.local scripts/alpha-v3-true-entry-forward-oos-collector-v1.ts",
+    "forward-oos:evaluate": "tsx scripts/alpha-v3-true-forward-oos-evaluator-v1.ts",
+    "forward-oos:test": "tsx scripts/alpha-v3-true-forward-oos-pipeline-v1-contract-test.ts",
+    "risk:gap-slippage:test": "tsx scripts/alpha-v3-gap-slippage-risk-v1-contract-test.ts",
+    "risk:gap-slippage:probe": "node scripts/alpha-v3-gap-slippage-risk-v1-execution-surface-probe.cjs",
+    "risk:gap-slippage:binding-probe": "node scripts/alpha-v3-gap-slippage-risk-v1-binding-facts-probe.cjs",
+    "paper-execution-price:test": "tsx scripts/alpha-v3-paper-execution-price-model-v1-contract-test.ts",
+    "risk:gap-slippage:binding:test": "tsx scripts/alpha-v3-gap-slippage-execution-binding-v1-contract-test.ts",
+    "test:governance": "node ./scripts/governance-regression-suite-v1.cjs",
+    "test:paper-readiness": "node ./scripts/paper-readiness-gate-v1.cjs",
+    "test:true-forward-oos-readiness": "node ./scripts/true-forward-oos-readiness-audit-v1.cjs",
+    "test:true-forward-oos-runtime": "node ./scripts/true-forward-oos-runtime-data-flow-audit-v1.cjs",
+    "test:true-forward-oos-runtime-deps": "node ./scripts/true-forward-oos-runtime-dependency-audit-v2.cjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "latest",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "supabase": "^2.120.0",
+    "tsx": "^4.23.15",
+    "typescript": "latest"
+  }
+}

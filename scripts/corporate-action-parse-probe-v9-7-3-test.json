@@ -1,0 +1,735 @@
+{
+  "version": "V9_7_3_PARSE_PROBE",
+  "inputVersion": "V9_7_2_DETAIL_PROBE",
+  "sampleHash": "e11748d09aea9bf617df0693af2d95578830c4c210454911465b1d05b45010bf",
+  "inventoryRunId": "5c2b20cb-a468-4575-b9b6-cedb4841b043",
+  "sourceCoverageWindowId": "00e02e27-801d-49c2-825d-7cc054ff5d02",
+  "scope": "SAMPLE_ONLY_NOT_COVERAGE",
+  "eventImportComplete": false,
+  "coveragePromoted": false,
+  "status": "PARSE_PROBE_FINISHED",
+  "records": [
+    {
+      "candidate": {
+        "corpCode": "01516933",
+        "receiptNo": "20260731901237",
+        "stockCode": "0001A0",
+        "reportName": "현금ㆍ현물배당결정              (중간배당)",
+        "receiptDate": "20260731",
+        "needsDetailReview": true,
+        "candidateActionType": "CASH_DIVIDEND",
+        "correctionOrWithdrawalHint": false
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_DOCUMENTED_ENDPOINT"
+      },
+      "parseStatus": "PARSED_NEEDS_EFFECTIVE_DATE",
+      "reason": "EX_DATE_NOT_PROVEN_BY_SOURCE",
+      "xml": {
+        "validated": true,
+        "entryName": "20260731901237.xml",
+        "byteLength": 8695,
+        "sha256": "513c44adf3c0093d18b16ab0d2aa87bbd8147b4dc50dbf126dedc143814123a5",
+        "textNodeCount": 48
+      },
+      "event": {
+        "actionType": "CASH_DIVIDEND",
+        "recordDate": "2026-08-18",
+        "paymentDate": "2026-08-31",
+        "cashPerShare": 23,
+        "totalCashAmount": "583399508",
+        "currency": "KRW"
+      },
+      "correctionDocument": false,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "00226866",
+        "receiptNo": "20260731900674",
+        "stockCode": "049070",
+        "reportName": "현금ㆍ현물배당결정              (중간배당)",
+        "receiptDate": "20260731",
+        "needsDetailReview": true,
+        "candidateActionType": "CASH_DIVIDEND",
+        "correctionOrWithdrawalHint": false
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_DOCUMENTED_ENDPOINT"
+      },
+      "parseStatus": "PARSED_NEEDS_EFFECTIVE_DATE",
+      "reason": "EX_DATE_NOT_PROVEN_BY_SOURCE",
+      "xml": {
+        "validated": true,
+        "entryName": "20260731900674.xml",
+        "byteLength": 8756,
+        "sha256": "12825a6f87d30bac2a3c9dbc579b22d69c2f7736b45aa83517192abe951ffc8a",
+        "textNodeCount": 47
+      },
+      "event": {
+        "actionType": "CASH_DIVIDEND",
+        "recordDate": "2026-06-30",
+        "paymentDate": "2026-08-26",
+        "cashPerShare": 70,
+        "totalCashAmount": "1092617050",
+        "currency": "KRW"
+      },
+      "correctionDocument": false,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "00609661",
+        "receiptNo": "20260731900541",
+        "stockCode": "204610",
+        "reportName": "현금ㆍ현물배당결정              (분기배당)",
+        "receiptDate": "20260731",
+        "needsDetailReview": true,
+        "candidateActionType": "CASH_DIVIDEND",
+        "correctionOrWithdrawalHint": false
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_DOCUMENTED_ENDPOINT"
+      },
+      "parseStatus": "PARSED_NEEDS_EFFECTIVE_DATE",
+      "reason": "EX_DATE_NOT_PROVEN_BY_SOURCE",
+      "xml": {
+        "validated": true,
+        "entryName": "20260731900541.xml",
+        "byteLength": 8753,
+        "sha256": "b42199d0e631ee91c3107c36c2bd0f0a10915ba4785d80ceb3bd1e38613651b7",
+        "textNodeCount": 47
+      },
+      "event": {
+        "actionType": "CASH_DIVIDEND",
+        "recordDate": "2026-08-31",
+        "paymentDate": "2026-09-18",
+        "cashPerShare": 40,
+        "totalCashAmount": "2007566760",
+        "currency": "KRW"
+      },
+      "correctionDocument": false,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "00219440",
+        "receiptNo": "20260731000680",
+        "stockCode": "028080",
+        "reportName": "[기재정정]주요사항보고서(회사합병결정)",
+        "receiptDate": "20260731",
+        "needsDetailReview": true,
+        "candidateActionType": "MERGER",
+        "correctionOrWithdrawalHint": true
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_EXACT_RECEIPT_MATCH"
+      },
+      "parseStatus": "VALIDATED",
+      "reason": "EXPLICIT_MERGER_DATE_AND_RATIO",
+      "xml": {
+        "validated": true,
+        "entryName": "20260731000680.xml",
+        "byteLength": 845147,
+        "sha256": "50aaaf3ce7636fee46d2ae25812fe55297a597b6317c29b42da0e828f980f76b",
+        "textNodeCount": 5015
+      },
+      "event": {
+        "actionType": "MERGER",
+        "effectiveDate": "2026-10-01",
+        "listingDate": "2026-10-19",
+        "ratio": {
+          "left": 1,
+          "right": 0.9646707,
+          "text": "1:0.9646707"
+        },
+        "detailSource": "document.xml"
+      },
+      "correctionDocument": true,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "00580667",
+        "receiptNo": "20260731000668",
+        "stockCode": "091340",
+        "reportName": "[기재정정]주요사항보고서(회사합병결정)",
+        "receiptDate": "20260731",
+        "needsDetailReview": true,
+        "candidateActionType": "MERGER",
+        "correctionOrWithdrawalHint": true
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "EXACT_RECEIPT_MATCH"
+      },
+      "parseStatus": "VALIDATED",
+      "reason": "EXPLICIT_MERGER_DATE_AND_RATIO",
+      "xml": {
+        "validated": true,
+        "entryName": "20260731000668.xml",
+        "byteLength": 72665,
+        "sha256": "c0c6b9910ab16fb751cdcaba01a2d865b0cafae341e156c1ad9c711d0dc3fbd0",
+        "textNodeCount": 425
+      },
+      "event": {
+        "actionType": "MERGER",
+        "effectiveDate": "2026-10-01",
+        "listingDate": null,
+        "ratio": {
+          "left": 1,
+          "right": 0,
+          "text": "1.0000000:0.0000000"
+        },
+        "detailSource": "structured+document"
+      },
+      "correctionDocument": true,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "01046391",
+        "receiptNo": "20260730000381",
+        "stockCode": "217330",
+        "reportName": "[첨부정정]주요사항보고서(회사합병결정)",
+        "receiptDate": "20260730",
+        "needsDetailReview": true,
+        "candidateActionType": "MERGER",
+        "correctionOrWithdrawalHint": true
+      },
+      "source": {
+        "documentStatus": "SOURCE_UNAVAILABLE",
+        "structuredStatus": "NO_EXACT_RECEIPT_MATCH"
+      },
+      "parseStatus": "UNRESOLVED",
+      "reason": "MERGER_DOCUMENT_UNAVAILABLE",
+      "xml": null,
+      "event": null
+    },
+    {
+      "candidate": {
+        "corpCode": "01065679",
+        "receiptNo": "20260731900814",
+        "stockCode": "215790",
+        "reportName": "주식병합결정              ",
+        "receiptDate": "20260731",
+        "needsDetailReview": true,
+        "candidateActionType": "REVERSE_SPLIT",
+        "correctionOrWithdrawalHint": false
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_DOCUMENTED_ENDPOINT"
+      },
+      "parseStatus": "VALIDATED",
+      "reason": "EXPLICIT_EFFECTIVE_DATE_AND_RATIO",
+      "xml": {
+        "validated": true,
+        "entryName": "20260731900814.xml",
+        "byteLength": 10561,
+        "sha256": "3c3c0d6e9188cd22cdee874b09b394219e5989593a9b820286276a0546a0d4d2",
+        "textNodeCount": 60
+      },
+      "event": {
+        "actionType": "REVERSE_SPLIT",
+        "effectiveDate": "2026-09-29",
+        "listingDate": "2026-10-14",
+        "factor": 0.2,
+        "parValueBefore": 500,
+        "parValueAfter": 2500,
+        "commonSharesBefore": "40283149",
+        "commonSharesAfter": "8056629"
+      },
+      "correctionDocument": false,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "00406329",
+        "receiptNo": "20260731900377",
+        "stockCode": "038060",
+        "reportName": "[기재정정]주식병합결정              ",
+        "receiptDate": "20260731",
+        "needsDetailReview": true,
+        "candidateActionType": "REVERSE_SPLIT",
+        "correctionOrWithdrawalHint": true
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_DOCUMENTED_ENDPOINT"
+      },
+      "parseStatus": "VALIDATED",
+      "reason": "EXPLICIT_EFFECTIVE_DATE_AND_RATIO",
+      "xml": {
+        "validated": true,
+        "entryName": "20260731900377.xml",
+        "byteLength": 15949,
+        "sha256": "51789e4558b03ff0d5774785bbbace8745490268a15e88ea81aa774b1d5bd1bd",
+        "textNodeCount": 93
+      },
+      "event": {
+        "actionType": "REVERSE_SPLIT",
+        "effectiveDate": "2026-09-16",
+        "listingDate": "2026-10-12",
+        "factor": 0.5,
+        "parValueBefore": 500,
+        "parValueAfter": 1000,
+        "commonSharesBefore": "48103069",
+        "commonSharesAfter": "24051534"
+      },
+      "correctionDocument": true,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "01031502",
+        "receiptNo": "20260730900564",
+        "stockCode": "196450",
+        "reportName": "[기재정정]주식병합결정              ",
+        "receiptDate": "20260730",
+        "needsDetailReview": true,
+        "candidateActionType": "REVERSE_SPLIT",
+        "correctionOrWithdrawalHint": true
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_DOCUMENTED_ENDPOINT"
+      },
+      "parseStatus": "VALIDATED",
+      "reason": "EXPLICIT_EFFECTIVE_DATE_AND_RATIO",
+      "xml": {
+        "validated": true,
+        "entryName": "20260730900564.xml",
+        "byteLength": 14764,
+        "sha256": "4e2a1ed5e4923be7cdbdacf768a8448ea1a4f85f4c5e24f5eea94e3194adf6eb",
+        "textNodeCount": 87
+      },
+      "event": {
+        "actionType": "REVERSE_SPLIT",
+        "effectiveDate": "2026-08-25",
+        "listingDate": "2026-09-14",
+        "factor": 0.2,
+        "parValueBefore": 1000,
+        "parValueAfter": 5000,
+        "commonSharesBefore": "45320000",
+        "commonSharesAfter": "9064000"
+      },
+      "correctionDocument": true,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "01089378",
+        "receiptNo": "20260731901318",
+        "stockCode": "219550",
+        "reportName": "증권발행결과(자율공시)              (제3자배정 유상증자)",
+        "receiptDate": "20260731",
+        "needsDetailReview": true,
+        "candidateActionType": "RIGHTS_ISSUE",
+        "correctionOrWithdrawalHint": false
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_EXACT_RECEIPT_MATCH"
+      },
+      "parseStatus": "REJECTED",
+      "reason": "FOLLOWUP_NOTICE_NOT_NEW_EVENT",
+      "xml": {
+        "validated": true,
+        "entryName": "20260731901318.xml",
+        "byteLength": 5294,
+        "sha256": "fff7f74466781e433c7ce9185afee7bc3b7f688d104a88119f987b75da9a627a",
+        "textNodeCount": 26
+      },
+      "event": null,
+      "correctionDocument": false,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "01444380",
+        "receiptNo": "20260731901297",
+        "stockCode": "355690",
+        "reportName": "[기재정정]유상증자결정(종속회사의주요경영사항)              ",
+        "receiptDate": "20260731",
+        "needsDetailReview": true,
+        "candidateActionType": "RIGHTS_ISSUE",
+        "correctionOrWithdrawalHint": true
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_EXACT_RECEIPT_MATCH"
+      },
+      "parseStatus": "REJECTED",
+      "reason": "OTHER_ENTITY_SCOPE",
+      "xml": {
+        "validated": true,
+        "entryName": "20260731901297.xml",
+        "byteLength": 28586,
+        "sha256": "2973a319fb06b5d2fee65566270b4f9899dccb04118d26f5d774eada40c2145a",
+        "textNodeCount": 156
+      },
+      "event": null,
+      "correctionDocument": true,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "00146427",
+        "receiptNo": "20260731901046",
+        "stockCode": "058450",
+        "reportName": "유상증자최종발행가액확정              (일반공모증자-소액공모)",
+        "receiptDate": "20260731",
+        "needsDetailReview": true,
+        "candidateActionType": "RIGHTS_ISSUE",
+        "correctionOrWithdrawalHint": false
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_EXACT_RECEIPT_MATCH"
+      },
+      "parseStatus": "REJECTED",
+      "reason": "FOLLOWUP_NOTICE_NOT_NEW_EVENT",
+      "xml": {
+        "validated": true,
+        "entryName": "20260731901046.xml",
+        "byteLength": 6465,
+        "sha256": "513ef923bb867466535ba64547a0a60e8c60b0c4e1424bb74ab6b0a9c2175931",
+        "textNodeCount": 25
+      },
+      "event": null,
+      "correctionDocument": false,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "00216434",
+        "receiptNo": "20260715900487",
+        "stockCode": "066360",
+        "reportName": "회사분할결정(종속회사의주요경영사항)              ",
+        "receiptDate": "20260715",
+        "needsDetailReview": true,
+        "candidateActionType": "SPIN_OFF",
+        "correctionOrWithdrawalHint": false
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_STRUCTURED_DATA"
+      },
+      "parseStatus": "REJECTED",
+      "reason": "OTHER_ENTITY_SCOPE",
+      "xml": {
+        "validated": true,
+        "entryName": "20260715900487.xml",
+        "byteLength": 27946,
+        "sha256": "9018bb6921771921c52d54ee0158498ba1db07dc561f0baee18ccb2ff1464ff2",
+        "textNodeCount": 170
+      },
+      "event": null,
+      "correctionDocument": false,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "00390365",
+        "receiptNo": "20260710000095",
+        "stockCode": "051360",
+        "reportName": "[기재정정]주요사항보고서(회사분할결정)",
+        "receiptDate": "20260710",
+        "needsDetailReview": true,
+        "candidateActionType": "SPIN_OFF",
+        "correctionOrWithdrawalHint": true
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "EXACT_RECEIPT_MATCH"
+      },
+      "parseStatus": "VALIDATED",
+      "reason": "EXPLICIT_SPIN_OFF_DATE_AND_RATIO",
+      "xml": {
+        "validated": true,
+        "entryName": "20260710000095.xml",
+        "byteLength": 55515,
+        "sha256": "c6ddc195cd38e33fde50ee358bceaea642cfa70cde39912d983efd997d1b3fb2",
+        "textNodeCount": 295
+      },
+      "event": {
+        "actionType": "SPIN_OFF",
+        "effectiveDate": "2026-07-01",
+        "recordDate": "2026-06-30",
+        "listingDate": "2026-07-27",
+        "newCompanySharesPerOldShare": 0.3536822,
+        "capitalReductionPercent": 35.36822,
+        "detailSource": "structured+document"
+      },
+      "correctionDocument": true,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "00132202",
+        "receiptNo": "20260630901481",
+        "stockCode": "086710",
+        "reportName": "기타주요경영사항              (회사분할결정 철회)",
+        "receiptDate": "20260630",
+        "needsDetailReview": true,
+        "candidateActionType": "SPIN_OFF",
+        "correctionOrWithdrawalHint": true
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_EXACT_RECEIPT_MATCH"
+      },
+      "parseStatus": "UNRESOLVED",
+      "reason": "WITHDRAWAL_REQUIRES_ORIGINAL_LINK",
+      "xml": {
+        "validated": true,
+        "entryName": "20260630901481.xml",
+        "byteLength": 3886,
+        "sha256": "50354589bde215143ca390e704a540b6f9d59686e92d1dfed4a158123c7444de",
+        "textNodeCount": 11
+      },
+      "event": null,
+      "correctionDocument": false,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "00223434",
+        "receiptNo": "20260406900605",
+        "stockCode": "036810",
+        "reportName": "[기재정정]주식배당결정              ",
+        "receiptDate": "20260406",
+        "needsDetailReview": true,
+        "candidateActionType": "STOCK_DIVIDEND",
+        "correctionOrWithdrawalHint": true
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_DOCUMENTED_ENDPOINT"
+      },
+      "parseStatus": "PARSED_NEEDS_EFFECTIVE_DATE",
+      "reason": "LISTING_OR_ADJUSTMENT_DATE_NOT_PROVEN_BY_SOURCE",
+      "xml": {
+        "validated": true,
+        "entryName": "20260406900605.xml",
+        "byteLength": 10250,
+        "sha256": "1b08653b0d315be57124db462949603eb873ed47b9fd6184b61c16591f4d7e78",
+        "textNodeCount": 52
+      },
+      "event": {
+        "actionType": "STOCK_DIVIDEND",
+        "recordDate": "2025-12-31",
+        "stockPerShare": 0.01,
+        "totalDividendShares": "203441"
+      },
+      "correctionDocument": true,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "00111722",
+        "receiptNo": "20260313800897",
+        "stockCode": "006800",
+        "reportName": "[기재정정]주식배당결정              ",
+        "receiptDate": "20260313",
+        "needsDetailReview": true,
+        "candidateActionType": "STOCK_DIVIDEND",
+        "correctionOrWithdrawalHint": true
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_DOCUMENTED_ENDPOINT"
+      },
+      "parseStatus": "PARSED_NEEDS_EFFECTIVE_DATE",
+      "reason": "LISTING_OR_ADJUSTMENT_DATE_NOT_PROVEN_BY_SOURCE",
+      "xml": {
+        "validated": true,
+        "entryName": "20260313800897.xml",
+        "byteLength": 15833,
+        "sha256": "f70dae224b0c3f31aa44b6f03835fe675ac99944ae660daba79c7834b0585987",
+        "textNodeCount": 82
+      },
+      "event": {
+        "actionType": "STOCK_DIVIDEND",
+        "recordDate": "2026-03-17",
+        "stockPerShare": 0.0073206,
+        "totalDividendShares": "4250472"
+      },
+      "correctionDocument": true,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "00116824",
+        "receiptNo": "20260225800942",
+        "stockCode": "000640",
+        "reportName": "주식배당결정              ",
+        "receiptDate": "20260225",
+        "needsDetailReview": true,
+        "candidateActionType": "STOCK_DIVIDEND",
+        "correctionOrWithdrawalHint": false
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_DOCUMENTED_ENDPOINT"
+      },
+      "parseStatus": "PARSED_NEEDS_EFFECTIVE_DATE",
+      "reason": "LISTING_OR_ADJUSTMENT_DATE_NOT_PROVEN_BY_SOURCE",
+      "xml": {
+        "validated": true,
+        "entryName": "20260225800942.xml",
+        "byteLength": 7776,
+        "sha256": "69759f824810ab0a0a0dd2eacf681e73920ca62f96c252495e6c6e32df1d7ae4",
+        "textNodeCount": 36
+      },
+      "event": {
+        "actionType": "STOCK_DIVIDEND",
+        "recordDate": "2026-03-12",
+        "stockPerShare": 0.03,
+        "totalDividendShares": "196093"
+      },
+      "correctionDocument": false,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "01230255",
+        "receiptNo": "20260729900648",
+        "stockCode": "276730",
+        "reportName": "[기재정정]주식분할결정              ",
+        "receiptDate": "20260729",
+        "needsDetailReview": true,
+        "candidateActionType": "STOCK_SPLIT",
+        "correctionOrWithdrawalHint": true
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_DOCUMENTED_ENDPOINT"
+      },
+      "parseStatus": "VALIDATED",
+      "reason": "EXPLICIT_EFFECTIVE_DATE_AND_RATIO",
+      "xml": {
+        "validated": true,
+        "entryName": "20260729900648.xml",
+        "byteLength": 12593,
+        "sha256": "6203a65a383d82a59a653622c6af3d40951572faf1f6114f01db26703d8892bd",
+        "textNodeCount": 75
+      },
+      "event": {
+        "actionType": "STOCK_SPLIT",
+        "effectiveDate": "2026-07-31",
+        "listingDate": "2026-08-18",
+        "factor": 5,
+        "parValueBefore": 500,
+        "parValueAfter": 100,
+        "commonSharesBefore": "4511854",
+        "commonSharesAfter": "22559270"
+      },
+      "correctionDocument": true,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "00264945",
+        "receiptNo": "20260724900679",
+        "stockCode": "036800",
+        "reportName": "주권매매거래정지              (주식분할)",
+        "receiptDate": "20260724",
+        "needsDetailReview": true,
+        "candidateActionType": "STOCK_SPLIT",
+        "correctionOrWithdrawalHint": false
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_DOCUMENTED_ENDPOINT"
+      },
+      "parseStatus": "REJECTED",
+      "reason": "FOLLOWUP_NOTICE_NOT_NEW_EVENT",
+      "xml": {
+        "validated": true,
+        "entryName": "20260724900679.xml",
+        "byteLength": 4745,
+        "sha256": "378a2b0caf5ce917f85b8260359411f82828a3cbe67bfd81e3ca86c125e97bd4",
+        "textNodeCount": 17
+      },
+      "event": null,
+      "correctionDocument": false,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    },
+    {
+      "candidate": {
+        "corpCode": "00997812",
+        "receiptNo": "20260716900397",
+        "stockCode": "183300",
+        "reportName": "[기재정정]주식분할결정              ",
+        "receiptDate": "20260716",
+        "needsDetailReview": true,
+        "candidateActionType": "STOCK_SPLIT",
+        "correctionOrWithdrawalHint": true
+      },
+      "source": {
+        "documentStatus": "DOCUMENT_ZIP_RECEIVED",
+        "structuredStatus": "NO_DOCUMENTED_ENDPOINT"
+      },
+      "parseStatus": "VALIDATED",
+      "reason": "EXPLICIT_EFFECTIVE_DATE_AND_RATIO",
+      "xml": {
+        "validated": true,
+        "entryName": "20260716900397.xml",
+        "byteLength": 14498,
+        "sha256": "35110259eb9ba3c4f87608a76de7809b71c934321019a939f0c262a247b4b937",
+        "textNodeCount": 76
+      },
+      "event": {
+        "actionType": "STOCK_SPLIT",
+        "effectiveDate": "2026-07-31",
+        "listingDate": "2026-08-21",
+        "factor": 2.5,
+        "parValueBefore": 500,
+        "parValueAfter": 200,
+        "commonSharesBefore": "20545310",
+        "commonSharesAfter": "51363275"
+      },
+      "correctionDocument": true,
+      "correctionChainResolved": false,
+      "eventInsertAllowed": false
+    }
+  ],
+  "summary": {
+    "samples": 21,
+    "xmlValidated": 20,
+    "validatedEvents": 8,
+    "parsedNeedsEffectiveDate": 6,
+    "rejectedCandidates": 5,
+    "unresolvedCandidates": 2,
+    "errors": 0,
+    "correctionDocuments": 10,
+    "correctionChainsResolved": 0,
+    "eventRowsInserted": 0,
+    "coveragePromoted": false
+  }
+}

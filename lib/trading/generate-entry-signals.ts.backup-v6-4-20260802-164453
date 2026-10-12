@@ -1,0 +1,1229 @@
+import { getActiveEntryThreshold } from "@/lib/trading/get-active-entry-threshold";
+import {
+  getLatestPredictionCandidates,
+  type PredictionCandidate,
+} from "@/lib/trading/get-latest-prediction-candidates";
+import {
+  getCurrentMarketRegimeShadowSafe,
+  type MarketRegimeShadow,
+} from "@/lib/trading/market-regime-shadow";
+import { createSupabaseServerClient } from "@/lib/supabase";
+import { createPaperBuyOrder } from "@/lib/trading/paper-order-service";
+
+interface GenerateEntrySignalsInput {
+  modelId?: string;
+  autoOrder?: boolean;
+  maxOrders?: number;
+  stockCodes?: string[];
+  maximumPredictionAgeMinutes?: number;
+}
+
+interface SnapshotRecord {
+  stock_code: string;
+  observed_at: string;
+
+  close_price: number | string | null;
+  open_price: number | string | null;
+  high_price: number | string | null;
+  low_price: number | string | null;
+  volume: number | string | null;
+}
+
+interface EntryModelRecord {
+  id: string;
+  model_name: string;
+  model_version: string;
+  purpose: string;
+  status: string;
+}
+
+interface ExistingSignalRecord {
+  id: string;
+  status: string;
+  order_id: string | null;
+}
+
+interface SignalCandidate {
+  stockCode: string;
+  observedAt: string;
+
+  score: number;
+  qualifies: boolean;
+
+  entryPrice: number;
+  stopPrice: number;
+  quantity: number;
+
+  features: {
+    snapshotCount: number;
+    momentumRate: number;
+    intradayRate: number;
+    volumeRatio: number;
+    rangePosition: number;
+
+    prediction: {
+      predictionId: string;
+      score: number;
+      confidence: number;
+      disclosureScore: number | null;
+      priceMomentum: number | null;
+      intradayReturn: number | null;
+      volumeRatio: number | null;
+      generatedAt: string;
+      modelName: string;
+      modelVersion: string;
+    };
+
+    /*
+     * Regime Shadow는 관찰용 메타데이터다.
+     * 실제 진입 여부(qualifies)에는 사용하지 않는다.
+     */
+    marketRegimeShadow?: MarketRegimeShadow;
+  };
+
+  reasons: string[];
+}
+
+const DEFAULT_MAX_ORDERS = 3;
+const DEFAULT_STOP_DISTANCE_RATE = 0.025;
+const DEFAULT_MAX_PREDICTION_AGE_MINUTES = 180;
+
+function clamp(
+  value: number,
+  minimum = 0,
+  maximum = 1,
+): number {
+  return Math.min(
+    maximum,
+    Math.max(minimum, value),
+  );
+}
+
+function toNumber(
+  value: number | string | null,
+): number | null {
+  if (value === null) {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed)
+    ? parsed
+    : null;
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
+function normalizeStockCodes(
+  stockCodes: string[] | undefined,
+): string[] {
+  if (!stockCodes) {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      stockCodes
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  ];
+}
+
+async function resolveEntryModel(
+  modelId?: string,
+): Promise<EntryModelRecord> {
+  const supabase =
+    createSupabaseServerClient();
+
+  if (modelId) {
+    if (!isUuid(modelId)) {
+      throw new Error("INVALID_MODEL_ID");
+    }
+
+    const { data, error } = await supabase
+      .from("ai_model_versions")
+      .select(`
+        id,
+        model_name,
+        model_version,
+        purpose,
+        status
+      `)
+      .eq("id", modelId)
+      .single();
+
+    if (error || !data) {
+      throw new Error(
+        "ENTRY_MODEL_NOT_FOUND",
+      );
+    }
+
+    const model =
+      data as EntryModelRecord;
+
+    if (
+      model.purpose !== "ENTRY_TIMING"
+    ) {
+      throw new Error(
+        "ENTRY_TIMING_MODEL_REQUIRED",
+      );
+    }
+
+    if (
+      model.status !== "CANDIDATE" &&
+      model.status !== "APPROVED"
+    ) {
+      throw new Error(
+        "ENTRY_MODEL_NOT_ACTIVE",
+      );
+    }
+
+    return model;
+  }
+
+  /*
+   * 별도 ID가 없으면 최신 CANDIDATE 모델을 우선 사용한다.
+   */
+  const {
+    data: candidate,
+    error: candidateError,
+  } = await supabase
+    .from("ai_model_versions")
+    .select(`
+      id,
+      model_name,
+      model_version,
+      purpose,
+      status
+    `)
+    .eq("purpose", "ENTRY_TIMING")
+    .eq("status", "CANDIDATE")
+    .order("created_at", {
+      ascending: false,
+    })
+    .limit(1)
+    .maybeSingle();
+
+  if (candidateError) {
+    throw new Error(
+      `후보 모델 조회 실패: ${candidateError.message}`,
+    );
+  }
+
+  if (candidate) {
+    return candidate as EntryModelRecord;
+  }
+
+  /*
+   * 후보 모델이 없으면 승인 모델을 사용한다.
+   */
+  const {
+    data: approved,
+    error: approvedError,
+  } = await supabase
+    .from("ai_model_versions")
+    .select(`
+      id,
+      model_name,
+      model_version,
+      purpose,
+      status
+    `)
+    .eq("purpose", "ENTRY_TIMING")
+    .eq("status", "APPROVED")
+    .order("approved_at", {
+      ascending: false,
+    })
+    .limit(1)
+    .maybeSingle();
+
+  if (approvedError) {
+    throw new Error(
+      `승인 모델 조회 실패: ${approvedError.message}`,
+    );
+  }
+
+  if (!approved) {
+    throw new Error(
+      "ACTIVE_ENTRY_TIMING_MODEL_NOT_FOUND",
+    );
+  }
+
+  return approved as EntryModelRecord;
+}
+
+function calculateEntrySignal(
+  snapshots: SnapshotRecord[],
+  prediction: PredictionCandidate,
+  entryScoreThreshold: number,
+): SignalCandidate | null {
+  const sorted = [...snapshots].sort(
+    (left, right) =>
+      new Date(right.observed_at).getTime() -
+      new Date(left.observed_at).getTime(),
+  );
+
+  const latest = sorted[0];
+
+  if (!latest) {
+    return null;
+  }
+
+  const latestClose =
+    toNumber(latest.close_price);
+
+  if (
+    latestClose === null ||
+    latestClose <= 0
+  ) {
+    return null;
+  }
+
+  const latestOpen =
+    toNumber(latest.open_price);
+
+  const latestHigh =
+    toNumber(latest.high_price);
+
+  const latestLow =
+    toNumber(latest.low_price);
+
+  const latestVolume =
+    toNumber(latest.volume) ?? 0;
+
+  const previousClose =
+    toNumber(
+      sorted[1]?.close_price ?? null,
+    ) ??
+    latestOpen ??
+    latestClose;
+
+  const momentumRate =
+    previousClose > 0
+      ? (
+          latestClose -
+          previousClose
+        ) / previousClose
+      : 0;
+
+  const intradayRate =
+    latestOpen !== null &&
+    latestOpen > 0
+      ? (
+          latestClose -
+          latestOpen
+        ) / latestOpen
+      : 0;
+
+  const rangePosition =
+    latestHigh !== null &&
+    latestLow !== null &&
+    latestHigh > latestLow
+      ? clamp(
+          (
+            latestClose -
+            latestLow
+          ) /
+            (
+              latestHigh -
+              latestLow
+            ),
+        )
+      : 0.5;
+
+  const previousVolumes = sorted
+    .slice(1, 6)
+    .map((snapshot) =>
+      toNumber(snapshot.volume),
+    )
+    .filter(
+      (value): value is number =>
+        value !== null &&
+        value > 0,
+    );
+
+  const averagePreviousVolume =
+    previousVolumes.length > 0
+      ? previousVolumes.reduce(
+          (sum, value) =>
+            sum + value,
+          0,
+        ) / previousVolumes.length
+      : latestVolume;
+
+  const volumeRatio =
+    averagePreviousVolume > 0
+      ? latestVolume /
+        averagePreviousVolume
+      : 1;
+
+  /*
+   * 1차 기준 점수:
+   * 가격 모멘텀 40%
+   * 장중 강도 25%
+   * 종가 위치 20%
+   * 거래량 증가 15%
+   */
+  const momentumScore = clamp(
+    (
+      momentumRate +
+      0.01
+    ) / 0.03,
+  );
+
+  const intradayScore = clamp(
+    (
+      intradayRate +
+      0.01
+    ) / 0.025,
+  );
+
+  const rangeScore =
+    clamp(rangePosition);
+
+  const volumeScore = clamp(
+    (
+      volumeRatio -
+      0.8
+    ) / 1.2,
+  );
+
+  const score =
+    momentumScore * 0.4 +
+    intradayScore * 0.25 +
+    rangeScore * 0.2 +
+    volumeScore * 0.15;
+
+  const qualifies =
+    score >= entryScoreThreshold &&
+    momentumRate > 0 &&
+    intradayRate > -0.005;
+
+  const stopPrice = Math.floor(
+    latestClose *
+      (
+        1 -
+        DEFAULT_STOP_DISTANCE_RATE
+      ),
+  );
+
+  const reasons: string[] = [
+    `AI 종목 예측에서 상승 후보로 선정됐습니다. 예측점수 ${prediction.score.toFixed(4)}, 신뢰도 ${prediction.confidence.toFixed(4)}입니다.`,
+    ...prediction.reasons.map(
+      (reason) => `예측 근거: ${reason}`,
+    ),
+  ];
+
+  if (momentumRate > 0) {
+    reasons.push(
+      "직전 관측 가격보다 현재 가격이 상승했습니다.",
+    );
+  } else {
+    reasons.push(
+      "직전 관측 가격보다 현재 가격이 상승하지 않았습니다.",
+    );
+  }
+
+  if (intradayRate > 0) {
+    reasons.push(
+      "현재 가격이 시가보다 높습니다.",
+    );
+  }
+
+  if (rangePosition >= 0.7) {
+    reasons.push(
+      "현재 가격이 당일 고가 부근에 위치합니다.",
+    );
+  }
+
+  if (volumeRatio >= 1.2) {
+    reasons.push(
+      "최근 평균보다 거래량이 증가했습니다.",
+    );
+  }
+
+  if (!qualifies) {
+    reasons.push(
+      `진입 기준 점수 ${entryScoreThreshold}에 미달했거나 상승 조건을 충족하지 못했습니다.`,
+    );
+  }
+
+  return {
+    stockCode: latest.stock_code,
+    observedAt: latest.observed_at,
+
+    score:
+      Math.round(score * 1_000_000) /
+      1_000_000,
+
+    qualifies,
+
+    entryPrice: latestClose,
+    stopPrice,
+    quantity: 1,
+
+    features: {
+      snapshotCount: sorted.length,
+
+      momentumRate:
+        Math.round(
+          momentumRate * 1_000_000,
+        ) / 1_000_000,
+
+      intradayRate:
+        Math.round(
+          intradayRate * 1_000_000,
+        ) / 1_000_000,
+
+      volumeRatio:
+        Math.round(
+          volumeRatio * 1_000_000,
+        ) / 1_000_000,
+
+      rangePosition:
+        Math.round(
+          rangePosition * 1_000_000,
+        ) / 1_000_000,
+
+      prediction: {
+        predictionId:
+          prediction.predictionId,
+
+        score:
+          prediction.score,
+
+        confidence:
+          prediction.confidence,
+
+        disclosureScore:
+          prediction.disclosureScore,
+
+        priceMomentum:
+          prediction.priceMomentum,
+
+        intradayReturn:
+          prediction.intradayReturn,
+
+        volumeRatio:
+          prediction.volumeRatio,
+
+        generatedAt:
+          prediction.generatedAt,
+
+        modelName:
+          prediction.modelName,
+
+        modelVersion:
+          prediction.modelVersion,
+      },
+    },
+
+    reasons,
+  };
+}
+
+export async function generateEntrySignals(
+  input: GenerateEntrySignalsInput = {},
+) {
+  const supabase =
+    createSupabaseServerClient();
+
+  const model =
+    await resolveEntryModel(
+      input.modelId,
+    );
+
+  const autoOrder =
+    input.autoOrder === true;
+
+  const maxOrders = Math.min(
+    10,
+    Math.max(
+      1,
+      Math.floor(
+        input.maxOrders ??
+          DEFAULT_MAX_ORDERS,
+      ),
+    ),
+  );
+
+  const entryScoreThreshold =
+    await getActiveEntryThreshold();
+
+  /*
+   * Regime Shadow v6
+   *
+   * 현재 시장 상태를 관찰하고 저장하지만,
+   * 실제 주문 조건에는 사용하지 않는다.
+   */
+  const marketRegimeShadow =
+    await getCurrentMarketRegimeShadowSafe();
+
+  const maximumPredictionAgeMinutes =
+    Math.min(
+      24 * 60,
+      Math.max(
+        10,
+        Math.floor(
+          input.maximumPredictionAgeMinutes ??
+            DEFAULT_MAX_PREDICTION_AGE_MINUTES,
+        ),
+      ),
+    );
+
+  const predictionGate =
+    await getLatestPredictionCandidates({
+      maximumAgeMinutes:
+        maximumPredictionAgeMinutes,
+      limit: 100,
+    });
+
+  const requestedStockCodes =
+    normalizeStockCodes(
+      input.stockCodes,
+    );
+
+  if (
+    !predictionGate.available ||
+    !predictionGate.fresh ||
+    predictionGate.candidateCount === 0
+  ) {
+    const message =
+      predictionGate.reason ===
+      "NO_PREDICTION"
+        ? "AI 종목 예측이 없어 진입 분석을 중단했습니다."
+        : predictionGate.reason ===
+          "STALE_PREDICTION"
+        ? `AI 종목 예측이 ${predictionGate.maximumAgeMinutes}분보다 오래돼 진입 분석을 중단했습니다.`
+        : "AI 상승 후보가 없어 진입 신호와 주문을 생성하지 않았습니다.";
+
+    return {
+      model: {
+        id: model.id,
+        name: model.model_name,
+        version: model.model_version,
+        purpose: model.purpose,
+        status: model.status,
+      },
+
+      autoOrder,
+      threshold:
+        entryScoreThreshold,
+      maxOrders,
+
+      predictionGate,
+      marketRegimeShadow,
+
+      analyzed: 0,
+      qualified: 0,
+      eligible: 0,
+      ordersCreated: 0,
+      message,
+      signals: [],
+    };
+  }
+
+  const predictionMap =
+    new Map(
+      predictionGate.candidates.map(
+        (prediction) => [
+          prediction.stockCode,
+          prediction,
+        ],
+      ),
+    );
+
+  const targetStockCodes =
+    requestedStockCodes.length > 0
+      ? requestedStockCodes.filter(
+          (stockCode) =>
+            predictionMap.has(
+              stockCode,
+            ),
+        )
+      : predictionGate.stockCodes;
+
+  if (targetStockCodes.length === 0) {
+    return {
+      model: {
+        id: model.id,
+        name: model.model_name,
+        version: model.model_version,
+        purpose: model.purpose,
+        status: model.status,
+      },
+
+      autoOrder,
+      threshold:
+        entryScoreThreshold,
+      maxOrders,
+
+      predictionGate,
+      requestedStockCodes,
+      targetStockCodes,
+      marketRegimeShadow,
+
+      analyzed: 0,
+      qualified: 0,
+      eligible: 0,
+      ordersCreated: 0,
+
+      message:
+        "요청한 종목 중 최신 AI 상승 후보에 포함된 종목이 없습니다.",
+
+      signals: [],
+    };
+  }
+
+  const snapshotResult =
+    await supabase
+      .from("market_snapshots")
+      .select(`
+        stock_code,
+        observed_at,
+        close_price,
+        open_price,
+        high_price,
+        low_price,
+        volume
+      `)
+      .in(
+        "stock_code",
+        targetStockCodes,
+      )
+      .lte(
+        "observed_at",
+        new Date().toISOString(),
+      )
+      .order("observed_at", {
+        ascending: false,
+      })
+      .limit(1000);
+
+  const {
+    data: snapshotData,
+    error: snapshotError,
+  } = snapshotResult;
+
+  if (snapshotError) {
+    throw new Error(
+      `시세 조회 실패: ${snapshotError.message}`,
+    );
+  }
+
+  const snapshots =
+    (snapshotData ??
+      []) as SnapshotRecord[];
+
+  if (snapshots.length === 0) {
+    return {
+      model,
+      autoOrder,
+      threshold:
+        entryScoreThreshold,
+      predictionGate,
+      targetStockCodes,
+      marketRegimeShadow,
+      analyzed: 0,
+      qualified: 0,
+      ordersCreated: 0,
+      message:
+        "분석할 시세가 없습니다. 먼저 시세 동기화를 실행해 주세요.",
+      signals: [],
+    };
+  }
+
+  const groupedSnapshots =
+    new Map<
+      string,
+      SnapshotRecord[]
+    >();
+
+  for (const snapshot of snapshots) {
+    const current =
+      groupedSnapshots.get(
+        snapshot.stock_code,
+      ) ?? [];
+
+    current.push(snapshot);
+
+    groupedSnapshots.set(
+      snapshot.stock_code,
+      current,
+    );
+  }
+
+  const candidates: SignalCandidate[] =
+    [];
+
+  for (
+    const stockSnapshots
+    of groupedSnapshots.values()
+  ) {
+    const prediction =
+      predictionMap.get(
+        stockSnapshots[0]
+          ?.stock_code ??
+          "",
+      );
+
+    if (!prediction) {
+      continue;
+    }
+
+    const candidate =
+      calculateEntrySignal(
+        stockSnapshots,
+        prediction,
+        entryScoreThreshold,
+      );
+
+    if (candidate) {
+      /*
+       * SHADOW 관찰 정보만 추가한다.
+       * candidate.qualifies 값은 변경하지 않는다.
+       */
+      candidate.features
+        .marketRegimeShadow =
+          marketRegimeShadow;
+
+      candidate.reasons.push(
+        `시장 Regime SHADOW: ${marketRegimeShadow.regime}, breadth20=${
+          marketRegimeShadow.breadth20 ?? "N/A"
+        }, avgReturn20=${
+          marketRegimeShadow.avgReturn20 ?? "N/A"
+        }, wouldBlock=${
+          marketRegimeShadow.wouldBlockByRegime
+        }. 실제 주문 판단에는 반영하지 않습니다.`,
+      );
+
+      candidates.push(candidate);
+    }
+  }
+
+  candidates.sort(
+    (left, right) =>
+      right.score - left.score,
+  );
+
+  const allStockCodes =
+    candidates.map(
+      (candidate) =>
+        candidate.stockCode,
+    );
+
+  const activePositionCodes =
+    new Set<string>();
+
+  const activeOrderCodes =
+    new Set<string>();
+
+  if (allStockCodes.length > 0) {
+    const {
+      data: positionData,
+      error: positionError,
+    } = await supabase
+      .from("paper_positions")
+      .select("stock_code")
+      .in(
+        "stock_code",
+        allStockCodes,
+      );
+
+    if (positionError) {
+      throw new Error(
+        `보유 포지션 조회 실패: ${positionError.message}`,
+      );
+    }
+
+    for (
+      const position
+      of positionData ?? []
+    ) {
+      activePositionCodes.add(
+        String(position.stock_code),
+      );
+    }
+
+    const {
+      data: orderData,
+      error: orderError,
+    } = await supabase
+      .from("paper_order_requests")
+      .select("stock_code")
+      .eq("side", "BUY")
+      .eq("status", "RISK_APPROVED")
+      .in(
+        "stock_code",
+        allStockCodes,
+      );
+
+    if (orderError) {
+      throw new Error(
+        `대기 주문 조회 실패: ${orderError.message}`,
+      );
+    }
+
+    for (
+      const order
+      of orderData ?? []
+    ) {
+      activeOrderCodes.add(
+        String(order.stock_code),
+      );
+    }
+  }
+
+  /*
+   * 중요:
+   * Regime Shadow는 아래 후보 선정 로직에 사용하지 않는다.
+   * 기존 전략과 동일하게 qualifies/보유/대기주문만 사용한다.
+   */
+  const eligibleCandidates =
+    candidates.filter(
+      (candidate) =>
+        candidate.qualifies &&
+        !activePositionCodes.has(
+          candidate.stockCode,
+        ) &&
+        !activeOrderCodes.has(
+          candidate.stockCode,
+        ),
+    );
+
+  const selectedForOrder =
+    new Set(
+      eligibleCandidates
+        .slice(0, maxOrders)
+        .map(
+          (candidate) =>
+            candidate.stockCode,
+        ),
+    );
+
+  const results: Array<
+    Record<string, unknown>
+  > = [];
+
+  let ordersCreated = 0;
+
+  for (const candidate of candidates) {
+    let status:
+      | "GENERATED"
+      | "ORDER_CREATED"
+      | "SKIPPED"
+      | "FAILED" =
+      candidate.qualifies
+        ? "GENERATED"
+        : "SKIPPED";
+
+    const reasons = [
+      ...candidate.reasons,
+    ];
+
+    if (
+      activePositionCodes.has(
+        candidate.stockCode,
+      )
+    ) {
+      status = "SKIPPED";
+
+      reasons.push(
+        "이미 보유 중인 종목입니다.",
+      );
+    }
+
+    if (
+      activeOrderCodes.has(
+        candidate.stockCode,
+      )
+    ) {
+      status = "SKIPPED";
+
+      reasons.push(
+        "이미 위험승인 대기 주문이 있습니다.",
+      );
+    }
+
+    const {
+      data: existingSignal,
+      error: existingSignalError,
+    } = await supabase
+      .from("ai_entry_signals")
+      .select(`
+        id,
+        status,
+        order_id
+      `)
+      .eq("model_id", model.id)
+      .eq(
+        "stock_code",
+        candidate.stockCode,
+      )
+      .eq(
+        "observed_at",
+        candidate.observedAt,
+      )
+      .maybeSingle();
+
+    if (existingSignalError) {
+      throw new Error(
+        `기존 신호 조회 실패: ${existingSignalError.message}`,
+      );
+    }
+
+    let signal =
+      existingSignal as ExistingSignalRecord | null;
+
+    if (!signal) {
+      const {
+        data: insertedSignal,
+        error: insertSignalError,
+      } = await supabase
+        .from("ai_entry_signals")
+        .insert({
+          model_id: model.id,
+          stock_code:
+            candidate.stockCode,
+          observed_at:
+            candidate.observedAt,
+
+          status,
+          score: candidate.score,
+
+          recommended_entry_price:
+            candidate.entryPrice,
+
+          recommended_stop_price:
+            candidate.stopPrice,
+
+          recommended_quantity:
+            candidate.quantity,
+
+          features:
+            candidate.features,
+
+          reasons,
+        })
+        .select(`
+          id,
+          status,
+          order_id
+        `)
+        .single();
+
+      if (
+        insertSignalError ||
+        !insertedSignal
+      ) {
+        throw new Error(
+          `진입 신호 저장 실패: ${
+            insertSignalError?.message ??
+            "저장 결과가 없습니다."
+          }`,
+        );
+      }
+
+      signal =
+        insertedSignal as ExistingSignalRecord;
+    } else if (!signal.order_id) {
+      const {
+        data: updatedSignal,
+        error: updateSignalError,
+      } = await supabase
+        .from("ai_entry_signals")
+        .update({
+          status,
+          score: candidate.score,
+
+          recommended_entry_price:
+            candidate.entryPrice,
+
+          recommended_stop_price:
+            candidate.stopPrice,
+
+          recommended_quantity:
+            candidate.quantity,
+
+          features:
+            candidate.features,
+          reasons,
+          error_message: null,
+          updated_at:
+            new Date().toISOString(),
+        })
+        .eq("id", signal.id)
+        .select(`
+          id,
+          status,
+          order_id
+        `)
+        .single();
+
+      if (
+        updateSignalError ||
+        !updatedSignal
+      ) {
+        throw new Error(
+          `진입 신호 갱신 실패: ${
+            updateSignalError?.message ??
+            "갱신 결과가 없습니다."
+          }`,
+        );
+      }
+
+      signal =
+        updatedSignal as ExistingSignalRecord;
+    }
+
+    const shouldCreateOrder =
+      autoOrder &&
+      selectedForOrder.has(
+        candidate.stockCode,
+      ) &&
+      !signal.order_id;
+
+    if (!shouldCreateOrder) {
+      results.push({
+        signalId: signal.id,
+        stockCode:
+          candidate.stockCode,
+        score: candidate.score,
+        qualifies:
+          candidate.qualifies,
+        status: signal.status,
+        orderId: signal.order_id,
+        reasons,
+        features:
+          candidate.features,
+      });
+
+      continue;
+    }
+
+    try {
+      const orderResult =
+        await createPaperBuyOrder({
+          stockCode:
+            candidate.stockCode,
+
+          proposedStopPrice:
+            candidate.stopPrice,
+
+          requestedQuantity:
+            candidate.quantity,
+
+          modelId: model.id,
+        });
+
+      const orderId =
+        String(orderResult.order.id);
+
+      const {
+        error: linkOrderError,
+      } = await supabase
+        .from("ai_entry_signals")
+        .update({
+          status: "ORDER_CREATED",
+          order_id: orderId,
+          error_message: null,
+          updated_at:
+            new Date().toISOString(),
+        })
+        .eq("id", signal.id);
+
+      if (linkOrderError) {
+        throw new Error(
+          `신호와 주문 연결 실패: ${linkOrderError.message}`,
+        );
+      }
+
+      ordersCreated += 1;
+
+      results.push({
+        signalId: signal.id,
+        stockCode:
+          candidate.stockCode,
+        score: candidate.score,
+        qualifies: true,
+        status: "ORDER_CREATED",
+        orderId,
+        riskApproved:
+          orderResult.risk.approved,
+        orderStatus:
+          orderResult.order.status,
+        reasons,
+        features:
+          candidate.features,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "모의주문 생성 실패";
+
+      await supabase
+        .from("ai_entry_signals")
+        .update({
+          status: "FAILED",
+          error_message: message,
+          updated_at:
+            new Date().toISOString(),
+        })
+        .eq("id", signal.id);
+
+      results.push({
+        signalId: signal.id,
+        stockCode:
+          candidate.stockCode,
+        score: candidate.score,
+        qualifies: true,
+        status: "FAILED",
+        error: message,
+        reasons,
+        features:
+          candidate.features,
+      });
+    }
+  }
+
+  return {
+    model: {
+      id: model.id,
+      name: model.model_name,
+      version: model.model_version,
+      purpose: model.purpose,
+      status: model.status,
+    },
+
+    autoOrder,
+    threshold:
+      entryScoreThreshold,
+    maxOrders,
+
+    predictionGate,
+    requestedStockCodes,
+    targetStockCodes,
+    marketRegimeShadow,
+
+    analyzed: candidates.length,
+
+    qualified:
+      candidates.filter(
+        (candidate) =>
+          candidate.qualifies,
+      ).length,
+
+    eligible:
+      eligibleCandidates.length,
+
+    ordersCreated,
+    signals: results,
+  };
+}

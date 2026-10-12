@@ -1,0 +1,21 @@
+﻿AI STOCK LAB - TYPESCRIPT FULL SWEEP ERROR REPORT
+Generated: 2026-10-11 21:29:44
+TSC Exit Code: 2
+Error Count: 2
+Files With Errors: 1
+
+============================================================
+FULL OUTPUT
+============================================================
+
+scripts/backups/alpha-v1-cross-sectional-ic-regime-timing.before-horizon-literal-union-v2.ts(601,21): error TS1005: ',' expected.
+scripts/backups/alpha-v1-cross-sectional-ic-regime-timing.before-horizon-literal-union-v2.ts(622,7): error TS1109: Expression expected.
+
+
+============================================================
+SUMMARY
+============================================================
+
+TOTAL TYPESCRIPT ERRORS: 2
+FILES WITH ERRORS: 1
+

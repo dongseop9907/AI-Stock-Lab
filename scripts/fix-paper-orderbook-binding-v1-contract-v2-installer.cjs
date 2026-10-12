@@ -1,0 +1,124 @@
+const fs = require("fs");
+const path = require("path");
+
+const ROOT =
+  process.cwd();
+
+const TARGET =
+  path.join(
+    ROOT,
+    "scripts",
+    "paper-orderbook-binding-v1-contract-test.ts"
+  );
+
+const BACKUP_DIR =
+  path.join(
+    ROOT,
+    "scripts",
+    "backups",
+    "paper-orderbook-binding-v1-contract-v2"
+  );
+
+fs.mkdirSync(
+  BACKUP_DIR,
+  {
+    recursive:
+      true
+  }
+);
+
+if (
+  fs.existsSync(
+    TARGET
+  )
+) {
+  const backup =
+    path.join(
+      BACKUP_DIR,
+      "paper-orderbook-binding-v1-contract-test.ts"
+    );
+
+  if (
+    !fs.existsSync(
+      backup
+    )
+  ) {
+    fs.copyFileSync(
+      TARGET,
+      backup
+    );
+  }
+}
+
+fs.writeFileSync(
+  TARGET,
+  Buffer.from(
+    "aW1wb3J0IHsKICBidWlsZFBhcGVyUXVvdGVTbmFwc2hvdEZyb21LaXNPcmRlcmJvb2ssCn0gZnJvbSAiLi4vbGliL3RyYWRpbmcvcmVzb2x2ZS1wYXBlci1leGVjdXRpb24tcmVhbGlzbS12Mi1vcmRlcmJvb2stcXVvdGUiOwoKaW1wb3J0IHsKICBldmFsdWF0ZVBhcGVyRXhlY3V0aW9uUmVhbGlzbVYyLAp9IGZyb20gIi4uL2xpYi90cmFkaW5nL3BhcGVyLWV4ZWN1dGlvbi1yZWFsaXNtLXYyIjsKCmNvbnN0IG9ic2VydmVkQXQgPQogICIyMDI2LTEwLTEwVDA1OjAwOjAwLjAwMFoiOwoKY29uc3QgYmVzdEFzayA9CiAgMTAwMTAwOwoKY29uc3QgYmVzdEJpZCA9CiAgMTAwMDAwOwoKY29uc3QgcXVvdGUgPQogIGJ1aWxkUGFwZXJRdW90ZVNuYXBzaG90RnJvbUtpc09yZGVyYm9vaygKICAgIHsKICAgICAgYXNrcDE6CiAgICAgICAgU3RyaW5nKGJlc3RBc2spLAoKICAgICAgYmlkcDE6CiAgICAgICAgU3RyaW5nKGJlc3RCaWQpLAoKICAgICAgYXNrcF9yc3FuMToKICAgICAgICAiMjAiLAoKICAgICAgYmlkcF9yc3FuMToKICAgICAgICAiMzAiLAogICAgfSwKICAgIG9ic2VydmVkQXQsCiAgKTsKCmNvbnN0IGJ1eSA9CiAgZXZhbHVhdGVQYXBlckV4ZWN1dGlvblJlYWxpc21WMih7CiAgICBzaWRlOgogICAgICAiQlVZIiwKCiAgICByZXF1ZXN0ZWRRdWFudGl0eToKICAgICAgMTAsCgogICAgcmVmZXJlbmNlUHJpY2U6CiAgICAgIDEwMDA1MCwKCiAgICBub3c6CiAgICAgIG9ic2VydmVkQXQsCgogICAgcXVvdGUsCgogICAgaW50ZXJ2YWxWb2x1bWU6CiAgICAgIDEwMDAsCiAgfSk7Cgpjb25zdCBzZWxsID0KICBldmFsdWF0ZVBhcGVyRXhlY3V0aW9uUmVhbGlzbVYyKHsKICAgIHNpZGU6CiAgICAgICJTRUxMIiwKCiAgICByZXF1ZXN0ZWRRdWFudGl0eToKICAgICAgMTAsCgogICAgcmVmZXJlbmNlUHJpY2U6CiAgICAgIDEwMDA1MCwKCiAgICBub3c6CiAgICAgIG9ic2VydmVkQXQsCgogICAgcXVvdGUsCgogICAgaW50ZXJ2YWxWb2x1bWU6CiAgICAgIDEwMDAsCiAgfSk7Cgpjb25zdCBlbXB0eSA9CiAgYnVpbGRQYXBlclF1b3RlU25hcHNob3RGcm9tS2lzT3JkZXJib29rKAogICAge30sCiAgICBvYnNlcnZlZEF0LAogICk7Cgpjb25zdCBidXlQcmljZSA9CiAgYnV5LmV4ZWN1dGlvblByaWNlOwoKY29uc3Qgc2VsbFByaWNlID0KICBzZWxsLmV4ZWN1dGlvblByaWNlOwoKY29uc3QgY2hlY2tzID0gewogIHF1b3RlQnVpbHQ6CiAgICBxdW90ZSAhPT0gbnVsbCwKCiAgYmVzdEFza1BhcnNlZDoKICAgIHF1b3RlPy5iZXN0QXNrUHJpY2UgPT09CiAgICBiZXN0QXNrLAoKICBiZXN0QmlkUGFyc2VkOgogICAgcXVvdGU/LmJlc3RCaWRQcmljZSA9PT0KICAgIGJlc3RCaWQsCgogIGFza1F1YW50aXR5UGFyc2VkOgogICAgcXVvdGU/LmJlc3RBc2tRdWFudGl0eSA9PT0KICAgIDIwLAoKICBiaWRRdWFudGl0eVBhcnNlZDoKICAgIHF1b3RlPy5iZXN0QmlkUXVhbnRpdHkgPT09CiAgICAzMCwKCiAgYnV5VXNlc0Jlc3RBc2tTb3VyY2U6CiAgICBidXkuYXBwcm92ZWQgPT09CiAgICAgIHRydWUgJiYKICAgIGJ1eS5wcmljZVNvdXJjZSA9PT0KICAgICAgIkJFU1RfQVNLIiwKCiAgc2VsbFVzZXNCZXN0QmlkU291cmNlOgogICAgc2VsbC5hcHByb3ZlZCA9PT0KICAgICAgdHJ1ZSAmJgogICAgc2VsbC5wcmljZVNvdXJjZSA9PT0KICAgICAgIkJFU1RfQklEIiwKCiAgYnV5RXhlY3V0aW9uQXRPckFib3ZlQmVzdEFzazoKICAgIHR5cGVvZiBidXlQcmljZSA9PT0KICAgICAgIm51bWJlciIgJiYKICAgIE51bWJlci5pc0Zpbml0ZSgKICAgICAgYnV5UHJpY2UsCiAgICApICYmCiAgICBidXlQcmljZSA+PQogICAgICBiZXN0QXNrLAoKICBzZWxsRXhlY3V0aW9uQXRPckJlbG93QmVzdEJpZDoKICAgIHR5cGVvZiBzZWxsUHJpY2UgPT09CiAgICAgICJudW1iZXIiICYmCiAgICBOdW1iZXIuaXNGaW5pdGUoCiAgICAgIHNlbGxQcmljZSwKICAgICkgJiYKICAgIHNlbGxQcmljZSA8PQogICAgICBiZXN0QmlkLAoKICBidXlNYXJrZXRJbXBhY3REaXJlY3Rpb25Db3JyZWN0OgogICAgYnV5Lm1hcmtldEltcGFjdEJwcyA+CiAgICAgIDAKICAgICAgPyAoCiAgICAgICAgICB0eXBlb2YgYnV5UHJpY2UgPT09CiAgICAgICAgICAgICJudW1iZXIiICYmCiAgICAgICAgICBidXlQcmljZSA+CiAgICAgICAgICAgIGJlc3RBc2sKICAgICAgICApCiAgICAgIDogKAogICAgICAgICAgYnV5UHJpY2UgPT09CiAgICAgICAgICBiZXN0QXNrCiAgICAgICAgKSwKCiAgc2VsbE1hcmtldEltcGFjdERpcmVjdGlvbkNvcnJlY3Q6CiAgICBzZWxsLm1hcmtldEltcGFjdEJwcyA+CiAgICAgIDAKICAgICAgPyAoCiAgICAgICAgICB0eXBlb2Ygc2VsbFByaWNlID09PQogICAgICAgICAgICAibnVtYmVyIiAmJgogICAgICAgICAgc2VsbFByaWNlIDwKICAgICAgICAgICAgYmVzdEJpZAogICAgICAgICkKICAgICAgOiAoCiAgICAgICAgICBzZWxsUHJpY2UgPT09CiAgICAgICAgICBiZXN0QmlkCiAgICAgICAgKSwKCiAgYnV5VG9wT2ZCb29rUXVhbnRpdHlDYXA6CiAgICBidXkudG9wT2ZCb29rUXVhbnRpdHlDYXAgPT09CiAgICAyMCwKCiAgc2VsbFRvcE9mQm9va1F1YW50aXR5Q2FwOgogICAgc2VsbC50b3BPZkJvb2tRdWFudGl0eUNhcCA9PT0KICAgIDMwLAoKICBlbXB0eU9yZGVyYm9va1JldHVybnNOdWxsOgogICAgZW1wdHkgPT09CiAgICBudWxsLAoKICBub1N5bnRoZXRpY1NwcmVhZFdoZW5RdW90ZVVzZWQ6CiAgICBidXkuc3ludGhldGljU3ByZWFkQnBzID09PQogICAgICAwICYmCiAgICBzZWxsLnN5bnRoZXRpY1NwcmVhZEJwcyA9PT0KICAgICAgMCwKCiAgYnV5UmVhbGlzbVN0aWxsQXBwbGllc0ltcGFjdDoKICAgIGJ1eS50b3RhbEFkdmVyc2VQcmljZUJwcyAhPT0KICAgICAgbnVsbCAmJgogICAgYnV5LnRvdGFsQWR2ZXJzZVByaWNlQnBzID49CiAgICAgIGJ1eS5tYXJrZXRJbXBhY3RCcHMsCgogIHNlbGxSZWFsaXNtU3RpbGxBcHBsaWVzSW1wYWN0OgogICAgc2VsbC50b3RhbEFkdmVyc2VQcmljZUJwcyAhPT0KICAgICAgbnVsbCAmJgogICAgc2VsbC50b3RhbEFkdmVyc2VQcmljZUJwcyA+PQogICAgICBzZWxsLm1hcmtldEltcGFjdEJwcywKfTsKCmNvbnN0IGZhaWxlZCA9CiAgT2JqZWN0LmVudHJpZXMoCiAgICBjaGVja3MsCiAgKQogICAgLmZpbHRlcigKICAgICAgKFssIG9rXSkgPT4KICAgICAgICBvayAhPT0gdHJ1ZSwKICAgICkKICAgIC5tYXAoCiAgICAgIChbbmFtZV0pID0+CiAgICAgICAgbmFtZSwKICAgICk7Cgpjb25zb2xlLmxvZygKICBKU09OLnN0cmluZ2lmeSgKICAgIHsKICAgICAgc3RhdHVzOgogICAgICAgIGZhaWxlZC5sZW5ndGggPT09CiAgICAgICAgICAwCiAgICAgICAgICA/ICJBSV9TVE9DS19MQUJfUEFQRVJfT1JERVJCT09LX0JJTkRJTkdfVjFfQ09OVFJBQ1RfUEFTUyIKICAgICAgICAgIDogIkFJX1NUT0NLX0xBQl9QQVBFUl9PUkRFUkJPT0tfQklORElOR19WMV9DT05UUkFDVF9GQUlMIiwKCiAgICAgIGNoZWNrcywKCiAgICAgIGludGVycHJldGF0aW9uOiB7CiAgICAgICAgcXVvdGVQcmljZVJvbGU6CiAgICAgICAgICAiQkVTVF9BU0svQkVTVF9CSUQgaXMgdGhlIGV4ZWN1dGFibGUgdG9wLW9mLWJvb2sgc3RhcnRpbmcgcHJpY2UuIiwKCiAgICAgICAgbWFya2V0SW1wYWN0Um9sZToKICAgICAgICAgICJFeGVjdXRpb24gcmVhbGlzbSBtYXkgbW92ZSBCVVkgYWJvdmUgYmVzdCBhc2sgYW5kIFNFTEwgYmVsb3cgYmVzdCBiaWQgYWNjb3JkaW5nIHRvIHBhcnRpY2lwYXRpb24vaW1wYWN0LiIsCgogICAgICAgIGV4YWN0UXVvdGVFcXVhbGl0eVJlcXVpcmVkOgogICAgICAgICAgZmFsc2UsCgogICAgICAgIHN5bnRoZXRpY1NwcmVhZFVzZWRXaXRoUmVhbFF1b3RlOgogICAgICAgICAgZmFsc2UsCiAgICAgIH0sCgogICAgICBzYW1wbGVzOiB7CiAgICAgICAgcXVvdGUsCgogICAgICAgIGJ1eTogewogICAgICAgICAgYmVzdEFzaywKICAgICAgICAgIGV4ZWN1dGlvblByaWNlOgogICAgICAgICAgICBidXkuZXhlY3V0aW9uUHJpY2UsCiAgICAgICAgICBwcmljZVNvdXJjZToKICAgICAgICAgICAgYnV5LnByaWNlU291cmNlLAogICAgICAgICAgbWFya2V0SW1wYWN0QnBzOgogICAgICAgICAgICBidXkubWFya2V0SW1wYWN0QnBzLAogICAgICAgICAgdG90YWxBZHZlcnNlUHJpY2VCcHM6CiAgICAgICAgICAgIGJ1eS50b3RhbEFkdmVyc2VQcmljZUJwcywKICAgICAgICAgIGZpbGxlZFF1YW50aXR5OgogICAgICAgICAgICBidXkuZmlsbGVkUXVhbnRpdHksCiAgICAgICAgICB0b3BPZkJvb2tRdWFudGl0eUNhcDoKICAgICAgICAgICAgYnV5LnRvcE9mQm9va1F1YW50aXR5Q2FwLAogICAgICAgICAgc3ludGhldGljU3ByZWFkQnBzOgogICAgICAgICAgICBidXkuc3ludGhldGljU3ByZWFkQnBzLAogICAgICAgIH0sCgogICAgICAgIHNlbGw6IHsKICAgICAgICAgIGJlc3RCaWQsCiAgICAgICAgICBleGVjdXRpb25QcmljZToKICAgICAgICAgICAgc2VsbC5leGVjdXRpb25QcmljZSwKICAgICAgICAgIHByaWNlU291cmNlOgogICAgICAgICAgICBzZWxsLnByaWNlU291cmNlLAogICAgICAgICAgbWFya2V0SW1wYWN0QnBzOgogICAgICAgICAgICBzZWxsLm1hcmtldEltcGFjdEJwcywKICAgICAgICAgIHRvdGFsQWR2ZXJzZVByaWNlQnBzOgogICAgICAgICAgICBzZWxsLnRvdGFsQWR2ZXJzZVByaWNlQnBzLAogICAgICAgICAgZmlsbGVkUXVhbnRpdHk6CiAgICAgICAgICAgIHNlbGwuZmlsbGVkUXVhbnRpdHksCiAgICAgICAgICB0b3BPZkJvb2tRdWFudGl0eUNhcDoKICAgICAgICAgICAgc2VsbC50b3BPZkJvb2tRdWFudGl0eUNhcCwKICAgICAgICAgIHN5bnRoZXRpY1NwcmVhZEJwczoKICAgICAgICAgICAgc2VsbC5zeW50aGV0aWNTcHJlYWRCcHMsCiAgICAgICAgfSwKICAgICAgfSwKCiAgICAgIHNhZmV0eTogewogICAgICAgIGV4dGVybmFsQXBpQ2FsbHM6CiAgICAgICAgICAwLAogICAgICAgIGRhdGFiYXNlUmVhZHM6CiAgICAgICAgICAwLAogICAgICAgIGRhdGFiYXNlV3JpdGVzOgogICAgICAgICAgMCwKICAgICAgICBvcmRlcnNDcmVhdGVkOgogICAgICAgICAgMCwKICAgICAgICBwb3NpdGlvbnNDaGFuZ2VkOgogICAgICAgICAgMCwKICAgICAgICByZWFsVHJhZGluZ0VuYWJsZWQ6CiAgICAgICAgICBmYWxzZSwKICAgICAgfSwKCiAgICAgIGZhaWxlZCwKICAgIH0sCiAgICBudWxsLAogICAgMiwKICApLAopOwoKcHJvY2Vzcy5leGl0Q29kZSA9CiAgZmFpbGVkLmxlbmd0aCA9PT0KICAgIDAKICAgID8gMAogICAgOiAxOwo=",
+    "base64"
+  ).toString(
+    "utf8"
+  ),
+  "utf8"
+);
+
+console.log(
+  JSON.stringify(
+    {
+      status:
+        "AI_STOCK_LAB_PAPER_ORDERBOOK_BINDING_V1_CONTRACT_V2_REPAIRED",
+
+      target:
+        "scripts/paper-orderbook-binding-v1-contract-test.ts",
+
+      repair: {
+        previousFailure: [
+          "buyUsesBestAsk",
+          "sellUsesBestBid"
+        ],
+
+        rootCause:
+          "The old contract incorrectly required executionPrice to equal top-of-book exactly even though Realism V2 applies market impact after selecting BEST_ASK/BEST_BID.",
+
+        correctedPolicy: {
+          buy:
+            "priceSource BEST_ASK and final executionPrice >= best ask",
+
+          sell:
+            "priceSource BEST_BID and final executionPrice <= best bid",
+
+          impact:
+            "positive market impact must move price adversely",
+
+          syntheticSpread:
+            "must remain zero when a real quote is supplied"
+        }
+      },
+
+      safety: {
+        sourceProductionFilesWritten:
+          0,
+        testFileWritten:
+          1,
+        databaseReads:
+          0,
+        databaseWrites:
+          0,
+        externalApiCalls:
+          0,
+        ordersCreated:
+          0,
+        positionsChanged:
+          0,
+        realTradingEnabled:
+          false
+      },
+
+      nextAction:
+        "RERUN_CONTRACT_STATIC_AND_CLEAN_TSC"
+    },
+    null,
+    2
+  )
+);
+
+process.exitCode = 0;

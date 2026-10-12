@@ -1,0 +1,429 @@
+[
+  {
+    "file": "./logs/opendart-corporate-action-incremental-v9-8-1.json",
+    "topLevelKeys": [
+      "version",
+      "status",
+      "provider",
+      "providerVersion",
+      "classifierVersion",
+      "fingerprint",
+      "latestCoverage",
+      "startDate",
+      "throughDate",
+      "markets",
+      "actionTypes",
+      "pages",
+      "disclosures",
+      "candidates",
+      "duplicateDisclosureIdentities",
+      "startedAt",
+      "finishedAt",
+      "writesPerformed",
+      "productionApplied",
+      "eventImportComplete",
+      "summary",
+      "coverageCandidate"
+    ],
+    "summary": {
+      "status": "INCREMENTAL_INVENTORY_COMPLETE",
+      "latestCoverage": {
+        "coverage_status": "PARTIAL",
+        "production_applied": false
+      },
+      "actionTypes": {
+        "type": "array",
+        "length": 7,
+        "sample": "CASH_DIVIDEND"
+      },
+      "disclosures": {
+        "type": "array",
+        "length": 20197,
+        "sample": {}
+      },
+      "candidates": {
+        "type": "array",
+        "length": 703,
+        "sample": {
+          "candidateActionType": "string",
+          "classifierReason": "string",
+          "correctionOrWithdrawalHint": "boolean",
+          "reviewFlags": "object"
+        }
+      },
+      "duplicateDisclosureIdentities": {
+        "type": "array",
+        "length": 0,
+        "sample": null
+      },
+      "productionApplied": false,
+      "eventImportComplete": false,
+      "coverageCandidate": {
+        "coverageStatus": "INVENTORY_COMPLETE",
+        "productionApplied": false,
+        "eventImportComplete": false,
+        "candidateClassificationExhaustive": false
+      }
+    }
+  },
+  {
+    "file": "./logs/opendart-corporate-action-detail-workset-v9-8-2.json",
+    "topLevelKeys": [
+      "version",
+      "status",
+      "source",
+      "currentCanonicalContract",
+      "counts",
+      "gateCounts",
+      "actionTypeCountsByGate",
+      "safety",
+      "policy",
+      "detailFetchQueue",
+      "chainLookupQueue",
+      "productionCandidateRows",
+      "autoExcludedRows",
+      "allRows",
+      "outputFile",
+      "outputFingerprint"
+    ],
+    "summary": {
+      "status": "DETAIL_WORKSET_READY",
+      "currentCanonicalContract": {
+        "type": "array",
+        "length": 6,
+        "sample": "CASH_DIVIDEND"
+      },
+      "counts": {
+        "sourceCandidates": 703,
+        "inCurrentCanonicalContract": 279,
+        "outOfCurrentCanonicalScope": 424,
+        "currentlyEligibleStandaloneProductionCandidates": 127,
+        "autoExcludedWithoutDetailFetch": 427
+      },
+      "gateCounts": {
+        "CHAIN_CONTROL_WITHDRAWAL": 7,
+        "CORRECTION_REQUIRES_CHAIN_LOOKUP": 100,
+        "FOLLOWUP_NOTICE_NOT_EVENT": 3,
+        "OTHER_ENTITY_SCOPE_REVIEW": 42,
+        "OUT_OF_CURRENT_CANONICAL_SCOPE": 424,
+        "SUPPORTED_DECISION_DETAIL_READY": 96
+      },
+      "actionTypeCountsByGate": {
+        "CHAIN_CONTROL_WITHDRAWAL": {},
+        "CORRECTION_REQUIRES_CHAIN_LOOKUP": {},
+        "FOLLOWUP_NOTICE_NOT_EVENT": {},
+        "OTHER_ENTITY_SCOPE_REVIEW": {},
+        "OUT_OF_CURRENT_CANONICAL_SCOPE": {},
+        "SUPPORTED_DECISION_DETAIL_READY": {}
+      },
+      "productionCandidateRows": {
+        "type": "array",
+        "length": 127,
+        "sample": {
+          "actionType": "string",
+          "correction": "boolean",
+          "withdrawal": "boolean",
+          "originalV981ReviewFlags": "object",
+          "reason": "string",
+          "canBecomeProductionEvent": "boolean"
+        }
+      },
+      "autoExcludedRows": {
+        "type": "array",
+        "length": 427,
+        "sample": {
+          "actionType": "string",
+          "correction": "boolean",
+          "withdrawal": "boolean",
+          "originalV981ReviewFlags": "object",
+          "reason": "string",
+          "canBecomeProductionEvent": "boolean"
+        }
+      }
+    }
+  },
+  {
+    "file": "./logs/opendart-corporate-action-detail-evidence-v9-8-3-1.json",
+    "topLevelKeys": [
+      "version",
+      "status",
+      "source",
+      "verifiedInputFailureContract",
+      "summary",
+      "provider014ActionTypeCounts",
+      "provider014GateCounts",
+      "provider014StructuredStatusCounts",
+      "dispositionCounts",
+      "safety",
+      "policy",
+      "chainResolutionQueue",
+      "unresolvedWithoutAlternateEvidence",
+      "results",
+      "outputFile",
+      "outputFingerprint"
+    ],
+    "summary": {
+      "status": "PROVIDER_014_DISPOSITION_COMPLETE",
+      "provider014ActionTypeCounts": {},
+      "provider014GateCounts": {
+        "CORRECTION_REQUIRES_CHAIN_LOOKUP": 28,
+        "OTHER_ENTITY_SCOPE_REVIEW": 3
+      },
+      "provider014StructuredStatusCounts": {},
+      "dispositionCounts": {}
+    }
+  },
+  {
+    "file": "./logs/opendart-corporate-action-chain-resolution-v9-8-4-2.json",
+    "topLevelKeys": [
+      "version",
+      "status",
+      "source",
+      "counts",
+      "resolutionReasonCounts",
+      "confidenceCounts",
+      "safety",
+      "policy",
+      "resolved",
+      "quarantineQueue",
+      "invalidResolved",
+      "rows",
+      "outputFile",
+      "outputFingerprint"
+    ],
+    "summary": {
+      "status": "FINAL_PRECISION_CHAIN_RESOLUTION_QUARANTINE_REQUIRED",
+      "counts": {
+        "finalResolvedCount": 116,
+        "finalUnresolvedCount": 5
+      },
+      "resolutionReasonCounts": {},
+      "confidenceCounts": {}
+    }
+  },
+  {
+    "file": "./logs/opendart-corporate-action-canonical-source-selection-v9-8-5-1.json",
+    "topLevelKeys": [
+      "version",
+      "status",
+      "source",
+      "counts",
+      "withdrawalControlClassCounts",
+      "activeActionTypeCounts",
+      "safety",
+      "policy",
+      "activeChains",
+      "suppressedChains",
+      "quarantineDocuments",
+      "otherEntityExcluded",
+      "withdrawalControls",
+      "carryInWithdrawalControls",
+      "otherEntityWithdrawalControls",
+      "additionalSuppressedControls",
+      "currentWindowNonactiveControls",
+      "blockingRows",
+      "remainingUnaccountedReceipts",
+      "conflictedChains",
+      "outputFile",
+      "outputFingerprint"
+    ],
+    "summary": {
+      "status": "CANONICAL_SOURCE_SELECTION_READY_WITH_QUARANTINE",
+      "counts": {
+        "sourceActiveCanonicalChains": 159,
+        "sourceWithdrawnChainsSuppressed": 4,
+        "sourceOtherEntityExcluded": 42,
+        "sourceUnaccountedReceipts": 3,
+        "fixedWithdrawalControls": 3,
+        "carryInWithdrawalControls": 0,
+        "otherEntityWithdrawalControls": 2,
+        "remainingUnaccountedReceipts": 0
+      },
+      "withdrawalControlClassCounts": {
+        "ADDITIONAL_WITHDRAWAL_CONTROL_FOR_SUPPRESSED_ROOT": 1,
+        "OTHER_ENTITY_WITHDRAWAL_CONTROL_EXCLUDED": 2
+      },
+      "activeActionTypeCounts": {},
+      "otherEntityExcluded": {
+        "type": "array",
+        "length": 42,
+        "sample": {
+          "actionType": "string",
+          "reason": "string"
+        }
+      },
+      "withdrawalControls": {
+        "type": "array",
+        "length": 3,
+        "sample": {
+          "actionType": "string",
+          "correction": "boolean",
+          "withdrawal": "boolean",
+          "rootResolutionReason": "string",
+          "canonicalEventCreated": "boolean",
+          "parentSecurityEventMutationAllowed": "boolean",
+          "productionReconciliationRequired": "boolean"
+        }
+      },
+      "carryInWithdrawalControls": {
+        "type": "array",
+        "length": 0,
+        "sample": null
+      },
+      "otherEntityWithdrawalControls": {
+        "type": "array",
+        "length": 2,
+        "sample": {
+          "actionType": "string",
+          "correction": "boolean",
+          "withdrawal": "boolean",
+          "rootResolutionReason": "string",
+          "canonicalEventCreated": "boolean",
+          "parentSecurityEventMutationAllowed": "boolean",
+          "productionReconciliationRequired": "boolean"
+        }
+      },
+      "remainingUnaccountedReceipts": {
+        "type": "array",
+        "length": 0,
+        "sample": null
+      }
+    }
+  },
+  {
+    "file": "./logs/opendart-corporate-action-field-extraction-v9-8-6-3.json",
+    "topLevelKeys": [
+      "version",
+      "status",
+      "source",
+      "counts",
+      "actionTypeCounts",
+      "parseStatusCounts",
+      "repairedRatioCounts",
+      "recoveryReasonCounts",
+      "safety",
+      "policy",
+      "repairedRows",
+      "reviewQueue",
+      "results",
+      "outputFile",
+      "outputFingerprint"
+    ],
+    "summary": {
+      "status": "REVERSE_SPLIT_RECOVERY_COMPLETE",
+      "counts": {
+        "duplicateCanonicalIdentities": 0
+      },
+      "actionTypeCounts": {},
+      "parseStatusCounts": {},
+      "repairedRatioCounts": {},
+      "recoveryReasonCounts": {},
+      "reviewQueue": {
+        "type": "array",
+        "length": 0,
+        "sample": null
+      }
+    }
+  },
+  {
+    "file": "./logs/opendart-corporate-action-market-effective-date-v9-8-7-2.json",
+    "topLevelKeys": [
+      "version",
+      "status",
+      "asOfDate",
+      "source",
+      "counts",
+      "resolutionStatusCounts",
+      "resolutionReasonCounts",
+      "futurePendingRows",
+      "newlyResolvedRows",
+      "safety",
+      "policy",
+      "results",
+      "outputFile",
+      "outputFingerprint"
+    ],
+    "summary": {
+      "status": "EFFECTIVE_DATE_FINALIZATION_COMPLETE_WITH_FUTURE_PENDING",
+      "counts": {
+        "duplicateCanonicalIdentities": 0,
+        "futureEventsReclassified": 1
+      },
+      "resolutionStatusCounts": {},
+      "resolutionReasonCounts": {
+        "OFFICIAL_KRX_DISCLOSURE_CONFIRMS_EFFECTIVE_DATE_KIS_SUSPENSION_SERIES_INCONCLUSIVE": 1
+      }
+    }
+  },
+  {
+    "file": "./logs/opendart-corporate-action-factor-validation-v9-8-8.json",
+    "topLevelKeys": [
+      "version",
+      "status",
+      "source",
+      "counts",
+      "factorStatusCounts",
+      "factorReasonCounts",
+      "factorReadyActionTypeCounts",
+      "reviewActionTypeCounts",
+      "reviewReasonCounts",
+      "reviewQueue",
+      "futurePendingRows",
+      "safety",
+      "policy",
+      "results",
+      "outputFile",
+      "outputFingerprint"
+    ],
+    "summary": {
+      "status": "PER_EVENT_FACTOR_VALIDATION_COMPLETE",
+      "counts": {
+        "factorReviewRequired": 0,
+        "duplicateCanonicalIdentities": 0,
+        "nonCanonicalCashReferenceBars": 0
+      },
+      "factorStatusCounts": {},
+      "factorReasonCounts": {
+        "EXPLICIT_EVENT_RATIO": 42,
+        "LATEST_PRIOR_CANONICAL_ADJUSTED_MARKET_CLOSE": 79
+      },
+      "factorReadyActionTypeCounts": {},
+      "reviewActionTypeCounts": {},
+      "reviewReasonCounts": {},
+      "reviewQueue": {
+        "type": "array",
+        "length": 0,
+        "sample": null
+      }
+    }
+  },
+  {
+    "file": "./logs/opendart-corporate-action-cycle-closure-v9-8-11-13.json",
+    "topLevelKeys": [
+      "version",
+      "status",
+      "evidenceSnapshotAsOf",
+      "closure",
+      "accounting",
+      "carryForward",
+      "issues",
+      "sourceFingerprints",
+      "safety",
+      "nextGate",
+      "outputFile",
+      "outputFingerprint"
+    ],
+    "summary": {
+      "status": "V9_8_CURRENT_CYCLE_CLOSED_AT_2026_10_01",
+      "accounting": {
+        "currentBatchEvents": 128,
+        "factorReadyEvents": 121,
+        "structuralBlockedEvents": 7,
+        "ratioRefreshCandidates": 42,
+        "ratioEligibleAtSnapshot": 18,
+        "refreshableCanonicalSurfaces": 16,
+        "noCanonicalBarSurface": 2
+      }
+    }
+  }
+]

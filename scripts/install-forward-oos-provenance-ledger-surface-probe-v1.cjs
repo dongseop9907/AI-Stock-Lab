@@ -1,0 +1,79 @@
+const fs = require("fs");
+const path = require("path");
+
+const ROOT = process.cwd();
+
+const TARGET = path.join(
+  ROOT,
+  "scripts",
+  "forward-oos-provenance-ledger-surface-probe-v1.ts"
+);
+
+const SOURCE = Buffer.from(
+  "aW1wb3J0IGZzIGZyb20gIm5vZGU6ZnMiOwppbXBvcnQgcGF0aCBmcm9tICJub2RlOnBhdGgiOwppbXBvcnQgY3J5cHRvIGZyb20gIm5vZGU6Y3J5cHRvIjsKCmNvbnN0IFJPT1QgPSBwcm9jZXNzLmN3ZCgpOwoKY29uc3QgRklMRVMgPSBbCiAgInNjcmlwdHMvdHJ1ZS1mb3J3YXJkLW9vcy1jb250cm9sbGVkLXByb2R1Y2VyLWV2aWRlbmNlLXJ1bi12MS50cyIsCiAgImxpYi9yZXNlYXJjaC9nZXQtZm9yd2FyZC1vb3Mtb2JzZXJ2YWJpbGl0eS1kYXNoYm9hcmQtdjEudHMiLAogICJzY3JpcHRzL2ZvcndhcmQtb29zLWRhdGEtcXVhbGl0eS1pbnRlZ3JpdHktbW9uaXRvci12MS50cyIsCiAgInNjcmlwdHMvYWxwaGEtdjMtdHJ1ZS1mb3J3YXJkLXRvcDEtcHJvZHVjZXItdjEudHMiLApdIGFzIGNvbnN0OwoKY29uc3QgTkVFRExFUyA9IFsKICAiZXZpZGVuY2VSdW5JZCIsCiAgIm5ld1Nlc3Npb25zQ2FycnlFdmlkZW5jZVJ1bklkIiwKICAid3JpdGVGaWxlU3luYyIsCiAgInRydWUtZm9yd2FyZC1vb3MtY29udHJvbGxlZC1wcm9kdWNlci1ldmlkZW5jZS1ydW4tdjEuanNvbiIsCiAgIkZPUldBUkRfRklMRVMiLAogICJmaXJzdEV4aXN0aW5nIiwKICAic2Vzc2lvblJvd3MiLAogICJub3JtYWxpemVkU2Vzc2lvbnMiLAogICJjb250cm9sbGVkRXZpZGVuY2VDb3VudGFibGUiLAogICJwcm92ZW5hbmNlIiwKICAiY2FuZGlkYXRlRmluZ2VycHJpbnQiLAogICJwYXlsb2FkSGFzaCIsCl0gYXMgY29uc3Q7CgpmdW5jdGlvbiBzaGEyNTYodGV4dDogc3RyaW5nKSB7CiAgcmV0dXJuIGNyeXB0bwogICAgLmNyZWF0ZUhhc2goInNoYTI1NiIpCiAgICAudXBkYXRlKHRleHQpCiAgICAuZGlnZXN0KCJoZXgiKTsKfQoKZnVuY3Rpb24gbGluZVdpbmRvdygKICBsaW5lczogc3RyaW5nW10sCiAgbGluZUluZGV4OiBudW1iZXIsCiAgcmFkaXVzID0gMTIsCikgewogIGNvbnN0IHN0YXJ0ID0KICAgIE1hdGgubWF4KAogICAgICAwLAogICAgICBsaW5lSW5kZXggLSByYWRpdXMsCiAgICApOwoKICBjb25zdCBlbmQgPQogICAgTWF0aC5taW4oCiAgICAgIGxpbmVzLmxlbmd0aCwKICAgICAgbGluZUluZGV4ICsgcmFkaXVzICsgMSwKICAgICk7CgogIHJldHVybiBsaW5lcwogICAgLnNsaWNlKHN0YXJ0LCBlbmQpCiAgICAubWFwKAogICAgICAobGluZSwgb2Zmc2V0KSA9PiAoewogICAgICAgIGxpbmU6CiAgICAgICAgICBzdGFydCArIG9mZnNldCArIDEsCiAgICAgICAgdGV4dDoKICAgICAgICAgIGxpbmUsCiAgICAgIH0pLAogICAgKTsKfQoKZnVuY3Rpb24gaW5zcGVjdCgKICByZWw6IHN0cmluZywKKSB7CiAgY29uc3QgYWJzID0KICAgIHBhdGguam9pbigKICAgICAgUk9PVCwKICAgICAgcmVsLAogICAgKTsKCiAgaWYgKCFmcy5leGlzdHNTeW5jKGFicykpIHsKICAgIHJldHVybiB7CiAgICAgIGZpbGU6IHJlbCwKICAgICAgZXhpc3RzOiBmYWxzZSwKICAgIH07CiAgfQoKICBjb25zdCB0ZXh0ID0KICAgIGZzLnJlYWRGaWxlU3luYygKICAgICAgYWJzLAogICAgICAidXRmOCIsCiAgICApOwoKICBjb25zdCBzdGF0ID0KICAgIGZzLnN0YXRTeW5jKGFicyk7CgogIGNvbnN0IGxpbmVzID0KICAgIHRleHQuc3BsaXQoL1xyP1xuLyk7CgogIGNvbnN0IG1hdGNoZXMgPQogICAgTkVFRExFUy5mbGF0TWFwKAogICAgICBuZWVkbGUgPT4gewogICAgICAgIGNvbnN0IGluZGV4ZXMgPQogICAgICAgICAgbGluZXMKICAgICAgICAgICAgLm1hcCgKICAgICAgICAgICAgICAobGluZSwgaW5kZXgpID0+ICh7CiAgICAgICAgICAgICAgICBsaW5lLAogICAgICAgICAgICAgICAgaW5kZXgsCiAgICAgICAgICAgICAgfSksCiAgICAgICAgICAgICkKICAgICAgICAgICAgLmZpbHRlcigKICAgICAgICAgICAgICByb3cgPT4KICAgICAgICAgICAgICAgIHJvdy5saW5lLmluY2x1ZGVzKAogICAgICAgICAgICAgICAgICBuZWVkbGUsCiAgICAgICAgICAgICAgICApLAogICAgICAgICAgICApCiAgICAgICAgICAgIC5tYXAoCiAgICAgICAgICAgICAgcm93ID0+IHJvdy5pbmRleCwKICAgICAgICAgICAgKQogICAgICAgICAgICAuc2xpY2UoCiAgICAgICAgICAgICAgMCwKICAgICAgICAgICAgICA0LAogICAgICAgICAgICApOwoKICAgICAgICByZXR1cm4gaW5kZXhlcy5tYXAoCiAgICAgICAgICBpbmRleCA9PiAoewogICAgICAgICAgICBuZWVkbGUsCiAgICAgICAgICAgIGF0TGluZToKICAgICAgICAgICAgICBpbmRleCArIDEsCiAgICAgICAgICAgIGNvbnRleHQ6CiAgICAgICAgICAgICAgbGluZVdpbmRvdygKICAgICAgICAgICAgICAgIGxpbmVzLAogICAgICAgICAgICAgICAgaW5kZXgsCiAgICAgICAgICAgICAgICAxMCwKICAgICAgICAgICAgICApLAogICAgICAgICAgfSksCiAgICAgICAgKTsKICAgICAgfSwKICAgICk7CgogIHJldHVybiB7CiAgICBmaWxlOiByZWwsCiAgICBleGlzdHM6IHRydWUsCiAgICBtdGltZToKICAgICAgc3RhdC5tdGltZS50b0lTT1N0cmluZygpLAogICAgc2l6ZToKICAgICAgc3RhdC5zaXplLAogICAgaGFzaDoKICAgICAgc2hhMjU2KHRleHQpLAogICAgbWF0Y2hlcywKICB9Owp9Cgpjb25zdCByZXBvcnQgPSB7CiAgc3RhdHVzOgogICAgIkFJX1NUT0NLX0xBQl9GT1JXQVJEX09PU19QUk9WRU5BTkNFX0xFREdFUl9TVVJGQUNFX1BST0JFX1YxX0NPTVBMRVRFIiwKCiAgcHVycG9zZToKICAgICJMb2NhdGUgZXhhY3Qgc2FmZSBwYXRjaCBzdXJmYWNlcyBmb3IgYXBwZW5kLW9ubHkgdmVyaWZpZWQgcHJvdmVuYW5jZSBsZWRnZXIgYW5kIGZhaWwtY2xvc2VkIGRhc2hib2FyZC9pbnRlZ3JpdHkgZmlsdGVyaW5nLiIsCgogIGZpbGVzOgogICAgRklMRVMubWFwKAogICAgICBpbnNwZWN0LAogICAgKSwKCiAgaW50ZW5kZWRDb250cmFjdDogewogICAgbGVkZ2VyRmlsZToKICAgICAgImxvZ3MvdHJ1ZS1mb3J3YXJkLW9vcy1jb250cm9sbGVkLXByb2R1Y2VyLWV2aWRlbmNlLWxlZGdlci12MS5qc29ubCIsCgogICAgdmVyaWZpZWRFbnRyeVJ1bGU6CiAgICAgICJhcHBlbmQgb25seSBhZnRlciBjb250cm9sbGVkIGV2aWRlbmNlIGNoZWNrcyBwYXNzIiwKCiAgICBqb2luUnVsZToKICAgICAgInNlc3Npb24ucHJvdmVuYW5jZS5ydW5JZCBtdXN0IGV4aXN0IGluIHZlcmlmaWVkIGxlZGdlciIsCgogICAgcmVxdWlyZWRTZXNzaW9uRmllbGRzOiBbCiAgICAgICJwcm92ZW5hbmNlLm1vZGU9Q09OVFJPTExFRF9OT1JNQUwiLAogICAgICAicHJvdmVuYW5jZS5ydW5JZCIsCiAgICAgICJjYW5kaWRhdGVGaW5nZXJwcmludCIsCiAgICAgICJpbnRlZ3JpdHkuYWxnb3JpdGhtPXNoYTI1NiIsCiAgICAgICJpbnRlZ3JpdHkucGF5bG9hZEhhc2giLAogICAgXSwKCiAgICBkYXNoYm9hcmRQb2xpY3k6CiAgICAgICJjb3VudCBvbmx5IHByb3ZlbmFuY2UtdmFsaWQgc2Vzc2lvbnMgd2l0aCB2ZXJpZmllZCBsZWRnZXIgcnVuSWQiLAoKICAgIGludGVncml0eVBvbGljeToKICAgICAgIkJMT0NLIGlmIGNhbm9uaWNhbCBzZXNzaW9uIGV4aXN0cyBidXQgcHJvdmVuYW5jZS9sZWRnZXIgdmVyaWZpY2F0aW9uIGZhaWxzIiwKICB9LAoKICBzYWZldHk6IHsKICAgIHJlYWRPbmx5OiB0cnVlLAogICAgc291cmNlRmlsZXNXcml0dGVuOiAwLAogICAgbG9nRmlsZXNXcml0dGVuOiAwLAogICAgbmV0d29ya1JlcXVlc3RzOiAwLAogICAgZGF0YWJhc2VSZWFkczogMCwKICAgIGRhdGFiYXNlV3JpdGVzOiAwLAogICAgb3JkZXJzQ3JlYXRlZDogMCwKICAgIHBvc2l0aW9uc0NoYW5nZWQ6IDAsCiAgICBwcm9tb3Rpb25FeGVjdXRlZDogZmFsc2UsCiAgICByZWFsVHJhZGluZ0VuYWJsZWQ6IGZhbHNlLAogIH0sCgogIG5leHRHYXRlOgogICAgIlBBVENIX1ZFUklGSUVEX1BST1ZFTkFOQ0VfTEVER0VSX1dJVEhfRVhBQ1RfU09VUkNFX0NPTlRFWFQiLAp9OwoKY29uc29sZS5sb2coCiAgSlNPTi5zdHJpbmdpZnkoCiAgICByZXBvcnQsCiAgICBudWxsLAogICAgMiwKICApLAopOwoKcHJvY2Vzcy5leGl0Q29kZSA9IDA7Cg==",
+  "base64"
+).toString(
+  "utf8"
+);
+
+fs.writeFileSync(
+  TARGET,
+  SOURCE,
+  "utf8"
+);
+
+console.log(
+  JSON.stringify(
+    {
+      status:
+        "AI_STOCK_LAB_FORWARD_OOS_PROVENANCE_LEDGER_SURFACE_PROBE_V1_INSTALLED",
+
+      generatedFile:
+        "scripts/forward-oos-provenance-ledger-surface-probe-v1.ts",
+
+      probe: {
+        readOnly:
+          true,
+
+        inspects: [
+          "controlled evidence wrapper",
+          "dashboard service",
+          "data quality monitor",
+          "true-forward producer"
+        ],
+
+        mutation:
+          "NONE",
+
+        purpose:
+          "Collect exact source anchors before provenance-ledger patch"
+      },
+
+      safety: {
+        producerExecuted:
+          false,
+        collectorExecuted:
+          false,
+        databaseReads:
+          0,
+        databaseWrites:
+          0,
+        ordersCreated:
+          0,
+        positionsChanged:
+          0,
+        promotionExecuted:
+          false,
+        realTradingEnabled:
+          false
+      },
+
+      nextAction:
+        "RUN_READ_ONLY_PROVENANCE_LEDGER_SURFACE_PROBE_V1"
+    },
+    null,
+    2
+  )
+);
+
+process.exitCode = 0;

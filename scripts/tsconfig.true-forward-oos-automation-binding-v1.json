@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "../lib/research/run-true-forward-oos-automation-binding-v1.ts",
+    "../scripts/alpha-v3-automation-cycle-scheduler.ts",
+    "../scripts/true-forward-oos-automation-binding-v1-contract-test.ts"
+  ]
+}

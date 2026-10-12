@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.forward-oos-operational.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "next-env.d.ts",
+    "scripts/alpha-v3-true-forward-top1-producer-v1.ts",
+    "scripts/alpha-v3-true-entry-forward-oos-collector-v1.ts",
+    "scripts/alpha-v3-true-forward-oos-evaluator-v1.ts",
+    "scripts/alpha-v3-true-forward-oos-summary.ts",
+    "scripts/true-forward-oos-controlled-normal-producer-v1.ts",
+    "scripts/true-forward-oos-controlled-producer-evidence-run-v1.ts",
+    "scripts/true-forward-oos-first-real-session-readiness-v1.ts",
+    "scripts/true-forward-oos-post-capture-maturity-audit-v1.ts",
+    "scripts/true-forward-oos-maturity-aware-collector-gate-v1.ts",
+    "scripts/forward-oos-data-quality-integrity-monitor-v1.ts",
+    "lib/research/run-true-forward-oos-automation-binding-v1.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "scripts/backups/**"
+  ]
+}

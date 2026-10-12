@@ -1,0 +1,723 @@
+import {
+  createSupabaseServerClient,
+} from "@/lib/supabase";
+
+type AgreementState =
+  | "BOTH_BLOCK"
+  | "BOTH_ALLOW"
+  | "V6_BLOCK_V7_ALLOW"
+  | "V6_ALLOW_V7_BLOCK"
+  | "NOT_COMPARABLE_DATE_MISMATCH"
+  | "NOT_COMPARABLE_MISSING_INPUT";
+
+type EvaluationStatus =
+  | "PENDING"
+  | "PARTIAL"
+  | "COMPLETED"
+  | "INVALID";
+
+interface OutcomeRow {
+  id: string;
+
+  stock_code: string;
+
+  market_date: string;
+
+  signal_market_date:
+    string | null;
+
+  agreement_state:
+    AgreementState;
+
+  v6_would_block:
+    boolean;
+
+  v7_would_block:
+    boolean;
+
+  return_1d:
+    number | string | null;
+
+  return_3d:
+    number | string | null;
+
+  return_5d:
+    number | string | null;
+
+  max_return_5d:
+    number | string | null;
+
+  min_return_5d:
+    number | string | null;
+
+  v6_decision_score_5d:
+    number | string | null;
+
+  v7_decision_score_5d:
+    number | string | null;
+
+  disagreement_winner:
+    string | null;
+
+  evaluation_status:
+    EvaluationStatus;
+
+  evaluated_at:
+    string | null;
+
+  created_at:
+    string;
+}
+
+interface ComparisonRow {
+  id: string;
+
+  observed_at: string;
+
+  v6_market_date:
+    string | null;
+
+  v7_market_date:
+    string | null;
+
+  comparison_eligible:
+    boolean;
+
+  agreement_state:
+    AgreementState;
+
+  v6_would_block:
+    boolean;
+
+  v7_would_block:
+    boolean;
+
+  v7_policy: string;
+
+  production_applied:
+    boolean;
+}
+
+function toNullableNumber(
+  value:
+    | number
+    | string
+    | null,
+): number | null {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return null;
+  }
+
+  const parsed =
+    Number(value);
+
+  return Number.isFinite(parsed)
+    ? parsed
+    : null;
+}
+
+function average(
+  values: number[],
+): number | null {
+  if (
+    values.length ===
+    0
+  ) {
+    return null;
+  }
+
+  return (
+    values.reduce(
+      (
+        sum,
+        value,
+      ) =>
+        sum +
+        value,
+      0,
+    ) /
+    values.length
+  );
+}
+
+function percentage(
+  numerator: number,
+  denominator: number,
+): number | null {
+  if (
+    denominator <=
+    0
+  ) {
+    return null;
+  }
+
+  return (
+    numerator /
+    denominator
+  );
+}
+
+function summarizeDecisionScores(
+  values: number[],
+) {
+  const positive =
+    values.filter(
+      (value) =>
+        value >
+        0,
+    ).length;
+
+  const negative =
+    values.filter(
+      (value) =>
+        value <
+        0,
+    ).length;
+
+  const flat =
+    values.length -
+    positive -
+    negative;
+
+  return {
+    sampleSize:
+      values.length,
+
+    averageScore:
+      average(values),
+
+    correctCount:
+      positive,
+
+    wrongCount:
+      negative,
+
+    flatCount:
+      flat,
+
+    correctRate:
+      percentage(
+        positive,
+        values.length,
+      ),
+  };
+}
+
+function summarizeAgreementGroup(
+  rows: OutcomeRow[],
+) {
+  const completed =
+    rows.filter(
+      (row) =>
+        row.evaluation_status ===
+        "COMPLETED",
+    );
+
+  const returns1d =
+    completed
+      .map(
+        (row) =>
+          toNullableNumber(
+            row.return_1d,
+          ),
+      )
+      .filter(
+        (
+          value,
+        ): value is number =>
+          value !==
+          null,
+      );
+
+  const returns3d =
+    completed
+      .map(
+        (row) =>
+          toNullableNumber(
+            row.return_3d,
+          ),
+      )
+      .filter(
+        (
+          value,
+        ): value is number =>
+          value !==
+          null,
+      );
+
+  const returns5d =
+    completed
+      .map(
+        (row) =>
+          toNullableNumber(
+            row.return_5d,
+          ),
+      )
+      .filter(
+        (
+          value,
+        ): value is number =>
+          value !==
+          null,
+      );
+
+  const maxReturns =
+    completed
+      .map(
+        (row) =>
+          toNullableNumber(
+            row.max_return_5d,
+          ),
+      )
+      .filter(
+        (
+          value,
+        ): value is number =>
+          value !==
+          null,
+      );
+
+  const minReturns =
+    completed
+      .map(
+        (row) =>
+          toNullableNumber(
+            row.min_return_5d,
+          ),
+      )
+      .filter(
+        (
+          value,
+        ): value is number =>
+          value !==
+          null,
+      );
+
+  return {
+    total:
+      rows.length,
+
+    pending:
+      rows.filter(
+        (row) =>
+          row.evaluation_status ===
+          "PENDING",
+      ).length,
+
+    partial:
+      rows.filter(
+        (row) =>
+          row.evaluation_status ===
+          "PARTIAL",
+      ).length,
+
+    completed:
+      completed.length,
+
+    invalid:
+      rows.filter(
+        (row) =>
+          row.evaluation_status ===
+          "INVALID",
+      ).length,
+
+    averageReturn1d:
+      average(
+        returns1d,
+      ),
+
+    averageReturn3d:
+      average(
+        returns3d,
+      ),
+
+    averageReturn5d:
+      average(
+        returns5d,
+      ),
+
+    positive5dRate:
+      percentage(
+        returns5d.filter(
+          (value) =>
+            value >
+            0,
+        ).length,
+        returns5d.length,
+      ),
+
+    averageMaxReturn5d:
+      average(
+        maxReturns,
+      ),
+
+    averageMinReturn5d:
+      average(
+        minReturns,
+      ),
+  };
+}
+
+export async function getRegimeForwardEvidenceV75() {
+  const supabase =
+    createSupabaseServerClient();
+
+  const [
+    outcomesResponse,
+    latestComparisonResponse,
+  ] =
+    await Promise.all([
+      supabase
+        .from(
+          "market_regime_shadow_outcomes",
+        )
+        .select(`
+          id,
+          stock_code,
+          market_date,
+          signal_market_date,
+          agreement_state,
+          v6_would_block,
+          v7_would_block,
+          return_1d,
+          return_3d,
+          return_5d,
+          max_return_5d,
+          min_return_5d,
+          v6_decision_score_5d,
+          v7_decision_score_5d,
+          disagreement_winner,
+          evaluation_status,
+          evaluated_at,
+          created_at
+        `)
+        .eq(
+          "is_validation",
+          false,
+        )
+        .order(
+          "created_at",
+          {
+            ascending: false,
+          },
+        )
+        .limit(5000),
+
+      supabase
+        .from(
+          "market_regime_shadow_comparisons",
+        )
+        .select(`
+          id,
+          observed_at,
+          v6_market_date,
+          v7_market_date,
+          comparison_eligible,
+          agreement_state,
+          v6_would_block,
+          v7_would_block,
+          v7_policy,
+          production_applied
+        `)
+        .order(
+          "observed_at",
+          {
+            ascending: false,
+          },
+        )
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+  if (
+    outcomesResponse.error
+  ) {
+    throw new Error(
+      `Regime evidence outcomes load failed: ${outcomesResponse.error.message}`,
+    );
+  }
+
+  if (
+    latestComparisonResponse.error
+  ) {
+    throw new Error(
+      `Latest regime comparison load failed: ${latestComparisonResponse.error.message}`,
+    );
+  }
+
+  const outcomes =
+    (
+      outcomesResponse.data ??
+      []
+    ) as OutcomeRow[];
+
+  const latestComparison =
+    latestComparisonResponse.data as
+      | ComparisonRow
+      | null;
+
+  const completed =
+    outcomes.filter(
+      (row) =>
+        row.evaluation_status ===
+        "COMPLETED",
+    );
+
+  const v6Scores =
+    completed
+      .map(
+        (row) =>
+          toNullableNumber(
+            row.v6_decision_score_5d,
+          ),
+      )
+      .filter(
+        (
+          value,
+        ): value is number =>
+          value !==
+          null,
+      );
+
+  const v7Scores =
+    completed
+      .map(
+        (row) =>
+          toNullableNumber(
+            row.v7_decision_score_5d,
+          ),
+      )
+      .filter(
+        (
+          value,
+        ): value is number =>
+          value !==
+          null,
+      );
+
+  const disagreementRows =
+    completed.filter(
+      (row) =>
+        row.v6_would_block !==
+        row.v7_would_block,
+    );
+
+  const v6Wins =
+    disagreementRows.filter(
+      (row) =>
+        row.disagreement_winner ===
+        "V6",
+    ).length;
+
+  const v7Wins =
+    disagreementRows.filter(
+      (row) =>
+        row.disagreement_winner ===
+        "V7",
+    ).length;
+
+  const ties =
+    disagreementRows.filter(
+      (row) =>
+        row.disagreement_winner ===
+        "TIE",
+    ).length;
+
+  const agreementStates:
+    AgreementState[] = [
+      "BOTH_BLOCK",
+      "BOTH_ALLOW",
+      "V6_BLOCK_V7_ALLOW",
+      "V6_ALLOW_V7_BLOCK",
+      "NOT_COMPARABLE_DATE_MISMATCH",
+      "NOT_COMPARABLE_MISSING_INPUT",
+    ];
+
+  const byAgreement =
+    Object.fromEntries(
+      agreementStates.map(
+        (state) => [
+          state,
+          summarizeAgreementGroup(
+            outcomes.filter(
+              (row) =>
+                row.agreement_state ===
+                state,
+            ),
+          ),
+        ],
+      ),
+    );
+
+  const statusCounts =
+    {
+      pending:
+        outcomes.filter(
+          (row) =>
+            row.evaluation_status ===
+            "PENDING",
+        ).length,
+
+      partial:
+        outcomes.filter(
+          (row) =>
+            row.evaluation_status ===
+            "PARTIAL",
+        ).length,
+
+      completed:
+        completed.length,
+
+      invalid:
+        outcomes.filter(
+          (row) =>
+            row.evaluation_status ===
+            "INVALID",
+        ).length,
+    };
+
+  const evidenceStage =
+    completed.length ===
+      0
+      ? "WAITING_FOR_FORWARD_DATA"
+      : completed.length <
+          30
+        ? "EARLY_SAMPLE"
+        : completed.length <
+            100
+          ? "DEVELOPING_SAMPLE"
+          : "MATURE_SAMPLE_FOR_REVIEW";
+
+  return {
+    version:
+      "MARKET_REGIME_FORWARD_EVIDENCE_V7_5",
+
+    mode:
+      "FORWARD_EVIDENCE",
+
+    productionApplied:
+      false,
+
+    productionPromotionAutomatic:
+      false,
+
+    evidenceStage,
+
+    latestComparison,
+
+    sample: {
+      totalOutcomeRows:
+        outcomes.length,
+
+      ...statusCounts,
+
+      disagreementCompleted:
+        disagreementRows.length,
+    },
+
+    v6: {
+      ...summarizeDecisionScores(
+        v6Scores,
+      ),
+    },
+
+    v7: {
+      ...summarizeDecisionScores(
+        v7Scores,
+      ),
+    },
+
+    headToHead: {
+      sampleSize:
+        disagreementRows.length,
+
+      v6Wins,
+      v7Wins,
+      ties,
+
+      v6WinRate:
+        percentage(
+          v6Wins,
+          disagreementRows.length,
+        ),
+
+      v7WinRate:
+        percentage(
+          v7Wins,
+          disagreementRows.length,
+        ),
+    },
+
+    byAgreement,
+
+    recentCompleted:
+      completed
+        .slice(
+          0,
+          20,
+        )
+        .map(
+          (row) => ({
+            id:
+              row.id,
+
+            stockCode:
+              row.stock_code,
+
+            regimeMarketDate:
+              row.market_date,
+
+            signalMarketDate:
+              row.signal_market_date,
+
+            agreementState:
+              row.agreement_state,
+
+            return1d:
+              toNullableNumber(
+                row.return_1d,
+              ),
+
+            return3d:
+              toNullableNumber(
+                row.return_3d,
+              ),
+
+            return5d:
+              toNullableNumber(
+                row.return_5d,
+              ),
+
+            v6DecisionScore5d:
+              toNullableNumber(
+                row.v6_decision_score_5d,
+              ),
+
+            v7DecisionScore5d:
+              toNullableNumber(
+                row.v7_decision_score_5d,
+              ),
+
+            disagreementWinner:
+              row.disagreement_winner,
+
+            evaluatedAt:
+              row.evaluated_at,
+          }),
+        ),
+
+    interpretation: {
+      decisionScore:
+        "Positive means the model's block/allow direction agreed with the 5-trading-day outcome; negative means it disagreed.",
+
+      headToHead:
+        "Only completed rows where v6 and v7 made different block/allow decisions are counted as direct head-to-head evidence.",
+
+      warning:
+        "Forward evidence is observational and does not automatically authorize production order blocking.",
+    },
+  };
+}

@@ -1,0 +1,229 @@
+﻿param(
+  [string]$StartDate = "2023-01-02",
+  [string]$EndDate = "2026-07-31",
+  [int]$ChunkCalendarDays = 90,
+  [int]$RequestDelayMs = 300,
+  [int]$MaxAttempts = 5,
+  [string]$StatePath = ".\logs\corporate-action-v9-7-1-state.json",
+  [string]$OutputDirectory = ".\logs\corporate-action-v9-7-1"
+)
+
+$ErrorActionPreference = "Stop"
+
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+function To-DartDate([string]$Date) {
+  if ($Date -notmatch '^\d{4}-\d{2}-\d{2}$') { throw "INVALID_DATE: $Date" }
+  $Date.Replace("-", "")
+}
+
+function Read-DartKey {
+  $envPath = ".\.env.local"
+  if (-not (Test-Path $envPath)) { throw ".env.local not found" }
+  $lines = Get-Content $envPath | Where-Object { $_ -and -not $_.Trim().StartsWith("#") -and $_.Contains("=") }
+  foreach ($name in @("OPENDART_API_KEY","OPEN_DART_API_KEY","DART_API_KEY","DART_KEY","OPEN_DART_KEY")) {
+    $line = $lines | Where-Object { ($_ -split "=",2)[0].Trim() -eq $name } | Select-Object -First 1
+    if ($line) {
+      $value = ($line -split "=",2)[1].Trim().Trim('"').Trim("'")
+      if ($value) { return @{ Name=$name; Value=$value } }
+    }
+  }
+  throw "DART_API_KEY_NOT_FOUND"
+}
+
+function Invoke-DartJson([string]$Uri) {
+  $last = $null
+  for ($attempt=1; $attempt -le $MaxAttempts; $attempt++) {
+    try { return Invoke-RestMethod -Uri $Uri -Method GET -TimeoutSec 90 -ErrorAction Stop }
+    catch {
+      $last = $_.Exception.Message
+      if ($attempt -ge $MaxAttempts) { break }
+      $sleepMs = [Math]::Min(10000, 1000 * [Math]::Pow(2,$attempt-1))
+      Write-Host "  retry attempt=$attempt sleep=${sleepMs}ms error=$last"
+      Start-Sleep -Milliseconds $sleepMs
+    }
+  }
+  throw "OpenDART request failed after $MaxAttempts attempts: $last"
+}
+
+function Classify-ReportName([string]$ReportName) {
+  $types = New-Object System.Collections.Generic.List[string]
+
+  if ($ReportName -match "주식분할") {
+    $types.Add("STOCK_SPLIT")
+  }
+
+  if ($ReportName -match "주식병합") {
+    $types.Add("REVERSE_SPLIT")
+  }
+
+  if ($ReportName -match "현금.*배당결정") {
+    $types.Add("CASH_DIVIDEND")
+  }
+
+  if ($ReportName -match "주식배당결정") {
+    $types.Add("STOCK_DIVIDEND")
+  }
+
+  if ($ReportName -match "유상증자결정") {
+    $types.Add("RIGHTS_ISSUE")
+  }
+
+  if (
+    $ReportName -match "회사분할결정" -or
+    $ReportName -match "회사분할합병결정"
+  ) {
+    $types.Add("SPIN_OFF")
+  }
+
+  if ($ReportName -match "회사합병결정") {
+    $types.Add("MERGER")
+  }
+
+  return [string[]]$types.ToArray()
+}
+function Get-DisclosurePages([string]$CorpCls,[string]$ChunkStart,[string]$ChunkEnd,[string]$DartKey) {
+  $rows = New-Object System.Collections.Generic.List[object]
+  $page = 1
+  $totalPage = 0
+  while ($true) {
+    $uri = "https://opendart.fss.or.kr/api/list.json" +
+      "?crtfc_key=$([uri]::EscapeDataString($DartKey))" +
+      "&bgn_de=$(To-DartDate $ChunkStart)&end_de=$(To-DartDate $ChunkEnd)" +
+      "&corp_cls=$CorpCls&last_reprt_at=N&page_no=$page&page_count=100"
+    $r = Invoke-DartJson $uri
+    if ($r.status -ne "000" -and $r.status -ne "013") { throw "OpenDART error status=$($r.status) message=$($r.message)" }
+    if ($r.status -eq "013") { return @{ Rows=@(); TotalPages=0; TotalCount=0 } }
+    $totalPage = [int]$r.total_page
+    foreach ($row in @($r.list)) { if ($null -ne $row) { $rows.Add($row) } }
+    Write-Host ("corp_cls={0} range={1}..{2} page={3}/{4} collected={5}" -f $CorpCls,$ChunkStart,$ChunkEnd,$page,$totalPage,$rows.Count)
+    if ($page -ge $totalPage) { break }
+    $page++
+    if ($RequestDelayMs -gt 0) { Start-Sleep -Milliseconds $RequestDelayMs }
+  }
+  $rowsForReturn =
+  [object[]](
+    $rows |
+      ForEach-Object {
+        $_
+      }
+  )
+
+return [pscustomobject]@{
+  Rows =
+    $rowsForReturn
+
+  TotalPages =
+    [int]$totalPage
+
+  TotalCount =
+    [int]$rows.Count
+}
+}
+
+function New-Chunks([string]$Start,[string]$End,[int]$Days) {
+  $cursor = [datetime]::ParseExact($Start,"yyyy-MM-dd",$null)
+  $last = [datetime]::ParseExact($End,"yyyy-MM-dd",$null)
+  $out = @(); $i=0
+  while ($cursor -le $last) {
+    $e = $cursor.AddDays($Days-1); if ($e -gt $last) { $e=$last }
+    $out += [pscustomobject]@{ index=$i; startDate=$cursor.ToString("yyyy-MM-dd"); endDate=$e.ToString("yyyy-MM-dd"); status="PENDING"; totalDisclosures=0; candidateCount=0; candidateCounts=@{}; markets=@{}; error=$null }
+    $cursor=$e.AddDays(1); $i++
+  }
+  $out
+}
+
+function Save-State($State) {
+  $dir = Split-Path $StatePath -Parent
+  if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+  $State | ConvertTo-Json -Depth 50 | Set-Content $StatePath -Encoding UTF8
+}
+
+function Sha256-Hex([string]$Text) {
+  $sha=[System.Security.Cryptography.SHA256]::Create()
+  try {
+    $hash=$sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Text))
+    (($hash | ForEach-Object { $_.ToString("x2") }) -join "")
+  } finally { $sha.Dispose() }
+}
+
+$key=Read-DartKey
+Write-Host "v9.7.1 OpenDART corporate-action source inventory"
+Write-Host "Using key variable: $($key.Name)"
+Write-Host "Range: $StartDate .. $EndDate"
+Write-Host ""
+New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
+
+if (Test-Path $StatePath) {
+  $state=Get-Content $StatePath -Raw | ConvertFrom-Json
+  if ($state.startDate -ne $StartDate -or $state.endDate -ne $EndDate -or [int]$state.chunkCalendarDays -ne $ChunkCalendarDays) { throw "STATE_CONFIG_MISMATCH; use another StatePath" }
+  Write-Host "Resuming existing state."
+} else {
+  $state=[pscustomobject]@{
+    version="OPENDART_CORPORATE_ACTION_SOURCE_INVENTORY_V9_7_1"; provider="OPENDART_DISCLOSURE_LIST"; providerVersion="LIST_JSON_V1";
+    startDate=$StartDate; endDate=$EndDate; chunkCalendarDays=$ChunkCalendarDays; corpClasses=@("Y","K");
+    actionTypes=@("STOCK_SPLIT","REVERSE_SPLIT","CASH_DIVIDEND","STOCK_DIVIDEND","RIGHTS_ISSUE","SPIN_OFF","MERGER");
+    status="RUNNING"; chunks=@(New-Chunks $StartDate $EndDate $ChunkCalendarDays); startedAt=(Get-Date).ToUniversalTime().ToString("o"); finishedAt=$null; sourceFingerprint=$null; totalDisclosures=0; totalCandidates=0
+  }
+  Save-State $state
+}
+
+foreach ($chunk in $state.chunks) {
+  if ($chunk.status -eq "SUCCESS") { Write-Host ("SKIP chunk {0}: {1}..{2}" -f $chunk.index,$chunk.startDate,$chunk.endDate); continue }
+  Write-Host ""; Write-Host ("=== Chunk {0}/{1}: {2} .. {3} ===" -f ([int]$chunk.index+1),$state.chunks.Count,$chunk.startDate,$chunk.endDate)
+  $chunk.status="RUNNING"; $chunk.error=$null; Save-State $state
+  try {
+    $candidates=New-Object System.Collections.Generic.List[object]
+    $total=0; $markets=@{}
+    foreach ($corpCls in @("Y","K")) {
+      $r=Get-DisclosurePages $corpCls $chunk.startDate $chunk.endDate $key.Value
+      $market=if($corpCls -eq "Y"){"KOSPI"}else{"KOSDAQ"}
+      $markets[$market]=@{ corpCls=$corpCls; totalPages=[int]$r.TotalPages; totalDisclosures=[int]$r.TotalCount; complete=$true }
+      $total += [int]$r.TotalCount
+      foreach ($row in @($r.Rows)) {
+        foreach ($type in @(Classify-ReportName ([string]$row.report_nm))) {
+          $candidates.Add([pscustomobject]@{ action_type=$type; corp_cls=[string]$row.corp_cls; corp_code=[string]$row.corp_code; stock_code=[string]$row.stock_code; corp_name=[string]$row.corp_name; report_nm=[string]$row.report_nm; rcept_no=[string]$row.rcept_no; rcept_dt=[string]$row.rcept_dt; flr_nm=[string]$row.flr_nm; rm=[string]$row.rm; chunk_start=$chunk.startDate; chunk_end=$chunk.endDate })
+        }
+      }
+    }
+    $path=Join-Path $OutputDirectory ("candidates-{0}-{1}.json" -f $chunk.startDate,$chunk.endDate)
+        $candidateArray =
+      [object[]]$candidates.ToArray()
+
+    $candidateJson =
+      ConvertTo-Json `
+        -InputObject $candidateArray `
+        -Depth 10
+
+    [System.IO.File]::WriteAllText(
+      $path,
+      $candidateJson,
+      $utf8NoBom
+    )
+    $counts=@{}; foreach($t in @($state.actionTypes)){ $counts[$t]=@($candidates | Where-Object { $_.action_type -eq $t }).Count }
+    $chunk.status="SUCCESS"; $chunk.totalDisclosures=$total; $chunk.candidateCount=$candidates.Count; $chunk.candidateCounts=$counts; $chunk.markets=$markets; $chunk.error=$null
+    Save-State $state
+    Write-Host ("Chunk complete disclosures={0} candidates={1}" -f $total,$candidates.Count)
+  } catch {
+    $chunk.status="FAILED"; $chunk.error=$_.Exception.Message; $state.status="FAILED"; Save-State $state; throw
+  }
+}
+
+$notDone=@($state.chunks | Where-Object { $_.status -ne "SUCCESS" })
+if($notDone.Count -gt 0){ throw "Not every chunk is complete" }
+$totalDisclosures=0; $totalCandidates=0; $agg=@{}; foreach($t in @($state.actionTypes)){$agg[$t]=0}
+foreach($chunk in $state.chunks){
+  $totalDisclosures += [int]$chunk.totalDisclosures; $totalCandidates += [int]$chunk.candidateCount
+  foreach($t in @($state.actionTypes)){ if($null -ne $chunk.candidateCounts.$t){ $agg[$t]+=[int]$chunk.candidateCounts.$t } }
+}
+$core=[ordered]@{ version=$state.version; provider=$state.provider; providerVersion=$state.providerVersion; universeCode="KRX_ALL_LISTED"; startDate=$StartDate; endDate=$EndDate; markets=@("KOSPI","KOSDAQ"); actionTypes=@($state.actionTypes); totalDisclosures=$totalDisclosures; totalCandidates=$totalCandidates; candidateCounts=$agg; chunkCount=$state.chunks.Count; completeChunkCount=$state.chunks.Count; allPagesCompleted=$true; eventAbsenceInterpretedAsNoAction=$false; productionApplied=$false }
+$fingerprint=Sha256-Hex ($core | ConvertTo-Json -Depth 30 -Compress)
+$evidence=[ordered]@{ version=$core.version; provider=$core.provider; providerVersion=$core.providerVersion; universeCode=$core.universeCode; startDate=$core.startDate; endDate=$core.endDate; coverageStatus="INVENTORY_COMPLETE"; markets=$core.markets; actionTypes=$core.actionTypes; totalDisclosures=$core.totalDisclosures; totalCandidates=$core.totalCandidates; candidateCounts=$core.candidateCounts; chunkCount=$core.chunkCount; completeChunkCount=$core.completeChunkCount; allPagesCompleted=$true; sourceFingerprint=$fingerprint; eventAbsenceInterpretedAsNoAction=$false; productionApplied=$false; note="Full OpenDART disclosure-list inventory only. Do not mark v9.7 COMPLETE until candidate detail parsing and real corporate_action_events ingestion are complete." }
+$evidencePath=Join-Path $OutputDirectory "source-inventory-evidence.json"
+$evidence | ConvertTo-Json -Depth 30 | Set-Content $evidencePath -Encoding UTF8
+$state.status="SUCCESS"; $state.finishedAt=(Get-Date).ToUniversalTime().ToString("o"); $state.sourceFingerprint=$fingerprint; $state.totalDisclosures=$totalDisclosures; $state.totalCandidates=$totalCandidates; Save-State $state
+Write-Host ""; Write-Host "OpenDART source inventory COMPLETE"; Write-Host "Total disclosures: $totalDisclosures"; Write-Host "Total candidates:  $totalCandidates"; Write-Host "Fingerprint:       $fingerprint"; Write-Host "Candidate counts:"
+foreach($t in @($state.actionTypes)){ Write-Host ("  {0,-18} {1,8}" -f $t,[int]$agg[$t]) }
+Write-Host "Evidence: $evidencePath"
+Write-Host "IMPORTANT: do NOT insert a COMPLETE source-coverage window yet. Next stage parses candidates into real events."
+

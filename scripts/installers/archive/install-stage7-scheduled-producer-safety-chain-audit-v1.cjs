@@ -1,0 +1,53 @@
+const fs = require("fs");
+const path = require("path");
+
+const ROOT = process.cwd();
+const SCRIPTS = path.join(ROOT, "scripts");
+const OUT = path.join(
+  SCRIPTS,
+  "stage7-scheduled-producer-safety-chain-audit-v1.cjs"
+);
+
+function fail(reason, extra = {}) {
+  console.error(JSON.stringify({
+    status:
+      "AI_STOCK_LAB_STAGE7_SCHEDULED_PRODUCER_SAFETY_CHAIN_AUDIT_V1_INSTALL_FAILED",
+    reason,
+    ...extra,
+  }, null, 2));
+  process.exitCode = 1;
+}
+
+if (!fs.existsSync(path.join(ROOT, "package.json"))) {
+  fail("AI_STOCK_LAB_ROOT_NOT_FOUND");
+} else {
+  fs.mkdirSync(SCRIPTS, { recursive: true });
+
+  const audit = "const fs = require(\"fs\");\nconst path = require(\"path\");\n\nconst ROOT = process.cwd();\n\nfunction read(rel) {\n  const full = path.join(ROOT, rel);\n\n  if (!fs.existsSync(full)) {\n    return { rel, full, exists: false, text: \"\" };\n  }\n\n  return {\n    rel,\n    full,\n    exists: true,\n    text: fs.readFileSync(full, \"utf8\"),\n  };\n}\n\nfunction lineHits(text, regex, max = 12) {\n  const out = [];\n\n  text.split(/\\r?\\n/).forEach((line, index) => {\n    if (regex.test(line)) {\n      out.push({\n        line: index + 1,\n        text: line.trim().slice(0, 220),\n      });\n    }\n    regex.lastIndex = 0;\n  });\n\n  return out.slice(0, max);\n}\n\nfunction keyForcedFalse(text, key) {\n  const escaped = key;\n\n  const patterns = [\n    new RegExp(\n      escaped + \"[\\\\s\\\\S]{0,160}(?:=|:)\\\\s*[\\\\\\\"']false[\\\\\\\"']\",\n      \"i\"\n    ),\n    new RegExp(\n      \"(?:=|:)\\\\s*[\\\\\\\"']false[\\\\\\\"'][\\\\s\\\\S]{0,160}\" + escaped,\n      \"i\"\n    ),\n    new RegExp(\n      \"process\\\\.env\\\\[['\\\\\\\"]?\" +\n        escaped +\n        \"['\\\\\\\"]?\\\\]\\\\s*=\\\\s*[\\\\\\\"']false[\\\\\\\"']\",\n      \"i\"\n    ),\n    new RegExp(\n      \"process\\\\.env\\\\.\" +\n        escaped +\n        \"\\\\s*=\\\\s*[\\\\\\\"']false[\\\\\\\"']\",\n      \"i\"\n    ),\n  ];\n\n  return patterns.some((re) => re.test(text));\n}\n\nfunction keyForcedTrue(text, key) {\n  const escaped = key;\n\n  const patterns = [\n    new RegExp(\n      escaped + \"[\\\\s\\\\S]{0,160}(?:=|:)\\\\s*[\\\\\\\"']true[\\\\\\\"']\",\n      \"i\"\n    ),\n    new RegExp(\n      \"process\\\\.env\\\\[['\\\\\\\"]?\" +\n        escaped +\n        \"['\\\\\\\"]?\\\\]\\\\s*=\\\\s*[\\\\\\\"']true[\\\\\\\"']\",\n      \"i\"\n    ),\n    new RegExp(\n      \"process\\\\.env\\\\.\" +\n        escaped +\n        \"\\\\s*=\\\\s*[\\\\\\\"']true[\\\\\\\"']\",\n      \"i\"\n    ),\n  ];\n\n  return patterns.some((re) => re.test(text));\n}\n\nfunction loadEnvSafety() {\n  const rel = \".env.local\";\n  const full = path.join(ROOT, rel);\n\n  const keys = [\n    \"REAL_TRADING_ENABLED\",\n    \"ENABLE_REAL_TRADING\",\n    \"ENABLE_LIVE_TRADING\",\n  ];\n\n  const result = {\n    exists: fs.existsSync(full),\n    values: {},\n    safe: true,\n  };\n\n  for (const key of keys) {\n    result.values[key] = null;\n  }\n\n  if (!result.exists) return result;\n\n  for (const raw of fs.readFileSync(full, \"utf8\").split(/\\r?\\n/)) {\n    const line = raw.trim();\n\n    if (!line || line.startsWith(\"#\")) continue;\n\n    const i = line.indexOf(\"=\");\n\n    if (i <= 0) continue;\n\n    const key = line.slice(0, i).trim();\n\n    if (!keys.includes(key)) continue;\n\n    let val = line.slice(i + 1).trim();\n\n    if (\n      (val.startsWith('\"') && val.endsWith('\"')) ||\n      (val.startsWith(\"'\") && val.endsWith(\"'\"))\n    ) {\n      val = val.slice(1, -1);\n    }\n\n    result.values[key] = val;\n\n    if (\n      [\"1\", \"true\", \"yes\", \"on\"].includes(\n        String(val).toLowerCase()\n      )\n    ) {\n      result.safe = false;\n    }\n  }\n\n  return result;\n}\n\nconst runner =\n  read(\"scripts/run-shadow-controlled-producer-0850.ps1\");\n\nconst wrapper =\n  read(\"scripts/true-forward-oos-controlled-producer-evidence-run-v1.ts\");\n\nconst controlled =\n  read(\"scripts/true-forward-oos-controlled-normal-producer-v1.ts\");\n\nconst producer =\n  read(\"scripts/alpha-v3-true-forward-top1-producer-v1.ts\");\n\nconst automationBinding =\n  read(\"lib/research/run-true-forward-oos-automation-binding-v1.ts\");\n\nconst envSafety = loadEnvSafety();\n\nconst realKeys = [\n  \"REAL_TRADING_ENABLED\",\n  \"ENABLE_REAL_TRADING\",\n  \"ENABLE_LIVE_TRADING\",\n];\n\nconst allExecutionSource =\n  [\n    runner.text,\n    wrapper.text,\n    controlled.text,\n    producer.text,\n    automationBinding.text,\n  ].join(\"\\n\");\n\nconst controlledForceMap =\n  Object.fromEntries(\n    realKeys.map((key) => [\n      key,\n      keyForcedFalse(controlled.text, key),\n    ])\n  );\n\nconst wrapperForceMap =\n  Object.fromEntries(\n    realKeys.map((key) => [\n      key,\n      keyForcedFalse(wrapper.text, key),\n    ])\n  );\n\nconst anyUnsafeTrueMap =\n  Object.fromEntries(\n    realKeys.map((key) => [\n      key,\n      keyForcedTrue(allExecutionSource, key),\n    ])\n  );\n\nconst runnerHasWrapper =\n  /true-forward-oos-controlled-producer-evidence-run-v1/i\n    .test(runner.text);\n\nconst wrapperHasControlledProducer =\n  /true-forward-oos-controlled-normal-producer-v1/i\n    .test(wrapper.text);\n\nconst controlledHasCanonicalProducer =\n  /alpha-v3-true-forward-top1-producer-v1/i\n    .test(controlled.text);\n\nconst controlledFeatureFlag =\n  /FORWARD_OOS_CONTROLLED_NORMAL_PRODUCER_ENABLED/i\n    .test(controlled.text);\n\nconst controlledExactConfirmation =\n  /RUN_TRUE_FORWARD_OOS_NORMAL_PRODUCER/i\n    .test(controlled.text);\n\nconst controlledWindowGuard =\n  /08:45|0845|08:59|0859|OUTSIDE_0845_0859_KST_WINDOW/i\n    .test(controlled.text);\n\nconst runnerDirectRealTradeGuard =\n  realKeys.some(\n    (key) => keyForcedFalse(runner.text, key)\n  );\n\nconst downstreamAllRealTradeFlagsForcedOff =\n  realKeys.every(\n    (key) =>\n      controlledForceMap[key] === true ||\n      wrapperForceMap[key] === true\n  );\n\nconst noRealTradeTrueAssignment =\n  realKeys.every(\n    (key) => anyUnsafeTrueMap[key] === false\n  );\n\nconst evidenceProvenancePresent =\n  /evidenceRunId/i.test(wrapper.text) &&\n  /candidateFingerprint|integrity/i.test(\n    wrapper.text + \"\\n\" + producer.text\n  );\n\nconst checks = {\n  runnerExists: runner.exists,\n  wrapperExists: wrapper.exists,\n  controlledProducerExists: controlled.exists,\n  canonicalProducerExists: producer.exists,\n  automationBindingExists: automationBinding.exists,\n  runnerInvokesEvidenceWrapper: runnerHasWrapper,\n  evidenceWrapperReferencesControlledProducer: wrapperHasControlledProducer,\n  controlledProducerReferencesCanonicalProducer: controlledHasCanonicalProducer,\n  controlledProducerFeatureFlagPresent: controlledFeatureFlag,\n  controlledProducerExactConfirmationPresent: controlledExactConfirmation,\n  controlledWindowGuardPresent: controlledWindowGuard,\n  downstreamAllRealTradingFlagsForcedOff: downstreamAllRealTradeFlagsForcedOff,\n  noExecutionSourceForcesRealTradingTrue: noRealTradeTrueAssignment,\n  envDoesNotEnableRealTrading: envSafety.safe,\n  evidenceProvenanceContractPresent: evidenceProvenancePresent,\n};\n\nconst failed =\n  Object.entries(checks)\n    .filter(([, ok]) => ok !== true)\n    .map(([key]) => key);\n\nconst classification =\n  failed.length === 0\n    ? (\n        runnerDirectRealTradeGuard\n          ? \"END_TO_END_SAFE_WITH_DEFENSE_IN_DEPTH_RUNNER_GUARD\"\n          : \"END_TO_END_SAFE_WITH_DOWNSTREAM_FAIL_CLOSED_REAL_TRADING_GUARD\"\n      )\n    : \"SCHEDULED_PRODUCER_SAFETY_CHAIN_REVIEW_REQUIRED\";\n\nconsole.log(JSON.stringify({\n  status:\n    failed.length === 0\n      ? \"AI_STOCK_LAB_STAGE7_SCHEDULED_PRODUCER_SAFETY_CHAIN_AUDIT_V1_PASS\"\n      : \"AI_STOCK_LAB_STAGE7_SCHEDULED_PRODUCER_SAFETY_CHAIN_AUDIT_V1_REVIEW\",\n\n  classification,\n\n  chain: [\n    \"Windows Scheduled Task\",\n    \"scripts/run-shadow-controlled-producer-0850.ps1\",\n    \"scripts/true-forward-oos-controlled-producer-evidence-run-v1.ts\",\n    \"scripts/true-forward-oos-controlled-normal-producer-v1.ts\",\n    \"scripts/alpha-v3-true-forward-top1-producer-v1.ts\",\n  ],\n\n  checks,\n  failed,\n\n  realTradingDefense: {\n    runnerDirectRealTradeGuard,\n    informationalInterpretation:\n      runnerDirectRealTradeGuard\n        ? \"Runner itself also forces a real-trading flag false.\"\n        : \"Runner has no direct real-trading flag assignment; downstream controlled execution boundary must force all real-trading flags off.\",\n\n    controlledProducerForceMap: controlledForceMap,\n    wrapperForceMap,\n    anyUnsafeTrueMap,\n\n    downstreamAllRealTradeFlagsForcedOff,\n    noRealTradeTrueAssignment,\n\n    env: envSafety,\n  },\n\n  evidenceContract: {\n    runnerHasWrapper,\n    wrapperHasControlledProducer,\n    controlledHasCanonicalProducer,\n    evidenceProvenancePresent,\n  },\n\n  excerpts: {\n    runner:\n      lineHits(\n        runner.text,\n        /controlled|evidence|tsx|node|real.trading/i\n      ),\n\n    wrapper:\n      lineHits(\n        wrapper.text,\n        /controlled|evidenceRunId|REAL_TRADING|ENABLE_REAL|ENABLE_LIVE/i\n      ),\n\n    controlledProducer:\n      lineHits(\n        controlled.text,\n        /FORWARD_OOS_CONTROLLED|RUN_TRUE_FORWARD|REAL_TRADING|ENABLE_REAL|ENABLE_LIVE|0845|0859/i\n      ),\n  },\n\n  safety: {\n    readOnly: true,\n    producerExecuted: false,\n    collectorExecuted: false,\n    networkRequests: 0,\n    databaseReads: 0,\n    databaseWrites: 0,\n    ordersCreated: 0,\n    positionsChanged: 0,\n    promotionExecuted: false,\n    realTradingChanged: false,\n  },\n\n  nextGate:\n    failed.length === 0\n      ? \"SCHEDULED_TASK_DEFINITION_FINAL_REVIEW_THEN_ALLOW_NEXT_NATURAL_0850_RUN\"\n      : \"REPAIR_SAFETY_CHAIN_BEFORE_NEXT_SCHEDULED_RUN\",\n}, null, 2));\n\nprocess.exitCode =\n  failed.length === 0\n    ? 0\n    : 1;\n";
+
+  fs.writeFileSync(OUT, audit, "utf8");
+
+  console.log(JSON.stringify({
+    status:
+      "AI_STOCK_LAB_STAGE7_SCHEDULED_PRODUCER_SAFETY_CHAIN_AUDIT_V1_INSTALLED",
+
+    generatedFile:
+      "scripts/stage7-scheduled-producer-safety-chain-audit-v1.cjs",
+
+    purpose:
+      "VERIFY_END_TO_END_SCHEDULED_TASK_TO_CONTROLLED_PRODUCER_REAL_TRADING_FAIL_CLOSED_CHAIN",
+
+    importantCorrection:
+      "Runner-direct REAL_TRADING flag is informational; PASS requires downstream controlled execution boundary to force all three real-trading flags false.",
+
+    safety: {
+      databaseWritesDuringInstall: 0,
+      producerExecuted: false,
+      collectorExecuted: false,
+      realTradingEnabled: false,
+    },
+
+    nextAction:
+      "RUN_READ_ONLY_SAFETY_CHAIN_AUDIT",
+  }, null, 2));
+}

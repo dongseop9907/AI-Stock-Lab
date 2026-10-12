@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.forward-oos-canonical-pipeline.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "next-env.d.ts",
+    "scripts/true-forward-oos-first-session-orchestrator-v1.ts",
+    "lib/trading/krx-trading-calendar.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "scripts/backups/**"
+  ]
+}

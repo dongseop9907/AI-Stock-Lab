@@ -1,0 +1,499 @@
+﻿const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+
+const root = process.cwd();
+
+const VERSION =
+  'V9_10_3_ZERO_NEW_EVENT_CYCLE_CLOSURE_AUDIT';
+
+const STATUS =
+  'V9_10_CURRENT_CYCLE_CLOSED_AT_2026_10_05';
+
+function readJson(file) {
+  return JSON.parse(
+    fs.readFileSync(file, 'utf8')
+      .replace(/^\uFEFF/, '')
+  );
+}
+
+function sha256(value) {
+  return crypto
+    .createHash('sha256')
+    .update(value)
+    .digest('hex');
+}
+
+function atomicSave(file, value) {
+  const tmp = `${file}.tmp`;
+  fs.writeFileSync(
+    tmp,
+    JSON.stringify(value, null, 2) + '\n',
+    'utf8'
+  );
+  fs.renameSync(tmp, file);
+}
+
+function stockCode(row) {
+  return String(
+    row?.stockCode ??
+    row?.stock_code ??
+    ''
+  ).padStart(6, '0');
+}
+
+function actionType(row) {
+  return String(
+    row?.actionType ??
+    row?.action_type ??
+    ''
+  );
+}
+
+const inventoryFile =
+  path.join(
+    root,
+    'logs',
+    'opendart-corporate-action-incremental-v9-10-1.json'
+  );
+
+const worksetFile =
+  path.join(
+    root,
+    'logs',
+    'opendart-corporate-action-detail-workset-v9-10-2.json'
+  );
+
+const reconciliationFile =
+  path.join(
+    root,
+    'logs',
+    'opendart-corporate-action-workset-carryforward-reconciliation-v9-10-2-1.json'
+  );
+
+const outputFile =
+  path.join(
+    root,
+    'logs',
+    'opendart-corporate-action-cycle-closure-v9-10-3-common-stock-scope.json'
+  );
+
+const inventory = readJson(inventoryFile);
+const workset = readJson(worksetFile);
+const reconciliation =
+  readJson(reconciliationFile);
+
+/* ---------- source validation ---------- */
+
+if (
+  inventory.version !==
+  'V9_10_1_INCREMENTAL_OPENDART_CORPORATE_ACTION_INVENTORY'
+) {
+  throw new Error(
+    'INVENTORY_VERSION_MISMATCH'
+  );
+}
+
+if (
+  inventory.status !==
+  'INCREMENTAL_INVENTORY_COMPLETE'
+) {
+  throw new Error(
+    'INVENTORY_NOT_COMPLETE'
+  );
+}
+
+if (
+  workset.version !==
+  'V9_10_2_INCREMENTAL_CORPORATE_ACTION_DETAIL_WORKSET'
+) {
+  throw new Error(
+    'WORKSET_VERSION_MISMATCH'
+  );
+}
+
+if (
+  workset.status !==
+  'DETAIL_WORKSET_READY'
+) {
+  throw new Error(
+    'WORKSET_NOT_READY'
+  );
+}
+
+if (
+  reconciliation.version !==
+  'V9_10_2_1_INCREMENTAL_WORKSET_CARRY_FORWARD_RECONCILIATION'
+) {
+  throw new Error(
+    'RECONCILIATION_VERSION_MISMATCH'
+  );
+}
+
+if (
+  reconciliation.status !==
+  'WORKSET_CARRY_FORWARD_RECONCILIATION_READY'
+) {
+  throw new Error(
+    'RECONCILIATION_NOT_READY'
+  );
+}
+
+/* ---------- zero-new-event contract ---------- */
+
+if (Number(inventory.disclosures) !== 0) {
+  throw new Error(
+    `EXPECTED_0_DISCLOSURES_GOT_${inventory.disclosures}`
+  );
+}
+
+if (Number(inventory.candidates) !== 0) {
+  throw new Error(
+    `EXPECTED_0_CANDIDATES_GOT_${inventory.candidates}`
+  );
+}
+
+if (Number(workset.counts?.sourceCandidates ?? workset.source?.sourceCandidateCount ?? 0) !== 0) {
+  throw new Error(
+    'WORKSET_SOURCE_CANDIDATES_NOT_ZERO'
+  );
+}
+
+if (
+  Number(
+    workset.counts?.inCurrentCanonicalContract
+  ) !== 0
+) {
+  throw new Error(
+    'WORKSET_IN_CONTRACT_NOT_ZERO'
+  );
+}
+
+if (
+  Number(
+    reconciliation.priorCarryForwardTotal
+  ) !== 4
+) {
+  throw new Error(
+    'EXPECTED_4_CARRY_FORWARD'
+  );
+}
+
+if (
+  Number(
+    reconciliation.priorFutureRatio
+  ) !== 0
+) {
+  throw new Error(
+    'EXPECTED_0_FUTURE_RATIO'
+  );
+}
+
+if (
+  Number(
+    reconciliation.priorFutureStructural
+  ) !== 3
+) {
+  throw new Error(
+    'EXPECTED_3_FUTURE_STRUCTURAL'
+  );
+}
+
+if (
+  Number(
+    reconciliation.priorFutureCash
+  ) !== 1
+) {
+  throw new Error(
+    'EXPECTED_1_FUTURE_CASH'
+  );
+}
+
+if (
+  Number(
+    reconciliation.touchedCarryForwardItems
+  ) !== 0
+) {
+  throw new Error(
+    'EXPECTED_0_TOUCHED_CARRY_FORWARD'
+  );
+}
+
+if (
+  Number(
+    reconciliation.untouchedCarryForwardItems
+  ) !== 4
+) {
+  throw new Error(
+    'EXPECTED_4_UNTOUCHED_CARRY_FORWARD'
+  );
+}
+
+if (
+  Array.isArray(reconciliation.blockers) &&
+  reconciliation.blockers.length > 0
+) {
+  throw new Error(
+    `RECONCILIATION_BLOCKERS:${reconciliation.blockers.join(',')}`
+  );
+}
+
+/* ---------- preserve detailed carry-forward ---------- */
+
+const carryRows =
+  Array.isArray(
+    reconciliation.untouchedCarryForward
+  )
+    ? reconciliation.untouchedCarryForward
+    : [];
+
+if (carryRows.length !== 4) {
+  throw new Error(
+    `EXPECTED_4_CARRY_ROWS_GOT_${carryRows.length}`
+  );
+}
+
+const expected = new Set([
+  '001570|SPIN_OFF',
+  '469480|MERGER',
+  '043910|MERGER',
+  '009970|CASH_DIVIDEND',
+]);
+
+const actual = new Set(
+  carryRows.map(
+    row =>
+      `${stockCode(row)}|${actionType(row)}`
+  )
+);
+
+for (const key of expected) {
+  if (!actual.has(key)) {
+    throw new Error(
+      `EXPECTED_CARRY_FORWARD_MISSING:${key}`
+    );
+  }
+}
+
+if (actual.size !== expected.size) {
+  throw new Error(
+    'UNEXPECTED_CARRY_FORWARD_IDENTITY'
+  );
+}
+
+const futureRatioActions =
+  carryRows.filter(
+    row =>
+      row.category === 'FUTURE_RATIO'
+  );
+
+const futureStructuralActions =
+  carryRows.filter(
+    row =>
+      row.category ===
+      'FUTURE_STRUCTURAL'
+  );
+
+const futureCashRows =
+  carryRows.filter(
+    row =>
+      row.category === 'FUTURE_CASH'
+  );
+
+if (
+  futureRatioActions.length !== 0 ||
+  futureStructuralActions.length !== 3 ||
+  futureCashRows.length !== 1
+) {
+  throw new Error(
+    'CARRY_FORWARD_CATEGORY_ACCOUNTING_MISMATCH'
+  );
+}
+
+/* ---------- closure ---------- */
+
+const report = {
+  version: VERSION,
+  status: STATUS,
+
+  evidenceSnapshotAsOf:
+    '2026-10-05',
+
+  incrementalWindow: {
+    startDate:
+      inventory.startDate,
+    throughDate:
+      inventory.throughDate,
+  },
+
+  counts: {
+    disclosures:
+      Number(inventory.disclosures),
+    newCandidates:
+      Number(inventory.candidates),
+
+    currentBatchEvents: 0,
+    factorReadyEvents: 0,
+    structuralBlockedEvents: 0,
+
+    adjustmentRuns: 0,
+    adjustmentFactors: 0,
+
+    ratioRefreshCandidates: 0,
+    refreshedStocks: 0,
+    vendorVerifiedStocks: 0,
+
+    futureRatioDeferred:
+      futureRatioActions.length,
+
+    futureStructuralDeferred:
+      futureStructuralActions.length,
+
+    futureCashDividendPending:
+      futureCashRows.length,
+  },
+
+  carryForward: {
+    /*
+     * Keep detailed rows from now on.
+     * Do not regress to count-only structural state.
+     */
+    futureRatioActions,
+
+    futureStructuralActions,
+
+    futureCashDividend:
+      futureCashRows[0],
+  },
+
+  futureStructuralDeferred:
+    futureStructuralActions.length,
+
+  futureCashDividendPending:
+    stockCode(
+      futureCashRows[0]
+    ),
+
+  issues: [],
+
+  productionApplied: false,
+  globalCoverageMarkerAdvanced: false,
+
+  databaseWrites: 0,
+  kisRequests: 0,
+
+  source: {
+    inventoryVersion:
+      inventory.version,
+
+    worksetVersion:
+      workset.version,
+
+    reconciliationVersion:
+      reconciliation.version,
+
+    inventoryFingerprint:
+      sha256(
+        JSON.stringify(inventory)
+      ),
+
+    worksetFingerprint:
+      sha256(
+        JSON.stringify(workset)
+      ),
+
+    reconciliationFingerprint:
+      sha256(
+        JSON.stringify(
+          reconciliation
+        )
+      ),
+  },
+
+  nextGate:
+    'START_NEXT_INCREMENTAL_DART_CYCLE_FROM_2026_10_06_WITH_CARRY_FORWARD_RECONFIRMATION',
+
+  outputFile:
+    path.relative(
+      root,
+      outputFile
+    ).replaceAll('\\', '/'),
+};
+
+report.outputFingerprint =
+  sha256(
+    JSON.stringify({
+      version:
+        report.version,
+      status:
+        report.status,
+      incrementalWindow:
+        report.incrementalWindow,
+      counts:
+        report.counts,
+      carryForward:
+        report.carryForward,
+      source:
+        report.source,
+    })
+  );
+
+atomicSave(
+  outputFile,
+  report
+);
+
+console.log(
+  JSON.stringify(
+    {
+      status:
+        report.status,
+
+      version:
+        report.version,
+
+      disclosures:
+        report.counts.disclosures,
+
+      newCandidates:
+        report.counts.newCandidates,
+
+      currentBatchEvents:
+        report.counts.currentBatchEvents,
+
+      futureRatioDeferred:
+        report.counts.futureRatioDeferred,
+
+      futureStructuralDeferred:
+        report.counts.futureStructuralDeferred,
+
+      futureCashDividendPending:
+        report.futureCashDividendPending,
+
+      carryForwardTotal:
+        futureRatioActions.length +
+        futureStructuralActions.length +
+        futureCashRows.length,
+
+      issues:
+        report.issues,
+
+      globalCoverageMarkerAdvanced:
+        report.globalCoverageMarkerAdvanced,
+
+      databaseWrites:
+        report.databaseWrites,
+
+      kisRequests:
+        report.kisRequests,
+
+      nextGate:
+        report.nextGate,
+
+      outputFile:
+        report.outputFile,
+    },
+    null,
+    2
+  )
+);
