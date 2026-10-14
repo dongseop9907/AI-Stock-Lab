@@ -55,6 +55,128 @@ function hashJson(
     .digest("hex");
 }
 
+const FORWARD_OOS_PROMOTION_GRADE_PROVENANCE_V1_2 =
+  "FORWARD_OOS_PROMOTION_GRADE_PROVENANCE_V1_2" as const;
+
+const FORWARD_OOS_SHADOW_MODE_V1_2 =
+  "DEVELOPMENT_SHADOW" as const;
+
+const FORWARD_OOS_STRATEGY_VERSION_V1_2 =
+  "TRUE_FORWARD_TOP1_V1" as const;
+
+const FORWARD_OOS_ALPHA_VERSION_V1_2 =
+  "ALPHA_V3" as const;
+
+const FORWARD_OOS_ENTRY_VERSION_V1_2 =
+  "ENTRY_V3" as const;
+
+const FORWARD_OOS_RISK_VERSION_V1_2 =
+  "RISK_V3" as const;
+
+function resolveForwardOosCommitShaV1_2():
+  string {
+  const explicit =
+    process.env
+      .AI_STOCK_LAB_COMMIT_SHA
+      ?.trim();
+
+  if (
+    explicit &&
+    /^[0-9a-f]{7,40}$/i.test(
+      explicit,
+    )
+  ) {
+    return explicit.toLowerCase();
+  }
+
+  try {
+    const releaseName =
+      path.basename(
+        fs.realpathSync(
+          process.cwd(),
+        ),
+      );
+
+    if (
+      /^[0-9a-f]{7,40}$/i.test(
+        releaseName,
+      )
+    ) {
+      return releaseName.toLowerCase();
+    }
+  }
+  catch {
+    // Local development checkout may not be a hash-named release directory.
+  }
+
+  return "UNRESOLVED";
+}
+
+function buildPromotionGradeProvenanceV1_2() {
+  const configHash =
+    hashJson({
+      historicalCutoff:
+        HISTORICAL_CUTOFF,
+
+      selectedCap:
+        FROZEN_PREMIUM_CAP,
+
+      entryScoreThreshold:
+        FROZEN_ENTRY_THRESHOLD,
+
+      retuningAllowed:
+        false,
+
+      candidateMustBeFrozenBeforeTargetOpen:
+        true,
+
+      historicalCheckpointMutable:
+        false,
+
+      strategyVersion:
+        FORWARD_OOS_STRATEGY_VERSION_V1_2,
+
+      alphaVersion:
+        FORWARD_OOS_ALPHA_VERSION_V1_2,
+
+      entryVersion:
+        FORWARD_OOS_ENTRY_VERSION_V1_2,
+
+      riskVersion:
+        FORWARD_OOS_RISK_VERSION_V1_2,
+    });
+
+  return {
+    promotionGradeSchemaVersion:
+      FORWARD_OOS_PROMOTION_GRADE_PROVENANCE_V1_2,
+
+    shadowMode:
+      FORWARD_OOS_SHADOW_MODE_V1_2,
+
+    commitSha:
+      resolveForwardOosCommitShaV1_2(),
+
+    configHash,
+
+    strategyVersion:
+      FORWARD_OOS_STRATEGY_VERSION_V1_2,
+
+    alphaVersion:
+      FORWARD_OOS_ALPHA_VERSION_V1_2,
+
+    entryVersion:
+      FORWARD_OOS_ENTRY_VERSION_V1_2,
+
+    riskVersion:
+      FORWARD_OOS_RISK_VERSION_V1_2,
+
+    generatedAt:
+      new Date()
+        .toISOString(),
+  } as const;
+}
+
+
 function controlledProvenance() {
   const rawMode =
     process.env
@@ -72,9 +194,14 @@ function controlledProvenance() {
       ?.trim() ||
     null;
 
+  const promotionGrade =
+    buildPromotionGradeProvenanceV1_2();
+
   return {
     schemaVersion:
       CONTROLLED_PROVENANCE_SCHEMA_VERSION,
+
+    ...promotionGrade,
 
     mode,
 
