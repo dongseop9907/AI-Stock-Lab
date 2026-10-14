@@ -340,6 +340,245 @@ export function evaluateForwardObservations(
   };
 }
 
+const FORWARD_OOS_EVALUATOR_PROVENANCE_AUDIT_V1_2 =
+  "FORWARD_OOS_EVALUATOR_PROVENANCE_AUDIT_V1_2" as const;
+
+const FORWARD_TOP1_SESSION_FILE_V1_2 =
+  path.resolve(
+    process.cwd(),
+    "logs/alpha-v3-true-forward-top1-sessions-v1.json",
+  );
+
+function inspectForwardTop1SessionProvenanceV1_2() {
+  let sessions:
+    unknown[] = [];
+
+  let parseError:
+    string | null = null;
+
+  try {
+    if (
+      fs.existsSync(
+        FORWARD_TOP1_SESSION_FILE_V1_2,
+      )
+    ) {
+      const parsed =
+        JSON.parse(
+          fs.readFileSync(
+            FORWARD_TOP1_SESSION_FILE_V1_2,
+            "utf8",
+          ),
+        ) as {
+          sessions?:
+            unknown[];
+        };
+
+      sessions =
+        Array.isArray(
+          parsed.sessions,
+        )
+          ? parsed.sessions
+          : [];
+    }
+  }
+  catch (error) {
+    parseError =
+      error instanceof Error
+        ? error.message
+        : String(error);
+  }
+
+  const rows =
+    sessions.map(
+      (
+        value,
+        index,
+      ) => {
+        const row =
+          value &&
+          typeof value ===
+            "object"
+            ? value as Record<
+                string,
+                unknown
+              >
+            : {};
+
+        const provenance =
+          row.provenance &&
+          typeof row.provenance ===
+            "object"
+            ? row.provenance as Record<
+                string,
+                unknown
+              >
+            : {};
+
+        const checks = {
+          shadowMode:
+            provenance.shadowMode ===
+              "DEVELOPMENT_SHADOW" ||
+            provenance.shadowMode ===
+              "PROMOTION_SHADOW",
+
+          commitSha:
+            typeof provenance.commitSha ===
+              "string" &&
+            /^[0-9a-f]{7,40}$/i.test(
+              provenance.commitSha,
+            ),
+
+          configHash:
+            typeof provenance.configHash ===
+              "string" &&
+            /^[0-9a-f]{64}$/i.test(
+              provenance.configHash,
+            ),
+
+          strategyVersion:
+            typeof provenance.strategyVersion ===
+              "string" &&
+            provenance.strategyVersion.length >
+              0,
+
+          alphaVersion:
+            typeof provenance.alphaVersion ===
+              "string" &&
+            provenance.alphaVersion.length >
+              0,
+
+          entryVersion:
+            typeof provenance.entryVersion ===
+              "string" &&
+            provenance.entryVersion.length >
+              0,
+
+          riskVersion:
+            typeof provenance.riskVersion ===
+              "string" &&
+            provenance.riskVersion.length >
+              0,
+
+          schemaVersion:
+            typeof provenance.schemaVersion ===
+              "string" &&
+            provenance.schemaVersion.length >
+              0,
+
+          generatedAt:
+            typeof provenance.generatedAt ===
+              "string" &&
+            !Number.isNaN(
+              Date.parse(
+                provenance.generatedAt,
+              ),
+            ),
+        };
+
+        const valid =
+          Object.values(
+            checks,
+          ).every(
+            (ok) =>
+              ok === true,
+          );
+
+        return {
+          index,
+
+          sourceTradingDate:
+            typeof row.sourceTradingDate ===
+              "string"
+              ? row.sourceTradingDate
+              : null,
+
+          targetSessionDate:
+            typeof row.targetSessionDate ===
+              "string"
+              ? row.targetSessionDate
+              : null,
+
+          shadowMode:
+            typeof provenance.shadowMode ===
+              "string"
+              ? provenance.shadowMode
+              : null,
+
+          commitSha:
+            typeof provenance.commitSha ===
+              "string"
+              ? provenance.commitSha
+              : null,
+
+          configHash:
+            typeof provenance.configHash ===
+              "string"
+              ? provenance.configHash
+              : null,
+
+          valid,
+
+          checks,
+        };
+      },
+    );
+
+  const validRows =
+    rows.filter(
+      (row) =>
+        row.valid,
+    );
+
+  const developmentShadow =
+    validRows.filter(
+      (row) =>
+        row.shadowMode ===
+          "DEVELOPMENT_SHADOW",
+    ).length;
+
+  const promotionShadow =
+    validRows.filter(
+      (row) =>
+        row.shadowMode ===
+          "PROMOTION_SHADOW",
+    ).length;
+
+  return {
+    schemaVersion:
+      FORWARD_OOS_EVALUATOR_PROVENANCE_AUDIT_V1_2,
+
+    generatedAt:
+      new Date()
+        .toISOString(),
+
+    sessionFile:
+      "logs/alpha-v3-true-forward-top1-sessions-v1.json",
+
+    parseError,
+
+    total:
+      rows.length,
+
+    valid:
+      validRows.length,
+
+    legacyOrInvalid:
+      rows.length -
+      validRows.length,
+
+    developmentShadow,
+
+    promotionShadow,
+
+    promotionEvidenceEligible:
+      promotionShadow >
+        0,
+
+    rows,
+  };
+}
+
+
 async function main() {
   const observations =
     fs.existsSync(
@@ -361,7 +600,12 @@ async function main() {
       observations,
     );
 
+  const promotionGradeSessionProvenance =
+    inspectForwardTop1SessionProvenanceV1_2();
+
   const report = {
+    promotionGradeSessionProvenance,
+
     status:
       observations.length >
       0
