@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import crypto from "node:crypto";
 
@@ -82,11 +83,47 @@ function resolveForwardOosCommitShaV1_2():
 
   if (
     explicit &&
-    /^[0-9a-f]{7,40}$/i.test(
+    /^[0-9a-f]{40}$/i.test(
       explicit,
     )
   ) {
     return explicit.toLowerCase();
+  }
+
+  try {
+    const gitHead =
+      execFileSync(
+        "git",
+        [
+          "rev-parse",
+          "HEAD",
+        ],
+        {
+          cwd:
+            process.cwd(),
+
+          encoding:
+            "utf8",
+
+          stdio: [
+            "ignore",
+            "pipe",
+            "ignore",
+          ],
+        },
+      )
+        .trim();
+
+    if (
+      /^[0-9a-f]{40}$/i.test(
+        gitHead,
+      )
+    ) {
+      return gitHead.toLowerCase();
+    }
+  }
+  catch {
+    // Packaged runtimes may not expose Git metadata.
   }
 
   try {
@@ -98,7 +135,7 @@ function resolveForwardOosCommitShaV1_2():
       );
 
     if (
-      /^[0-9a-f]{7,40}$/i.test(
+      /^[0-9a-f]{40}$/i.test(
         releaseName,
       )
     ) {
