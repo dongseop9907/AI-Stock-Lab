@@ -15,7 +15,7 @@ const CHECKPOINT =
   path.join(
     ROOT,
     "logs",
-    "alpha-v3-true-forward-entry-v3-checkpoint.json",
+    "alpha-v3-entry-v3-forward-oos-observations.json",
   );
 
 function finite(
@@ -87,6 +87,62 @@ function daysBetween(
   );
 }
 
+function isStrictTrueOosSession(
+  row: any,
+): boolean {
+  const legacy =
+    row?.integrity ===
+    "STRICT_TRUE_OOS";
+
+  const provenance =
+    row?.provenance;
+
+  const integrity =
+    row?.integrity;
+
+  const sourceTradingDate =
+    String(
+      row?.sourceTradingDate ??
+        "",
+    );
+
+  const targetSessionDate =
+    String(
+      row?.targetSessionDate ??
+        "",
+    );
+
+  const canonical =
+    row?.frozen === true &&
+    provenance?.schemaVersion ===
+      "FORWARD_OOS_CONTROLLED_PROVENANCE_V1" &&
+    provenance?.mode ===
+      "CONTROLLED_NORMAL" &&
+    typeof provenance?.runId ===
+      "string" &&
+    provenance.runId.trim().length >
+      0 &&
+    integrity?.algorithm ===
+      "sha256" &&
+    typeof integrity?.payloadHash ===
+      "string" &&
+    /^[0-9a-f]{64}$/i.test(
+      integrity.payloadHash,
+    ) &&
+    sourceTradingDate.length ===
+      10 &&
+    targetSessionDate.length ===
+      10 &&
+    targetSessionDate >
+      sourceTradingDate &&
+    String(
+      row?.sourceDataCutoffAtCollection ??
+        "",
+    ) === sourceTradingDate;
+
+  return legacy || canonical;
+}
+
 function main() {
   const top1 =
     fs.existsSync(
@@ -125,11 +181,13 @@ function main() {
   const strict =
     sessions.filter(
       (row: any) =>
-        row.integrity ===
-        "STRICT_TRUE_OOS",
+        isStrictTrueOosSession(
+          row,
+        ),
     );
 
   const results =
+    checkpoint.observations ??
     checkpoint.results ??
     [];
 
