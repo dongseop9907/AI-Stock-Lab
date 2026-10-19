@@ -1553,6 +1553,28 @@ export async function runTrueForwardEntryCollector(
       );
     }
 
+    // FORWARD_OOS_COLLECTOR_COVERAGE_AUDIT_V1: read-only decision audit; never rewrites a session or observation.
+    writeJsonAtomic(
+      path.resolve(process.cwd(), 'logs/alpha-v3-entry-v3-forward-oos-collector-audit-v1.json'),
+      {
+        status: 'FORWARD_OOS_COLLECTOR_COVERAGE_AUDIT_V1',
+        auditedAt: new Date().toISOString(),
+        assessment: 'NO_ELIGIBLE_SESSION',
+        counts: {
+          canonicalSessions: sessions.length,
+          eligibleUnobserved: eligible.length,
+          selectedBatch: 0,
+          completed: 0,
+          deferred: 0,
+          currentObservations: dataset.observations.length,
+          labelsUpdated,
+        },
+        completed: [],
+        deferred: [],
+        safety: { realTradingChanged: false, evidenceRewritten: false },
+      },
+    );
+
     return {
       status:
         "ALPHA_V3_TRUE_ENTRY_FORWARD_OOS_NO_ELIGIBLE_TARGET_SESSION",
@@ -1936,6 +1958,51 @@ export async function runTrueForwardEntryCollector(
   writeJsonAtomic(
     OBSERVATION_FILE,
     dataset,
+  );
+
+  // FORWARD_OOS_COLLECTOR_COVERAGE_AUDIT_V1: a zero exit / COLLECTION_COMPLETE can conceal deferred rows.
+  const collectorAuditCompleted = completed.map((row: any) => ({
+    sourceTradingDate: row.sourceTradingDate,
+    targetSessionDate: row.targetSessionDate,
+    stockCode: row.stockCode,
+    qualified: row.correctedEntry?.qualified === true,
+    filled: row.selectedPolicy?.filled === true,
+    fullCoverage: row.minuteCoverage?.fullCoverage === true,
+  }));
+  const collectorAuditDeferred = deferred.map((row: any) => ({
+    sourceTradingDate: row.sourceTradingDate,
+    targetSessionDate: row.targetSessionDate,
+    stockCode: row.stockCode,
+    reason: row.reason ?? 'UNSPECIFIED',
+    sourceRows: row.sourceRows ?? null,
+    earliestTime: row.earliestTime ?? null,
+    latestTime: row.latestTime ?? null,
+  }));
+  const collectorAuditAccounted =
+    collectorAuditCompleted.length + collectorAuditDeferred.length === batch.length;
+  writeJsonAtomic(
+    path.resolve(process.cwd(), 'logs/alpha-v3-entry-v3-forward-oos-collector-audit-v1.json'),
+    {
+      status: 'FORWARD_OOS_COLLECTOR_COVERAGE_AUDIT_V1',
+      auditedAt: new Date().toISOString(),
+      assessment: !collectorAuditAccounted
+        ? 'UNACCOUNTED_BATCH_ITEMS'
+        : collectorAuditDeferred.length > 0
+        ? 'PARTIAL_OR_FULL_DEFERRED'
+        : 'ALL_SELECTED_SESSIONS_COLLECTED',
+      counts: {
+        canonicalSessions: sessions.length,
+        eligibleUnobserved: eligible.length,
+        selectedBatch: batch.length,
+        completed: collectorAuditCompleted.length,
+        deferred: collectorAuditDeferred.length,
+        currentObservations: dataset.observations.length,
+        labelsUpdated,
+      },
+      completed: collectorAuditCompleted,
+      deferred: collectorAuditDeferred,
+      safety: { realTradingChanged: false, evidenceRewritten: false },
+    },
   );
 
   return {
