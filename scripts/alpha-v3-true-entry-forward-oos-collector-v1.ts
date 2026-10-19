@@ -9,6 +9,9 @@ import {
   createSupabaseServerClient,
 } from "../lib/supabase";
 
+import { nextKrxTradingDate } from "../lib/trading/krx-trading-calendar"; // KRX_T_PLUS_N_CLOSE_V2
+
+
 const VERSION =
   "ALPHA_V3_TRUE_ENTRY_FORWARD_OOS_COLLECTOR_V1";
 
@@ -1286,15 +1289,32 @@ async function enrichMaturedLabels(
       ),
     );
 
-  const b1 =
-    bars[0];
+  // KRX_T_PLUS_N_CLOSE_V2: official maturity audit defines T+1/T+3/T+5 after entry day.
+  let cursor = String(observation.targetSessionDate);
+  const horizonTradingDates: Record<"r1" | "r3" | "r5", string> = {r1: "", r3: "", r5: ""};
+  for (let i = 1; i <= 5; i += 1) {
+    cursor = nextKrxTradingDate(cursor);
+    if (i === 1) horizonTradingDates.r1 = cursor;
+    if (i === 3) horizonTradingDates.r3 = cursor;
+    if (i === 5) horizonTradingDates.r5 = cursor;
+  }
+  const validEntryDateBar = bars.some((bar: any) => bar.date === String(observation.targetSessionDate));
+  const b1 = validEntryDateBar ? bars.find((bar: any) => bar.date === horizonTradingDates.r1) : undefined;
+  const b3 = validEntryDateBar ? bars.find((bar: any) => bar.date === horizonTradingDates.r3) : undefined;
+  const b5 = validEntryDateBar ? bars.find((bar: any) => bar.date === horizonTradingDates.r5) : undefined;
 
-  const b3 =
-    bars[2];
-
-  const b5 =
-    bars[4];
-
+  // Preserve old T-inclusive labels as evidence BEFORE any re-labeling.
+  if (observation.maturity?.labelDefinition !== "KRX_T_PLUS_N_CLOSE_V2" &&
+      !observation.legacyHorizonLabelSnapshot &&
+      Object.values(observation.correctedEntry?.directReturns ?? {}).some((v: any) => typeof v === "number" && Number.isFinite(v))) {
+    observation.legacyHorizonLabelSnapshot = {
+      definition: "LEGACY_T_INCLUSIVE_V1",
+      preservedAt: new Date().toISOString(),
+      correctedEntryDirectReturns: {...(observation.correctedEntry?.directReturns ?? {})},
+      selectedPolicyReturns: {...(observation.selectedPolicy?.returns ?? {})},
+      maturity: {...(observation.maturity ?? {})},
+    };
+  }
   const entryPrice =
     toNumber(
       observation.correctedEntry
@@ -1356,20 +1376,14 @@ async function enrichMaturedLabels(
   };
 
   observation.maturity = {
-    r1:
-      Boolean(
-        b1,
-      ),
+    labelDefinition: "KRX_T_PLUS_N_CLOSE_V2",
+    horizonTradingDates,
 
-    r3:
-      Boolean(
-        b3,
-      ),
+    r1: Boolean(b1 && b1.close !== null),
 
-    r5:
-      Boolean(
-        b5,
-      ),
+    r3: Boolean(b3 && b3.close !== null),
+
+    r5: Boolean(b5 && b5.close !== null),
 
     latestAvailableTradingDate:
       bars.at(-1)

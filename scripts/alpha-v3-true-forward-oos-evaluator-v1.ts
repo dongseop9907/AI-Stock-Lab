@@ -41,8 +41,8 @@ function n(
   value:
     unknown,
 ): number | null {
-  const x =
-    Number(value);
+  // OOS_NULL_MATURITY_GUARD_V2: only actual numeric returns are observable.
+  const x = (typeof value === "number" && Number.isFinite(value)) ? value : null;
 
   return Number.isFinite(x)
     ? x
@@ -178,6 +178,8 @@ export function evaluateForwardObservations(
           filled
             .map(
               (row) => {
+                 if (row.maturity?.labelDefinition !== "KRX_T_PLUS_N_CLOSE_V2" || row.maturity?.[horizon] !== true) return null;
+
                 const direct =
                   n(
                     row.correctedEntry

@@ -217,8 +217,7 @@ function main() {
           row,
           policy:
             (
-              row.limitPolicies ??
-              []
+              ((Number(row.selectedPolicy?.maxPremium) === 0.01 ? [row.selectedPolicy] : row.limitPolicies) ?? []) /* OOS_SELECTED_POLICY_BINDING_V2 */
             ).find(
               (policy: any) =>
                 Number(
@@ -283,6 +282,8 @@ function main() {
         "r5",
       ] as const
     ) {
+      if (item.row.maturity?.labelDefinition !== "KRX_T_PLUS_N_CLOSE_V2" || item.row.maturity?.[horizon] !== true) continue; // OOS_V2_MATURITY_GUARD
+
       const d =
         item.row
           .correctedEntry
