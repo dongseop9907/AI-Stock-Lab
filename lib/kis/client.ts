@@ -1,3 +1,4 @@
+import { getOrIssueKisSharedToken } from "./shared-token-cache";
 interface KisTokenResponse {
   access_token: string;
   token_type: string;
@@ -150,6 +151,7 @@ let tokenCache: {
   accessToken: string;
   expiresAt: number;
 } | null = null;
+let kisSharedTokenInFlight: Promise<string> | null = null;
 
 function getKisConfig() {
   const appKey =
@@ -236,47 +238,25 @@ export async function issueKisAccessToken(): Promise<KisTokenResponse> {
 }
 
 export async function getKisAccessToken(): Promise<string> {
-  const now =
-    Date.now();
-
-  if (
-    tokenCache &&
-    now <
-      tokenCache.expiresAt -
-        60_000
-  ) {
-    return (
-      tokenCache.accessToken
-    );
+  const now = Date.now();
+  if (tokenCache && now < tokenCache.expiresAt - 60_000) {
+    return tokenCache.accessToken;
   }
-
-  const token =
-    await issueKisAccessToken();
-
-  const expiresIn =
-    Number(
-      token.expires_in,
+  if (kisSharedTokenInFlight) return kisSharedTokenInFlight;
+  kisSharedTokenInFlight = (async () => {
+    const { appKey, appSecret, baseUrl } = getKisConfig();
+    const token = await getOrIssueKisSharedToken(
+      baseUrl + "\\0" + appKey + "\\0" + appSecret,
+      issueKisAccessToken,
     );
-
-  tokenCache = {
-    accessToken:
-      token.access_token,
-
-    expiresAt:
-      now +
-      (
-        Number.isFinite(
-          expiresIn,
-        )
-          ? expiresIn
-          : 3600
-      ) *
-        1000,
-  };
-
-  return (
-    token.access_token
-  );
+    tokenCache = token;
+    return token.accessToken;
+  })();
+  try {
+    return await kisSharedTokenInFlight;
+  } finally {
+    kisSharedTokenInFlight = null;
+  }
 }
 
 /*
